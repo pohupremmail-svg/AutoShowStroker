@@ -23,8 +23,6 @@ class BeatHandler:
 
         [1, 2, 3, 4, -4, -4],
         [4, 3, 2, 1, -2],
-
-        [8, 8, 8, 8, -10],
         [1, 1, 1, 1, 2, 2, 2, 2],
     ]
 
@@ -70,13 +68,14 @@ class BeatHandler:
     def reset_beat_timer(self):
         if self.cur_freq == 0:  # Choose a frequency. None has been selected yet. This references 1-1-1-1 beats
             self.recalc_beat()
-        if self.target_beat_dur < time.time() - self.cur_beat_start_time and random.uniform(0, 1) < 0.1:
-            # The current beat reached its target duration. Check if a new one should be selected.
-            if random.uniform(0, 1) < 0.005:
-                # Pauses can happen at this time.
-                self.start_pause()
-                return
-            self.recalc_beat()
+        if self.target_beat_dur < time.time() - self.cur_beat_start_time:
+            if random.uniform(0, 1) < 0.1:
+                # The current beat reached its target duration. Check if a new one should be selected.
+                if random.uniform(0, 1) < 0.005:
+                    # Pauses can happen at this time.
+                    self.start_pause()
+                    return
+                self.recalc_beat()
         self.beat_pattern_mutex.lock()
         beat_time_ms = int((1/self.cur_freq)*1000/abs(self.current_beat_pattern[self.current_beat_position]))
         self.current_beat_position = (self.current_beat_position + 1) % len(self.current_beat_pattern)
