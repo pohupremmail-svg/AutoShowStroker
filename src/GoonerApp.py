@@ -83,9 +83,18 @@ class GoonerApp(QMainWindow):
 
         self.beat_handler = BeatHandler(layout)
 
+        self.video_start_time = 0
+        self.video_min_dur = 5
+
 
     def video_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
+            elapsed_time = time.time() - self.video_start_time
+            print(f"Video has been playing for: {elapsed_time}")
+            if elapsed_time < self.video_min_dur:
+                self.media_player.play()
+                return
+
             self.show_next()
 
     def next_img_timer(self):
@@ -153,6 +162,7 @@ class GoonerApp(QMainWindow):
             self.media_stack.setCurrentWidget(self.video_widget)
             self.media_player.setSource(QUrl.fromLocalFile(file_path))
             self.media_player.play()
+            self.video_start_time = time.time()
             self.audio_output.setVolume(0.7)
 
         elif ext == '.gif':
