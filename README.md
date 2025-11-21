@@ -49,3 +49,4 @@ python main.py
     - Manual Skip: Press Right Arrow or click "Skip >>".
     - Manual Back: Press Left Arrow or click "<< Previous".
     - Pause Indicator: The footer will turn Green and display a countdown during a mandatory pause.
+    - Drag the border between the beatmeter and the media control buttons to your liking customizing the relation between the media screen and the beatmeter
