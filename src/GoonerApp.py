@@ -11,12 +11,13 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QSoundEffect
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
+from src.BeatHandler import BeatHandler
+
 
 class GoonerApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.loudness = 1.0
         self.setWindowTitle("Auto Hero Generation")
         self.resize(1920, 1080)
 
@@ -45,7 +46,6 @@ class GoonerApp(QMainWindow):
         self.media_stack.addWidget(self.video_widget)
 
         self.media_player.mediaStatusChanged.connect(self.video_status_changed)
-        self.sound_effect = None
 
         layout.addWidget(self.media_stack, stretch=4)
 
@@ -79,60 +79,14 @@ class GoonerApp(QMainWindow):
         self.max_dur = 4
         self.min_dur = 0.5
 
-        self.beat_meter_timer = QTimer()
-        self.beat_meter_timer.timeout.connect(self.beat)
-        self.max_beat_dur = 4
-        self.min_beat_dur = 0.5
-        self.max_beat_freq = 5
-        self.min_beat_freq = 0.5
-        self.cur_freq = 0
-        self.target_beat_dur = 0
-        self.cur_beat_start_time = 0
-        self.min_pause_dur = 5
-        self.max_pause_dur = 20
-
-
         layout.addWidget(controls_container)
 
-        self.beat_meter = QLabel("Strokemeter appears here.")
-        self.beat_meter.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.beat_meter, stretch=1)
+        self.beat_handler = BeatHandler(layout)
 
-        self.footer_style_base = "font-weight: bold; font-size: 24px;"
-        self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
-
-        self.beat_meter_pause_timer = QTimer()
-        self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
-        self.cur_pause_dur = None
-
-        self.is_red = False
-
-    def start_pause(self):
-        self.beat_meter_timer.stop()
-        self.cur_pause_dur = random.randint(self.min_pause_dur, self.max_pause_dur)
-        self.beat_meter_pause_timer.start(1000)
-        self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
-        self.beat_meter.setStyleSheet(f"background-color: green; color: white; {self.footer_style_base}")
-        return
-
-    def pause_loop(self):
-        self.cur_pause_dur -= 1
-        if self.cur_pause_dur <= 0:
-            self.cur_freq = 0
-            self.recalc_beat_timer()
-            return
-        self.beat_meter_pause_timer.start(1000)
-        self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
 
     def video_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             self.show_next()
-
-    def beat(self):
-        self.toggle_blink()
-        self.recalc_beat_timer()
-        self.play_wave_file(".\\res\\mixkit-cool-interface-click-tone-2568.wav")
-
 
     def next_img_timer(self):
         self.show_next()
@@ -163,7 +117,7 @@ class GoonerApp(QMainWindow):
                 self.load_current_index()
 
                 self.recalc_autoplay_timer()
-                self.recalc_beat_timer()
+                self.beat_handler.start_beat()
                 self.btn_load.setText("Change Gooning Folder.")
             else:
                 self.image_label.setText("Keine Dateien gefunden.")
@@ -229,40 +183,9 @@ class GoonerApp(QMainWindow):
             self.recalc_autoplay_timer()
 
 
-    def toggle_blink(self):
-        if self.is_red:
-            color = "grey"
-            text_col = "white"
-            self.beat_meter.setText("UP")
-        else:
-            color = "red"
-            text_col = "yellow"
-            self.beat_meter.setText("DOWN")
 
 
-        self.beat_meter.setStyleSheet(f"background-color: {color}; color: {text_col}; {self.footer_style_base}")
-        self.is_red = not self.is_red
 
-    def play_wave_file(self, file_path):
-        if not self.sound_effect:
-            self.sound_effect = QSoundEffect()
-            self.sound_effect.setSource(QUrl.fromLocalFile(file_path))
-            self.sound_effect.setVolume(self.loudness)
-        self.sound_effect.play()
 
-    def recalc_beat_timer(self):
-        if self.cur_freq == 0:
-            self.recalc_beat()
-        if self.target_beat_dur < time.time() - self.cur_beat_start_time and random.uniform(0, 1) < 0.1:
-            if random.uniform(0, 1) < 0.005:
-                self.start_pause()
-                return
-            self.recalc_beat()
-        beat_time_ms = int((1/self.cur_freq)*1000)
-        self.beat_meter_timer.start(beat_time_ms)
 
-    def recalc_beat(self):
-        self.cur_freq = random.uniform(self.min_beat_freq, self.max_beat_freq)
-        self.cur_beat_start_time = time.time()
-        self.target_beat_dur = random.uniform(self.min_beat_dur, self.max_beat_dur)
 
