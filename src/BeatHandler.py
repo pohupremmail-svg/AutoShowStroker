@@ -69,10 +69,10 @@ class BeatHandler:
                 self.selected_beat_patterns = loaded_patterns
             else:
                 # Standard: Alle Muster aktiv
-                self.selected_beat_patterns = self.BEAT_PATTERNS_MAP.keys()
+                self.selected_beat_patterns = list(self.BEAT_PATTERNS_MAP.keys())
 
         else:
-            self.selected_beat_patterns = self.BEAT_PATTERNS_MAP.keys()
+            self.selected_beat_patterns = list(self.BEAT_PATTERNS_MAP.keys())
 
         self.beat_meter_timer = QTimer()
         self.beat_meter_timer.timeout.connect(self.beat)
@@ -118,6 +118,9 @@ class BeatHandler:
         self.target_beat_dur = random.uniform(self.min_beat_dur, self.max_beat_dur)
         self.beat_pattern_mutex.lock()
         self.current_beat_position = 0
+        if type(self.selected_beat_patterns) != list:
+            print(f"The selected_beat_pattern is not of the appropriate type: {type(self.selected_beat_patterns)}")
+            self.selected_beat_patterns = list(self.selected_beat_patterns)
         self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
         self.beat_pattern_mutex.unlock()
 
