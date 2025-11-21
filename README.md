@@ -31,6 +31,7 @@ source .venv/bin/activate
 
 ### 2. Install the requirements:
 ```
+py -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
