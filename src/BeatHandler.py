@@ -33,7 +33,7 @@ class BeatHandler:
 
         self.beat_meter = QLabel("Strokemeter appears here.")
         self.beat_meter.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.beat_meter, stretch=1)
+        layout.addWidget(self.beat_meter)
 
         self.footer_style_base = "font-weight: bold; font-size: 24px;"
         self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")

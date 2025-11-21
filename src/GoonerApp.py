@@ -7,7 +7,7 @@ from typing import List
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPixmap, QMovie
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
-                             QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout)
+                             QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
@@ -29,6 +29,13 @@ class GoonerApp(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        self.main_splitter = QSplitter(Qt.Orientation.Vertical)
+
+        media_container = QWidget()
+        media_layout = QVBoxLayout(media_container)
+        media_layout.setContentsMargins(0, 0, 0, 0)
+        media_layout.setSpacing(0)
+
         self.media_stack = QStackedWidget()
 
         self.image_label = QLabel("No Gooning files selected yet.")
@@ -47,7 +54,7 @@ class GoonerApp(QMainWindow):
 
         self.media_player.mediaStatusChanged.connect(self.video_status_changed)
 
-        layout.addWidget(self.media_stack, stretch=4)
+        media_layout.addWidget(self.media_stack, stretch=4)
 
         self.playlist: List[Path] = []
         self.current_index = 0
@@ -79,13 +86,16 @@ class GoonerApp(QMainWindow):
         self.max_dur = 4
         self.min_dur = 0.5
 
-        layout.addWidget(controls_container)
+        media_layout.addWidget(controls_container)
+        self.main_splitter.addWidget(media_container)
 
-        self.beat_handler = BeatHandler(layout)
+
+        self.beat_handler = BeatHandler(self.main_splitter)
 
         self.video_start_time = 0
         self.video_min_dur = 5
 
+        layout.addWidget(self.main_splitter)
 
     def video_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
@@ -191,11 +201,3 @@ class GoonerApp(QMainWindow):
                                           Qt.TransformationMode.SmoothTransformation)
             self.image_label.setPixmap(scaled_pixmap)
             self.recalc_autoplay_timer()
-
-
-
-
-
-
-
-
