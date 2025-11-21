@@ -54,6 +54,8 @@ class BeatHandler:
         self.min_beat_freq = 0.5
         self.min_pause_dur = 5
         self.max_pause_dur = 20
+        self.pause_chance = 0.05
+        self.beat_change_chance = 0.1
 
         # --- Laden, falls QSettings existieren ---
         if self.settings:
@@ -62,8 +64,10 @@ class BeatHandler:
             self.min_beat_dur = float(self.settings.value("BeatHandler/min_beat_dur", self.min_beat_dur))
             self.max_beat_freq = float(self.settings.value("BeatHandler/max_beat_freq", self.max_beat_freq))
             self.min_beat_freq = float(self.settings.value("BeatHandler/min_beat_freq", self.min_beat_freq))
-            self.min_pause_dur = float(self.settings.value("BeatHandler/min_pause_dur", self.min_pause_dur))
-            self.max_pause_dur = float(self.settings.value("BeatHandler/max_pause_dur", self.max_pause_dur))
+            self.min_pause_dur = int(float(self.settings.value("BeatHandler/min_pause_dur", self.min_pause_dur)))
+            self.max_pause_dur = int(float(self.settings.value("BeatHandler/max_pause_dur", self.max_pause_dur)))
+            self.pause_chance = float(self.settings.value("BeatHandler/pause_chance", self.pause_chance))
+            self.beat_change_chance = float(self.settings.value("BeatHandler/beat_change_chance", self.beat_change_chance))
             loaded_patterns = self.settings.value("BeatHandler/selected_beat_patterns")
             if loaded_patterns:
                 # Das geladene Muster ist eine Liste von Strings (Namen)
@@ -100,9 +104,9 @@ class BeatHandler:
         if self.cur_freq == 0:  # Choose a frequency. None has been selected yet. This references 1-1-1-1 beats
             self.recalc_beat()
         if self.target_beat_dur < time.time() - self.cur_beat_start_time:
-            if random.uniform(0, 1) < 0.1:
+            if random.uniform(0, 1) < self.beat_change_chance:
                 # The current beat reached its target duration. Check if a new one should be selected.
-                if random.uniform(0, 1) < 0.005:
+                if random.uniform(0, 1) < self.pause_chance:
                     # Pauses can happen at this time.
                     self.start_pause()
                     return

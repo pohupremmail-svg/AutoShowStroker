@@ -27,6 +27,8 @@ class SettingsDialog(QDialog):
         self.add_setting("Beat Max. duration (s):", "max_beat_dur", self.beat_handler, float, 1.0, 120.0, 1.0)
         self.add_setting("Pause Min. duration (s):", "min_pause_dur", self.beat_handler, int, 1, 180, 1)
         self.add_setting("Pause Max. duration (s):", "max_pause_dur", self.beat_handler, int, 1, 180, 1)
+        self.add_setting("Beat change chance", "beat_change_chance", self.beat_handler, float, 0.01, 1, 0.01)
+        self.add_setting("Pause chance", "pause_chance", self.beat_handler, float, 0.001, 1, 0.001)
 
         self.add_section_header("General Settings")
         self.add_setting("Beat Volume", "loudness", self.beat_handler, float, 0.1, 1.0, 0.1)
