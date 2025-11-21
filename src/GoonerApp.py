@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import List
 
-from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtCore import Qt, QTimer, QUrl, QSettings
 from PyQt6.QtGui import QPixmap, QMovie, QAction
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter)
@@ -18,6 +18,8 @@ from src.SettingsDialog import SettingsDialog
 class GoonerApp(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.settings = QSettings("GoonerCock", "GoonerApp")
 
         self.setWindowTitle("Auto Hero Generation")
         self.resize(1920, 1080)
@@ -84,18 +86,19 @@ class GoonerApp(QMainWindow):
 
         self.auto_play_timer = QTimer()
         self.auto_play_timer.timeout.connect(self.next_img_timer)
-        self.max_dur = 4
-        self.min_dur = 0.5
+
+        self.max_dur = float(self.settings.value("GoonerApp/max_dur", 4.0))
+        self.min_dur = float(self.settings.value("GoonerApp/min_dur", 0.5))
+        self.video_min_dur = float(self.settings.value("GoonerApp/video_min_dur", 1.5))
 
         media_layout.addWidget(controls_container)
         self.main_splitter.addWidget(media_container)
 
 
-        self.beat_handler = BeatHandler()
+        self.beat_handler = BeatHandler(settings=self.settings)
         self.main_splitter.addWidget(self.beat_handler.beat_meter)
 
         self.video_start_time = 0
-        self.video_min_dur = 5
 
         self.btn_settings = QPushButton("Settings")
 

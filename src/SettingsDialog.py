@@ -1,3 +1,4 @@
+from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDoubleSpinBox, QPushButton, QGridLayout, \
     QCheckBox
 
@@ -65,18 +66,25 @@ class SettingsDialog(QDialog):
         }
 
     def accept_settings(self):
+        settings = QSettings("GoonerCock", "GoonerApp")
+
         for var_name, data in self.settings_fields.items():
             new_value = data['widget'].value()
 
             setattr(data['object'], var_name, new_value)
+
+            key = f"{data['object'].__class__.__name__}/{var_name}"
+            settings.setValue(key, new_value)
 
         new_selected_patterns = []
         for name, checkbox in self.beat_checkboxes.items():
             if checkbox.isChecked():
                 new_selected_patterns.append(name)
         self.beat_handler.selected_beat_patterns = new_selected_patterns
-        self.beat_handler.recalc_beat()
 
+        settings.setValue("BeatHandler/selected_beat_patterns", new_selected_patterns)
+
+        self.beat_handler.recalc_beat()
         self.accept()
 
     def add_beat_selection(self):

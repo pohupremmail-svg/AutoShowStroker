@@ -32,7 +32,7 @@ class BeatHandler:
         "Speed Change": [1, 1, 1, 1, 2, 2, 2, 2],
     }
 
-    def __init__(self, beat_file=".\\res\\mixkit-cool-interface-click-tone-2568.wav"):
+    def __init__(self, beat_file=".\\res\\mixkit-cool-interface-click-tone-2568.wav", settings=None):
         self.beat_meter_pause_timer = QTimer()
         self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
         self.cur_pause_dur = None
@@ -44,17 +44,41 @@ class BeatHandler:
         self.footer_style_base = "font-weight: bold; font-size: 24px;"
         self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
 
+        self.settings = settings  # QSettings Instanz speichern
+
+        # --- Standardwerte definieren ---
+        self.max_beat_dur = 4.0
+        self.min_beat_dur = 0.5
+        self.max_beat_freq = 5.0
+        self.min_beat_freq = 0.5
+        self.min_pause_dur = 5
+        self.max_pause_dur = 20
+
+        # --- Laden, falls QSettings existieren ---
+        if self.settings:
+            print("Got Settings object")
+            self.max_beat_dur = float(self.settings.value("BeatHandler/max_beat_dur", self.max_beat_dur))
+            self.min_beat_dur = float(self.settings.value("BeatHandler/min_beat_dur", self.min_beat_dur))
+            self.max_beat_freq = float(self.settings.value("BeatHandler/max_beat_freq", self.max_beat_freq))
+            self.min_beat_freq = float(self.settings.value("BeatHandler/min_beat_freq", self.min_beat_freq))
+            self.min_pause_dur = float(self.settings.value("BeatHandler/min_pause_dur", self.min_pause_dur))
+            self.max_pause_dur = float(self.settings.value("BeatHandler/max_pause_dur", self.max_pause_dur))
+            loaded_patterns = self.settings.value("BeatHandler/selected_beat_patterns")
+            if loaded_patterns:
+                # Das geladene Muster ist eine Liste von Strings (Namen)
+                self.selected_beat_patterns = loaded_patterns
+            else:
+                # Standard: Alle Muster aktiv
+                self.selected_beat_patterns = self.BEAT_PATTERNS_MAP.keys()
+
+        else:
+            self.selected_beat_patterns = self.BEAT_PATTERNS_MAP.keys()
+
         self.beat_meter_timer = QTimer()
         self.beat_meter_timer.timeout.connect(self.beat)
-        self.max_beat_dur = 50
-        self.min_beat_dur = 15
-        self.max_beat_freq = 5
-        self.min_beat_freq = 0.5
         self.cur_freq = 0
         self.target_beat_dur = 0
         self.cur_beat_start_time = 0
-        self.min_pause_dur = 5
-        self.max_pause_dur = 20
 
         self.sound_effect = None
         self.loudness = 1.0
@@ -64,7 +88,6 @@ class BeatHandler:
         self.current_beat_pattern = None
         self.current_beat_position = 0
         self.available_beat_patterns = self.BEAT_PATTERNS_MAP
-        self.selected_beat_patterns = self.available_beat_patterns.keys()
         self.beat_pattern_mutex = QMutex()
 
 
