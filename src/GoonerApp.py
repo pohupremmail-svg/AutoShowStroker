@@ -5,13 +5,14 @@ from pathlib import Path
 from typing import List
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QPixmap, QMovie
+from PyQt6.QtGui import QPixmap, QMovie, QAction
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
 from src.BeatHandler import BeatHandler
+from src.SettingsDialog import SettingsDialog
 
 
 class GoonerApp(QMainWindow):
@@ -90,12 +91,36 @@ class GoonerApp(QMainWindow):
         self.main_splitter.addWidget(media_container)
 
 
-        self.beat_handler = BeatHandler(self.main_splitter)
+        self.beat_handler = BeatHandler()
+        self.main_splitter.addWidget(self.beat_handler.beat_meter)
 
         self.video_start_time = 0
         self.video_min_dur = 5
 
+        self.btn_settings = QPushButton("Settings")
+
         layout.addWidget(self.main_splitter)
+        self.btn_settings.clicked.connect(self.open_settings)
+
+        self.create_menu_bar()
+
+        self.loudness = 1.0
+
+    def create_menu_bar(self):
+        menu_bar = self.menuBar()
+
+        settings_menu = menu_bar.addMenu("Settings")
+
+        settings_action = QAction("Change Settings", self)
+        settings_action.setShortcut("Ctrl+S")
+        settings_action.triggered.connect(self.open_settings)
+
+        settings_menu.addAction(settings_action)
+
+        exit_action = QAction("Quit", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        settings_menu.addAction(exit_action)
 
     def video_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
@@ -173,7 +198,7 @@ class GoonerApp(QMainWindow):
             self.media_player.setSource(QUrl.fromLocalFile(file_path))
             self.media_player.play()
             self.video_start_time = time.time()
-            self.audio_output.setVolume(0.7)
+            self.audio_output.setVolume(self.loudness)
 
         elif ext == '.gif':
             self.media_stack.setCurrentWidget(self.image_label)
@@ -201,3 +226,8 @@ class GoonerApp(QMainWindow):
                                           Qt.TransformationMode.SmoothTransformation)
             self.image_label.setPixmap(scaled_pixmap)
             self.recalc_autoplay_timer()
+
+    # Neue Methode zur GoonerApp-Klasse hinzufügen
+    def open_settings(self):
+        settings_dialog = SettingsDialog(parent=self)
+        settings_dialog.exec()

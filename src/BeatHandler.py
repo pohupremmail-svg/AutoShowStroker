@@ -7,25 +7,32 @@ from PyQt6.QtWidgets import QLabel
 
 
 class BeatHandler:
-    BEAT_PATTERNS = [
-        [1],
-        [1, 2, 2, -1, -1],
-        [1, 1, -1, 1, 1, -1],
-        [2, 2, -2, 2, 2, -2],
-        [1, -1, 1, -1, 1, 1, 1],
-        [1, -2, -2, -2],
-        [2, 2, -1, -1, -1, -1],
+    BEAT_PATTERNS_MAP = {
+        # --- Standard & Simple ---
+        "Standard Beat": [1],
 
-        [1, -2, 2, -2, 1, -2, 2, -2],
-        [1, 4, 4, -2, -2],
-        [1, 1, -3, 1],
+        # --- Grooves & Swings ---
+        "Quick Swing": [1, 2, 2, -1, -1],
+        "Simple Bounce": [1, 1, -1, 1, 1, -1],
+        "Double Tap": [2, 2, -2, 2, 2, -2],
+        "Syncopated 4/4": [1, -1, 1, -1, 1, 1, 1],
 
-        [1, 2, 3, 4, -4, -4],
-        [4, 3, 2, 1, -2],
-        [1, 1, 1, 1, 2, 2, 2, 2],
-    ]
+        # --- Long Pauses & Gaps ---
+        "Long Rest": [1, -2, -2, -2],
+        "Double Tap Pause": [2, 2, -1, -1, -1, -1],
 
-    def __init__(self, layout, beat_file=".\\res\\mixkit-cool-interface-click-tone-2568.wav"):
+        # --- Complex & Off-Beat ---
+        "Delayed Swing": [1, -2, 2, -2, 1, -2, 2, -2],
+        "Triple Quick Tap": [1, 4, 4, -2, -2],
+        "Missing Third": [1, 1, -3, 1],
+
+        # --- Accelerating & Decelerating ---
+        "Build Up": [1, 2, 3, 4, -4, -4],
+        "Slow Down": [4, 3, 2, 1, -2],
+        "Speed Change": [1, 1, 1, 1, 2, 2, 2, 2],
+    }
+
+    def __init__(self, beat_file=".\\res\\mixkit-cool-interface-click-tone-2568.wav"):
         self.beat_meter_pause_timer = QTimer()
         self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
         self.cur_pause_dur = None
@@ -33,15 +40,14 @@ class BeatHandler:
 
         self.beat_meter = QLabel("Strokemeter appears here.")
         self.beat_meter.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.beat_meter)
 
         self.footer_style_base = "font-weight: bold; font-size: 24px;"
         self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
 
         self.beat_meter_timer = QTimer()
         self.beat_meter_timer.timeout.connect(self.beat)
-        self.max_beat_dur = 4
-        self.min_beat_dur = 0.5
+        self.max_beat_dur = 50
+        self.min_beat_dur = 15
         self.max_beat_freq = 5
         self.min_beat_freq = 0.5
         self.cur_freq = 0
@@ -57,6 +63,8 @@ class BeatHandler:
 
         self.current_beat_pattern = None
         self.current_beat_position = 0
+        self.available_beat_patterns = self.BEAT_PATTERNS_MAP
+        self.selected_beat_patterns = self.available_beat_patterns.keys()
         self.beat_pattern_mutex = QMutex()
 
 
@@ -87,7 +95,7 @@ class BeatHandler:
         self.target_beat_dur = random.uniform(self.min_beat_dur, self.max_beat_dur)
         self.beat_pattern_mutex.lock()
         self.current_beat_position = 0
-        self.current_beat_pattern = random.choice(self.BEAT_PATTERNS)
+        self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
         self.beat_pattern_mutex.unlock()
 
     def init_beat_sound(self, file_path):
