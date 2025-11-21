@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPixmap, QMovie
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout)
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput, QSoundEffect
+from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
 from src.BeatHandler import BeatHandler

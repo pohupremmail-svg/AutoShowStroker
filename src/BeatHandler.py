@@ -1,6 +1,5 @@
 import random
 import time
-from enum import Enum
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QMutex
 from PyQt6.QtMultimedia import QSoundEffect
