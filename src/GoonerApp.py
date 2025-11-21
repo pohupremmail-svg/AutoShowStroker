@@ -107,7 +107,7 @@ class GoonerApp(QMainWindow):
 
         self.create_menu_bar()
 
-        self.loudness = 1.0
+        self.vid_loudness = 1.0
 
     def create_menu_bar(self):
         menu_bar = self.menuBar()
@@ -201,7 +201,7 @@ class GoonerApp(QMainWindow):
             self.media_player.setSource(QUrl.fromLocalFile(file_path))
             self.media_player.play()
             self.video_start_time = time.time()
-            self.audio_output.setVolume(self.loudness)
+            self.audio_output.setVolume(self.vid_loudness)
 
         elif ext == '.gif':
             self.media_stack.setCurrentWidget(self.image_label)

@@ -31,8 +31,8 @@ class SettingsDialog(QDialog):
         self.add_setting("Pause chance", "pause_chance", self.beat_handler, float, 0.001, 1, 0.001)
 
         self.add_section_header("General Settings")
-        self.add_setting("Beat Volume", "loudness", self.beat_handler, float, 0.1, 1.0, 0.1)
-        self.add_setting("Video Volume", "loudness", self.main_app, float, 0.1, 1.0, 0.1)
+        self.add_setting("Beat Volume", "beat_loudness", self.beat_handler, float, 0.0, 1.0, 0.1)
+        self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
 
         self.add_beat_selection()
 
@@ -77,6 +77,8 @@ class SettingsDialog(QDialog):
 
             key = f"{data['object'].__class__.__name__}/{var_name}"
             settings.setValue(key, new_value)
+
+        self.beat_handler.sound_effect.setVolume(self.settings_fields['beat_loudness']['widget'].value())
 
         new_selected_patterns = []
         for name, checkbox in self.beat_checkboxes.items():

@@ -88,7 +88,7 @@ class BeatHandler:
         self.cur_beat_start_time = 0
 
         self.sound_effect = None
-        self.loudness = 1.0
+        self.beat_loudness = 1.0
 
         self.init_beat_sound(str(beat_file.absolute()))
 
@@ -140,7 +140,7 @@ class BeatHandler:
     def init_beat_sound(self, file_path):
         self.sound_effect = QSoundEffect()
         self.sound_effect.setSource(QUrl.fromLocalFile(file_path))
-        self.sound_effect.setVolume(self.loudness)
+        self.sound_effect.setVolume(self.beat_loudness)
 
     def play_beat_sound(self):
         if not self.sound_effect:
