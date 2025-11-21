@@ -34,6 +34,8 @@ class BeatHandler:
     }
 
     def __init__(self, beat_file=Path("./res/mixkit-cool-interface-click-tone-2568.wav"), settings=None):
+        self.beat_changed_counter = 5
+        self.just_changed_beat = False
         self.beat_meter_pause_timer = QTimer()
         self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
         self.cur_pause_dur = None
@@ -129,6 +131,12 @@ class BeatHandler:
         self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
         self.beat_pattern_mutex.unlock()
 
+        # Mark a new beat or speed with a different color for one beat:
+        self.beat_meter.setText(f"New Beat! {self.current_beat_pattern}")
+        self.beat_meter.setStyleSheet(f"background-color: blue; color: white; {self.footer_style_base}")
+        self.just_changed_beat = True
+        self.beat_changed_counter = 5
+
     def init_beat_sound(self, file_path):
         self.sound_effect = QSoundEffect()
         self.sound_effect.setSource(QUrl.fromLocalFile(file_path))
@@ -160,7 +168,12 @@ class BeatHandler:
 
         if play_beat:
             self.play_beat_sound()
-            self.toggle_blink()
+            if not self.just_changed_beat:
+                self.toggle_blink()
+            else:
+                self.beat_changed_counter -=1
+                if self.beat_changed_counter == 0:
+                    self.just_changed_beat = False
         self.reset_beat_timer()
 
 
