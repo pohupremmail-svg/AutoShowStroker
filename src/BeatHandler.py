@@ -48,8 +48,8 @@ class BeatHandler:
         self.settings = settings  # QSettings Instanz speichern
 
         # --- Standardwerte definieren ---
-        self.max_beat_dur = 4.0
-        self.min_beat_dur = 0.5
+        self.max_beat_dur = 45.0
+        self.min_beat_dur = 15
         self.max_beat_freq = 5.0
         self.min_beat_freq = 0.5
         self.min_pause_dur = 5
