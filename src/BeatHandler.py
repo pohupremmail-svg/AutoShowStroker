@@ -1,5 +1,6 @@
 import random
 import time
+from pathlib import Path
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QMutex
 from PyQt6.QtMultimedia import QSoundEffect
@@ -32,7 +33,7 @@ class BeatHandler:
         "Speed Change": [1, 1, 1, 1, 2, 2, 2, 2],
     }
 
-    def __init__(self, beat_file=".\\res\\mixkit-cool-interface-click-tone-2568.wav", settings=None):
+    def __init__(self, beat_file=Path("./res/mixkit-cool-interface-click-tone-2568.wav"), settings=None):
         self.beat_meter_pause_timer = QTimer()
         self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
         self.cur_pause_dur = None
@@ -83,7 +84,7 @@ class BeatHandler:
         self.sound_effect = None
         self.loudness = 1.0
 
-        self.init_beat_sound(beat_file)
+        self.init_beat_sound(str(beat_file.absolute()))
 
         self.current_beat_pattern = None
         self.current_beat_position = 0
