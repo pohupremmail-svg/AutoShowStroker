@@ -13,6 +13,10 @@ This is a specialized PyQt6 multimedia application designed to play a list of me
 * **Pause Function:** The Strokemeter can randomly enter a controlled pause phase (`min_pause_dur` to `max_pause_dur`).
 * **Navigation:** Manual control via keyboard shortcuts (**Left Arrow** / **Right Arrow**) and buttons ("Previous" / "Skip").
 
+## Contribution
+
+I am looking for people to extend the languages for the teasing support. Please take a look at ![Cotributing](CONTRIBUTING.md)
+
 ## 🚀 Installation
 
 To run the application locally, you need **Python 3.8+** and the necessary PyQt6 libraries.
