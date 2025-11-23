@@ -43,6 +43,7 @@ The available Trigger Keys at the moment are:
 | `pause_end`           | Fired when the session resumes after a pause.                                                |
 | `media_skipped`       | Fired when the user skips the currently displayed media.                                     |
 | `media_repeat`        | Fired when the user decides to repeat the current media file by pressing the `previous` key. |
+| `session_started`     | Fired when the session is started using the `Set gooning folder and start` button.           |
 
 #### 3. How to Contribute Phrases
 
@@ -87,7 +88,8 @@ available for selection.
 
 ### 🚀 Submitting Your Contribution (Pull Requests)
 
-Once you have added new phrases, created a new language file, or made code changes, please follow these steps to submit your work:
+Once you have added new phrases, created a new language file, or made code changes, please follow these steps to submit
+your work:
 
 #### 1. Branching
 
@@ -100,15 +102,18 @@ git checkout -b feature/add-french-callouts  # Use a descriptive name
 ```
 
 #### 2. Commit Messages
+
 Please ensure your commit messages are descriptive and reference the area you are modifying.
 
 #### 3. Create the Pull Request (PR)
+
 - Push your new branch to your fork.
 
 - Open a Pull Request targeting the main branch of the original repository.
 
 - PR Title: Use a clear, concise title that summarizes your work.
 
-- PR Description: Describe what you added, why it improves the experience, and which files were changed (especially for new language files).
+- PR Description: Describe what you added, why it improves the experience, and which files were changed (especially for
+  new language files).
 
 - We will review your PR as quickly as possible. Thank you for making the app better!
