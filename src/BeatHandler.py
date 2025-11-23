@@ -196,9 +196,9 @@ class BeatHandler(QObject):
     def pause_loop(self):
         self.cur_pause_dur -= 1
         if self.cur_pause_dur <= 0:
+            self.beat_resumed_event.emit()
             self.cur_freq = 0
             self.reset_beat_timer()
-            self.beat_resumed_event.emit()
             self.beat_meter_pause_timer.stop()
             return
         self.beat_meter_pause_timer.start(1000)

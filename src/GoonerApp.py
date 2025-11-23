@@ -328,13 +328,13 @@ class GoonerApp(QMainWindow):
 
     def start(self):
         if not self.is_running:
+            self.session_started_event.emit()
             self.btn_next.setEnabled(True)
             self.btn_prev.setEnabled(True)
             self.btn_stop.setEnabled(True)
             self.beat_handler.start_beat()
             self.is_running = True
             self.btn_load.setText("Change Gooning Folder.")
-            self.session_started_event.emit()
         self.load_current_index()
         self.recalc_autoplay_timer()
 
