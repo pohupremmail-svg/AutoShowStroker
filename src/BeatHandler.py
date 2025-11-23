@@ -2,12 +2,12 @@ import random
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, QMutex
+from PyQt6.QtCore import Qt, QTimer, QUrl, QMutex, pyqtSignal, QObject
 from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtWidgets import QLabel
 
 
-class BeatHandler:
+class BeatHandler(QObject):
     BEAT_PATTERNS_MAP = {
         # --- Standard & Simple ---
         "Standard Beat": [1],
@@ -33,7 +33,13 @@ class BeatHandler:
         "Speed Change": [1, 1, 1, 1, 2, 2, 2, 2],
     }
 
+    beat_paused_event = pyqtSignal()
+    beat_resumed_event = pyqtSignal()
+    beat_change_event = pyqtSignal(float, str)
+    beat_event = pyqtSignal()
+
     def __init__(self, beat_file=Path("./res/mixkit-cool-interface-click-tone-2568.wav"), settings=None):
+        super().__init__()
         self.beat_changed_counter = 5
         self.just_changed_beat = False
         self.beat_meter_pause_timer = QTimer()
@@ -134,6 +140,7 @@ class BeatHandler:
         self.beat_meter.setStyleSheet(f"background-color: blue; color: white; {self.footer_style_base}")
         self.just_changed_beat = True
         self.beat_changed_counter = 5
+        self.beat_change_event.emit(self.cur_freq, str(self.current_beat_pattern))
 
     def init_beat_sound(self, file_path):
         self.sound_effect = QSoundEffect()
@@ -172,6 +179,7 @@ class BeatHandler:
                 self.beat_changed_counter -=1
                 if self.beat_changed_counter == 0:
                     self.just_changed_beat = False
+            self.beat_event.emit()
         self.reset_beat_timer()
 
 
@@ -181,6 +189,7 @@ class BeatHandler:
         self.beat_meter_pause_timer.start(1000)
         self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
         self.beat_meter.setStyleSheet(f"background-color: green; color: white; {self.footer_style_base}")
+        self.beat_paused_event.emit()
         return
 
 
@@ -189,6 +198,8 @@ class BeatHandler:
         if self.cur_pause_dur <= 0:
             self.cur_freq = 0
             self.reset_beat_timer()
+            self.beat_resumed_event.emit()
+            self.beat_meter_pause_timer.stop()
             return
         self.beat_meter_pause_timer.start(1000)
         self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
@@ -198,3 +209,13 @@ class BeatHandler:
         self.beat_meter_pause_timer.stop()
         self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
         self.beat_meter.setText("Strokemeter appears here.")
+        
+    def register_beat_pause_events(self, pause_start_event, pause_resume_event):
+        self.beat_paused_event.connect(pause_start_event)
+        self.beat_resumed_event.connect(pause_resume_event)
+
+    def register_beat_event(self, handler):
+        self.beat_event.connect(handler)
+
+    def register_beat_change_event(self, handler):
+        self.beat_change_event.connect(handler)

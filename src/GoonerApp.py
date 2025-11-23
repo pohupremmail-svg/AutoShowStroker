@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import List
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, QSettings
+from PyQt6.QtCore import Qt, QTimer, QUrl, QSettings, pyqtSignal
 from PyQt6.QtGui import QPixmap, QMovie, QAction
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter)
@@ -12,10 +12,16 @@ from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
 from src.BeatHandler import BeatHandler
+from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
+from src.StatisticsDialog import StatisticsDialog
 
 
 class GoonerApp(QMainWindow):
+
+    session_started_event = pyqtSignal()
+    session_ended_event = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
@@ -117,6 +123,13 @@ class GoonerApp(QMainWindow):
         self.vid_loudness = 1.0
 
         self.is_running = False
+
+        self.score_tracker = ScoreTracker()
+        self.beat_handler.register_beat_pause_events(self.score_tracker.beat_paused, self.score_tracker.beat_resumed)
+        self.beat_handler.register_beat_event(self.score_tracker.beat)
+        self.beat_handler.register_beat_change_event(self.score_tracker.beat_changed)
+        self.register_start_event(self.score_tracker.session_started)
+        self.register_end_event(self.score_tracker.session_ended)
 
     def create_menu_bar(self):
         menu_bar = self.menuBar()
@@ -248,6 +261,8 @@ class GoonerApp(QMainWindow):
             self.btn_next.setEnabled(False)
             self.btn_prev.setEnabled(False)
             self.btn_stop.setEnabled(False)
+            self.session_ended_event.emit()
+            self.show_statistics()
 
     def start(self):
         if not self.is_running:
@@ -257,5 +272,16 @@ class GoonerApp(QMainWindow):
             self.beat_handler.start_beat()
             self.is_running = True
             self.btn_load.setText("Change Gooning Folder.")
+            self.session_started_event.emit()
         self.load_current_index()
         self.recalc_autoplay_timer()
+
+    def register_start_event(self, handler):
+        self.session_started_event.connect(handler)
+
+    def register_end_event(self, handler):
+        self.session_ended_event.connect(handler)
+
+    def show_statistics(self):
+        dialog = StatisticsDialog(self.score_tracker.deliver_infos(), parent=self)
+        dialog.exec()
