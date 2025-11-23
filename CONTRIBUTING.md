@@ -82,3 +82,33 @@ else :D
 
 Once the file is saved, the application's Settings Window will automatically detect the new language and make it
 available for selection.
+
+---
+
+### 🚀 Submitting Your Contribution (Pull Requests)
+
+Once you have added new phrases, created a new language file, or made code changes, please follow these steps to submit your work:
+
+#### 1. Branching
+
+All contributions must be made from a new feature branch, not directly to the `main` branch.
+
+```bash
+git checkout main
+git pull
+git checkout -b feature/add-french-callouts  # Use a descriptive name
+```
+
+#### 2. Commit Messages
+Please ensure your commit messages are descriptive and reference the area you are modifying.
+
+#### 3. Create the Pull Request (PR)
+- Push your new branch to your fork.
+
+- Open a Pull Request targeting the main branch of the original repository.
+
+- PR Title: Use a clear, concise title that summarizes your work.
+
+- PR Description: Describe what you added, why it improves the experience, and which files were changed (especially for new language files).
+
+- We will review your PR as quickly as possible. Thank you for making the app better!
