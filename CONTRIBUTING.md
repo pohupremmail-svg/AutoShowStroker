@@ -1,6 +1,6 @@
 ## Contribution
 
-We welcome contributions for our teasing lines segment of the program.
+We welcome contributions for our teasing lines component of the program.
 
 ---
 
@@ -34,15 +34,15 @@ the corresponding key is used to randomly select one phrase from the array.
 
 The available Trigger Keys at the moment are:
 
-| Trigger Key           | Description                                                  |
-|:----------------------|:-------------------------------------------------------------|
-| `beat_change_general` | Fired when the beat changes to a neutral frequency.          |
-| `beat_change_faster`  | Fired when the beat frequency increases significantly.       |
-| `beat_change_slower`  | Fired when the beat frequency decreases significantly.       |
-| `pause_start`         | Fired when the session enters an intentional pause.          |
-| `pause_end`           | Fired when the session resumes after a pause.                |
-| `media_skipped`       | Fired when the user skips the currently displayed media.     |
-| `media_repeat`        | Fired when the app decides to repeat the current media file. |
+| Trigger Key           | Description                                                                                  |
+|:----------------------|:---------------------------------------------------------------------------------------------|
+| `beat_change_general` | Fired when the beat changes frequency or rhythm.                                             |
+| `beat_change_faster`  | Fired when the beat frequency increases significantly.                                       |
+| `beat_change_slower`  | Fired when the beat frequency decreases significantly.                                       |
+| `pause_start`         | Fired when the session enters an intentional pause.                                          |
+| `pause_end`           | Fired when the session resumes after a pause.                                                |
+| `media_skipped`       | Fired when the user skips the currently displayed media.                                     |
+| `media_repeat`        | Fired when the user decides to repeat the current media file by pressing the `previous` key. |
 
 #### 3. How to Contribute Phrases
 
