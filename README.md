@@ -51,3 +51,10 @@ python main.py
     - Pause Indicator: The footer will turn Green and display a countdown during a mandatory pause.
     - Drag the border between the beatmeter and the media control buttons to your liking customizing the relation between the media screen and the beatmeter
     - Modify your settings via the settings field in the top left corner. Or use the shortcut Ctrl+S
+
+
+### 5. Sample Screenshots
+
+![Main Screen](demo_screens/demo_main_screen.png)
+![Running Main Screen](demo_screens/demo_main_screen_running_censored.png)
+![Statistics Window](demo_screens/demo_stat_screen.png)
