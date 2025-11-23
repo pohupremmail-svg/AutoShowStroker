@@ -42,7 +42,7 @@ The available Trigger Keys at the moment are:
 | `pause_start`         | Fired when the session enters an intentional pause.                                          |
 | `pause_end`           | Fired when the session resumes after a pause.                                                |
 | `media_skipped`       | Fired when the user skips the currently displayed media.                                     |
-| `media_repeat`        | Fired when the user decides to repeat the current media file by pressing the `previous` key. |
+| `media_repeated`      | Fired when the user decides to repeat the current media file by pressing the `previous` key. |
 | `session_started`     | Fired when the session is started using the `Set gooning folder and start` button.           |
 
 #### 3. How to Contribute Phrases
