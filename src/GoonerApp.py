@@ -71,7 +71,7 @@ class GoonerApp(QMainWindow):
         self.btn_prev.setShortcut("Left")
         self.btn_prev.setToolTip("Left Arrow Key")
 
-        self.btn_load = QPushButton("Add Gooning Folder.")
+        self.btn_load = QPushButton("Set Gooning Folder and Start.")
         self.btn_load.clicked.connect(self.open_folder)
 
         self.btn_next = QPushButton("Skip >>")
@@ -80,8 +80,15 @@ class GoonerApp(QMainWindow):
         self.btn_next.setShortcut("Right")
         self.btn_next.setToolTip("Right Arrow Key")
 
+        self.btn_stop = QPushButton("Stop")
+        self.btn_stop.clicked.connect(self.stop)
+        self.btn_stop.setEnabled(False)
+        self.btn_stop.setShortcut("Ctrl+Space")
+        self.btn_stop.setToolTip("Ctrl+Space")
+
         controls_layout.addWidget(self.btn_prev)
         controls_layout.addWidget(self.btn_load)
+        controls_layout.addWidget(self.btn_stop)
         controls_layout.addWidget(self.btn_next)
 
         self.auto_play_timer = QTimer()
@@ -109,6 +116,8 @@ class GoonerApp(QMainWindow):
 
         self.vid_loudness = 1.0
 
+        self.is_running = False
+
     def create_menu_bar(self):
         menu_bar = self.menuBar()
 
@@ -128,7 +137,6 @@ class GoonerApp(QMainWindow):
     def video_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             elapsed_time = time.time() - self.video_start_time
-            print(f"Video has been playing for: {elapsed_time}")
             if elapsed_time < self.video_min_dur:
                 self.media_player.play()
                 return
@@ -159,16 +167,12 @@ class GoonerApp(QMainWindow):
                 random.shuffle(files)
                 self.playlist = files
                 self.current_index = 0
-                self.btn_next.setEnabled(True)
-                self.btn_prev.setEnabled(True)
-                self.load_current_index()
-
-                self.recalc_autoplay_timer()
-                self.beat_handler.start_beat()
-                self.btn_load.setText("Change Gooning Folder.")
+                self.start()
             else:
                 self.image_label.setText("Keine Dateien gefunden.")
-                self.auto_play_timer.stop()
+                self.stop()
+
+
 
     def show_next(self):
         if not self.playlist: return
@@ -234,3 +238,24 @@ class GoonerApp(QMainWindow):
     def open_settings(self):
         settings_dialog = SettingsDialog(parent=self)
         settings_dialog.exec()
+
+    def stop(self):
+        if self.is_running:
+            self.auto_play_timer.stop()
+            self.beat_handler.stop()
+            self.btn_load.setText("Set Gooning Folder and Start.")
+            self.is_running = False
+            self.btn_next.setEnabled(False)
+            self.btn_prev.setEnabled(False)
+            self.btn_stop.setEnabled(False)
+
+    def start(self):
+        if not self.is_running:
+            self.btn_next.setEnabled(True)
+            self.btn_prev.setEnabled(True)
+            self.btn_stop.setEnabled(True)
+            self.beat_handler.start_beat()
+            self.is_running = True
+            self.btn_load.setText("Change Gooning Folder.")
+        self.load_current_index()
+        self.recalc_autoplay_timer()

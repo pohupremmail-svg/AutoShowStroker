@@ -92,7 +92,8 @@ class SettingsDialog(QDialog):
 
         settings.setValue("BeatHandler/selected_beat_patterns", new_selected_patterns)
 
-        self.beat_handler.recalc_beat()
+        if self.main_app.is_running:
+            self.beat_handler.recalc_beat()
         self.accept()
 
     def add_beat_selection(self):

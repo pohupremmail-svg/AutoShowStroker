@@ -61,7 +61,6 @@ class BeatHandler:
 
         # --- Laden, falls QSettings existieren ---
         if self.settings:
-            print("Got Settings object")
             self.max_beat_dur = float(self.settings.value("BeatHandler/max_beat_dur", self.max_beat_dur))
             self.min_beat_dur = float(self.settings.value("BeatHandler/min_beat_dur", self.min_beat_dur))
             self.max_beat_freq = float(self.settings.value("BeatHandler/max_beat_freq", self.max_beat_freq))
@@ -126,7 +125,6 @@ class BeatHandler:
         self.beat_pattern_mutex.lock()
         self.current_beat_position = 0
         if type(self.selected_beat_patterns) != list:
-            print(f"The selected_beat_pattern is not of the appropriate type: {type(self.selected_beat_patterns)}")
             self.selected_beat_patterns = list(self.selected_beat_patterns)
         self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
         self.beat_pattern_mutex.unlock()
@@ -194,3 +192,9 @@ class BeatHandler:
             return
         self.beat_meter_pause_timer.start(1000)
         self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
+
+    def stop(self):
+        self.beat_meter_timer.stop()
+        self.beat_meter_pause_timer.stop()
+        self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
+        self.beat_meter.setText("Strokemeter appears here.")
