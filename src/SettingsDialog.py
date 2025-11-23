@@ -73,7 +73,11 @@ class SettingsDialog(QDialog):
         for var_name, data in self.settings_fields.items():
             new_value = data['widget'].value()
 
-            setattr(data['object'], var_name, new_value)
+            if data['type'] == int:
+                setattr(data['object'], var_name, int(new_value))
+            else:
+                setattr(data['object'], var_name, new_value)
+
 
             key = f"{data['object'].__class__.__name__}/{var_name}"
             settings.setValue(key, new_value)
