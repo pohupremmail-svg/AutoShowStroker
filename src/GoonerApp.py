@@ -30,7 +30,6 @@ class GoonerApp(QMainWindow):
         self.settings = QSettings("GoonerCock", "GoonerApp")
 
         self.setWindowTitle("Auto Hero Generation")
-        self.resize(1920, 1080)
 
         self.current_movie = None
 
@@ -141,6 +140,8 @@ class GoonerApp(QMainWindow):
         self.video_start_time = 0
 
         self.btn_settings = QPushButton("Settings")
+
+        self.main_splitter.setSizes([950, 50, 50])
 
         layout.addWidget(self.main_splitter)
         self.btn_settings.clicked.connect(self.open_settings)
