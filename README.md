@@ -15,7 +15,7 @@ This is a specialized PyQt6 multimedia application designed to play a list of me
 
 ## Contribution
 
-I am looking for people to extend the languages for the teasing support. Please take a look at ![Cotributing](CONTRIBUTING.md)
+I am looking for people to extend the languages for the teasing support. Please take a look at ![Contributing](CONTRIBUTING.md)
 
 ## 🚀 Installation
 
