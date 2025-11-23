@@ -1,6 +1,8 @@
+from sys import int_info
+
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDoubleSpinBox, QPushButton, QGridLayout, \
-    QCheckBox
+    QCheckBox, QComboBox
 
 
 class SettingsDialog(QDialog):
@@ -11,6 +13,7 @@ class SettingsDialog(QDialog):
 
         self.main_app = parent
         self.beat_handler = self.main_app.beat_handler
+        self.callout_handler = self.main_app.callout_handler
 
         self.layout = QVBoxLayout(self)
         self.settings_fields = {}
@@ -35,6 +38,8 @@ class SettingsDialog(QDialog):
         self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
 
         self.add_beat_selection()
+
+        self.add_callout_selection()
 
         self.button_ok = QPushButton("Save & Close Settings")
         self.button_ok.clicked.connect(self.accept_settings)
@@ -92,6 +97,11 @@ class SettingsDialog(QDialog):
 
         settings.setValue("BeatHandler/selected_beat_patterns", new_selected_patterns)
 
+        settings.setValue("CalloutHandler/active_callout", self.callout_active_checkbox.isChecked())
+        self.callout_handler.active_callout = self.callout_active_checkbox.isChecked()
+        settings.setValue("CalloutHandler/selected_lang", self.callout_selected_lang.currentText())
+        self.callout_handler.set_lang(self.callout_selected_lang.currentText())
+
         if self.main_app.is_running:
             self.beat_handler.recalc_beat()
         self.accept()
@@ -124,3 +134,20 @@ class SettingsDialog(QDialog):
                 row += 1
 
         self.layout.addLayout(grid)
+
+    def add_callout_selection(self):
+        self.add_section_header("Callouts")
+
+        self.callout_active_checkbox = QCheckBox("Callouts active")
+        self.callout_active_checkbox.setChecked(self.callout_handler.active_callout)
+
+        self.callout_selected_lang = QComboBox()
+        self.callout_selected_lang.addItems(self.callout_handler.available_languages)
+        inital_index = self.callout_selected_lang.findText(self.callout_handler.lang)
+        if inital_index != -1:
+            self.callout_selected_lang.setCurrentIndex(inital_index)
+
+        self.layout.addWidget(self.callout_active_checkbox)
+        self.layout.addWidget(self.callout_selected_lang)
+
+        self.add_setting("Chance for callouts to happen during events", "talking_chance", self.callout_handler, float, 0, 1, 0.01)

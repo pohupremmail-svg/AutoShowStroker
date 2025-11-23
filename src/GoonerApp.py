@@ -7,20 +7,22 @@ from typing import List
 from PyQt6.QtCore import Qt, QTimer, QUrl, QSettings, pyqtSignal
 from PyQt6.QtGui import QPixmap, QMovie, QAction
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
-                             QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter)
+                             QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter, QGridLayout)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 
 from src.BeatHandler import BeatHandler
+from src.CalloutHandler import CalloutHandler
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
 
 
 class GoonerApp(QMainWindow):
-
     session_started_event = pyqtSignal()
     session_ended_event = pyqtSignal()
+    media_repeated_event = pyqtSignal()
+    media_skipped_event = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -63,7 +65,33 @@ class GoonerApp(QMainWindow):
 
         self.media_player.mediaStatusChanged.connect(self.video_status_changed)
 
-        media_layout.addWidget(self.media_stack, stretch=4)
+        self.callout_label = QLabel("")
+        self.callout_label.setWordWrap(True)
+        self.callout_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter)
+
+        self.callout_label.setStyleSheet("""
+                    color: #FF69B4;
+                    font-size: 24px;
+                    padding: 5px;
+                    background-color: rgba(0, 0, 0, 0.8);
+                    border-radius: 5px;
+                """)
+        self.callout_label.hide()
+
+        self.overlay_widget = QWidget()
+        self.overlay_layout = QGridLayout(self.overlay_widget)
+        self.overlay_layout.setContentsMargins(0, 0, 0, 0)
+        self.overlay_layout.setSpacing(0)
+
+        self.overlay_layout.addWidget(self.media_stack, 0, 0)
+
+        self.overlay_layout.addWidget(
+            self.callout_label,
+            0, 0,
+            Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter
+        )
+
+        media_layout.addWidget(self.overlay_widget, stretch=4)
 
         self.playlist: List[Path] = []
         self.current_index = 0
@@ -72,7 +100,7 @@ class GoonerApp(QMainWindow):
         controls_layout = QHBoxLayout(controls_container)
 
         self.btn_prev = QPushButton("<< Previous")
-        self.btn_prev.clicked.connect(self.show_prev)
+        self.btn_prev.clicked.connect(self.btn_prev_action)
         self.btn_prev.setEnabled(False)
         self.btn_prev.setShortcut("Left")
         self.btn_prev.setToolTip("Left Arrow Key")
@@ -81,7 +109,7 @@ class GoonerApp(QMainWindow):
         self.btn_load.clicked.connect(self.open_folder)
 
         self.btn_next = QPushButton("Skip >>")
-        self.btn_next.clicked.connect(self.show_next)
+        self.btn_next.clicked.connect(self.btn_next_action)
         self.btn_next.setEnabled(False)
         self.btn_next.setShortcut("Right")
         self.btn_next.setToolTip("Right Arrow Key")
@@ -107,7 +135,6 @@ class GoonerApp(QMainWindow):
         media_layout.addWidget(controls_container)
         self.main_splitter.addWidget(media_container)
 
-
         self.beat_handler = BeatHandler(settings=self.settings)
         self.main_splitter.addWidget(self.beat_handler.beat_meter)
 
@@ -124,12 +151,40 @@ class GoonerApp(QMainWindow):
 
         self.is_running = False
 
+        self.callout_handler = CalloutHandler(self.settings)
+
         self.score_tracker = ScoreTracker()
+
+        self._setup_signal_handler()
+
+    def display_new_tease(self, tease: str):
+        self.callout_label.setText(tease)
+        self.callout_label.show()
+
+    def hide_last_tease(self):
+        self.callout_label.hide()
+        self.callout_label.setText("")
+
+    def _setup_signal_handler(self):
         self.beat_handler.register_beat_pause_events(self.score_tracker.beat_paused, self.score_tracker.beat_resumed)
+        self.beat_handler.register_beat_pause_events(self.callout_handler.pause_started,
+                                                     self.callout_handler.pause_ended)
+
         self.beat_handler.register_beat_event(self.score_tracker.beat)
+
         self.beat_handler.register_beat_change_event(self.score_tracker.beat_changed)
+        self.beat_handler.register_beat_change_event(self.callout_handler.beat_change_general)
+
         self.register_start_event(self.score_tracker.session_started)
+        self.register_start_event(self.callout_handler.session_started)
+
         self.register_end_event(self.score_tracker.session_ended)
+
+        self.register_media_skip_event(self.callout_handler.media_skipped)
+
+        self.register_media_repeat_event(self.callout_handler.media_repeated)
+
+        self.callout_handler.register_new_tease_event(self.display_new_tease, self.hide_last_tease)
 
     def create_menu_bar(self):
         menu_bar = self.menuBar()
@@ -146,6 +201,14 @@ class GoonerApp(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         settings_menu.addAction(exit_action)
+
+    def btn_next_action(self):
+        self.show_next()
+        self.media_skipped_event.emit()
+
+    def btn_prev_action(self):
+        self.show_prev()
+        self.media_repeated_event.emit()
 
     def video_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
@@ -184,8 +247,6 @@ class GoonerApp(QMainWindow):
             else:
                 self.image_label.setText("Keine Dateien gefunden.")
                 self.stop()
-
-
 
     def show_next(self):
         if not self.playlist: return
@@ -281,6 +342,12 @@ class GoonerApp(QMainWindow):
 
     def register_end_event(self, handler):
         self.session_ended_event.connect(handler)
+
+    def register_media_skip_event(self, handler):
+        self.media_skipped_event.connect(handler)
+
+    def register_media_repeat_event(self, handler):
+        self.media_repeated_event.connect(handler)
 
     def show_statistics(self):
         dialog = StatisticsDialog(self.score_tracker.deliver_infos(), parent=self)
