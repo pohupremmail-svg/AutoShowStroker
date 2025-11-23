@@ -35,18 +35,6 @@ class StatisticsDialog(QDialog):
         average_speed = None # TODO
 
     def _populate_table(self, stats_data: dict):
-        #        return {
-        #     'total_dur_sec': self.total_run_time,
-        #     'pause_dur_sec': self.total_duration_of_pauses,
-        #     'average_pause_dur_sec': self.average_pause_duration,
-        #     'total_num_pauses': self.number_of_pauses,
-        #     'total_num_beat': self.beat_count,
-        #     'total_num_beat_change': self.number_of_beat_changes,
-        #     'average_beat_speed': self.average_beat_speed,
-        #     'average_beat_speed_active': self.average_beat_speed_active,
-        #     'most_used_pattern': self._find_fav_pattern()
-        # }
-
         display_order = [
             ("Total duration (min)", lambda x: f"{x['total_dur_sec'] / 60:.2f}"),
             ("Active Time (min)", lambda x: f"{(x['total_dur_sec'] - x['pause_dur_sec']) / 60:.2f}"),
