@@ -95,8 +95,8 @@ class GoonerApp(QMainWindow):
         self.playlist: List[Path] = []
         self.current_index = 0
 
-        controls_container = QWidget()
-        controls_layout = QHBoxLayout(controls_container)
+        self.controls_container = QWidget()
+        controls_layout = QHBoxLayout(self.controls_container)
 
         self.btn_prev = QPushButton("<< Previous")
         self.btn_prev.clicked.connect(self.btn_prev_action)
@@ -131,7 +131,7 @@ class GoonerApp(QMainWindow):
         self.min_dur = float(self.settings.value("GoonerApp/min_dur", 0.5))
         self.video_min_dur = float(self.settings.value("GoonerApp/video_min_dur", 1.5))
 
-        media_layout.addWidget(controls_container)
+        media_layout.addWidget(self.controls_container)
         self.main_splitter.addWidget(media_container)
 
         self.beat_handler = BeatHandler(settings=self.settings)
@@ -157,6 +157,30 @@ class GoonerApp(QMainWindow):
         self.score_tracker = ScoreTracker()
 
         self._setup_signal_handler()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_F or event.key() == Qt.Key.Key_F11:
+            self._toggle_fullscreen()
+        elif event.key() == Qt.Key.Key_Escape:
+            self._leave_fullscreen()
+        else:
+            super().keyPressEvent(event)
+
+    def _toggle_fullscreen(self):
+        if self.isFullScreen():
+            self._leave_fullscreen()
+        else:
+            self._enter_fullscreen()
+
+    def _enter_fullscreen(self):
+        if not self.isFullScreen():
+            self.controls_container.hide()
+            self.showFullScreen()
+
+    def _leave_fullscreen(self):
+        if self.isFullScreen():
+            self.showMaximized()
+            self.controls_container.show()
 
     def display_new_tease(self, tease: str):
         self.callout_label.setText(tease)
