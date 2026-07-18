@@ -24,9 +24,9 @@ def test_shows_a_label_per_version(dialog):
     assert "Second release text." in text
 
 
-def test_entries_appear_in_given_order(dialog):
+def test_entries_appear_newest_first(dialog):
     version_labels = [w.text() for w in dialog.findChildren(QLabel) if w.text().startswith("Version ")]
-    assert version_labels == ["Version 0.1.0", "Version 0.2.0"]
+    assert version_labels == ["Version 0.2.0", "Version 0.1.0"]
 
 
 def test_got_it_button_accepts_dialog(dialog):

@@ -1,25 +1,37 @@
 """User-facing changelog, shown in the in-app "What's New" popup.
 
 Every `feat:` (or critical `fix:`) version bump must add an entry here describing what's
-new, in plain language for the end user - not a commit-log dump. See CLAUDE.md's
-"Versioning & Releases" section.
+new, in the app's own flirty/teasing voice for the end user - not a commit-log dump. Write
+entries as a short suggestive lead sentence, then an inline HTML `<ul><li>` bullet list of
+the real features, then a one-line closing hook - WhatsNewDialog renders the body as rich
+text, so the markup shows up as actual bullets. See CLAUDE.md's "Versioning & Releases"
+section.
 """
 
 CHANGELOG = {
     "0.1.0": (
-        "First public build of GoonerApp! Randomized slideshow playback synced to a "
-        "configurable Strokemeter, multilingual teasing callouts (English, German, French), "
-        "difficulty ramping that builds intensity over the course of a session, and a full "
-        "climax announcement system with real, ruined, and denied outcomes - plus the "
-        "occasional fake-out."
+        "GoonerApp's first release is here to edge you properly."
+        "<ul>"
+        "<li>Randomized slideshow playback that syncs perfectly to a fully configurable "
+        "Strokemeter</li>"
+        "<li>Multilingual teasing callouts in English, German, and French, whispering you "
+        "along the whole way</li>"
+        "<li>Difficulty ramping that slowly tightens the screws as your session builds</li>"
+        "<li>A full climax announcement system - real, ruined, denied, and the occasional "
+        "cruel fake-out</li>"
+        "</ul>"
+        "Load up your folder and see how long you actually last."
     ),
     "0.2.0": (
-        "Brand new look: a neon cyber-erotic theme across the whole app, designed to match "
-        "the logo - dark purple backgrounds, glowing pink accents, rounded corners "
-        "everywhere. Settings got reorganized into tabs so nothing falls off your screen "
-        "anymore, and every tab now has its own \"Reset to defaults\" button. And you're "
-        "reading the result of this update right now: a \"What's New\" popup, shown once per "
-        "update and always available from the Help menu."
+        "GoonerApp got dressed up for you - dark, neon, and dripping in pink."
+        "<ul>"
+        "<li>A full cyber-erotic theme glow-up: deep purple backgrounds, glowing pink "
+        "accents, curves everywhere</li>"
+        "<li>Settings reorganized into tabs so nothing falls off your screen mid-session</li>"
+        "<li>A one-click \"Reset to defaults\" on every tab, no fumbling required</li>"
+        "<li>This very \"What's New\" popup, so you never miss what's new to play with</li>"
+        "</ul>"
+        "Go on, undress the new Settings menu and see for yourself."
     ),
 }
 
