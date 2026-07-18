@@ -46,16 +46,17 @@ python main.py
 
 You can package the entire application, including all sounds and language files, into a single, portable `.exe` file. This eliminates the need for the end-user to have Python installed.
 
-Ensure that your virtual environment is active and all dependencies from `requirements.txt` are installed. Then, execute the following command in the main directory of the project:
+Ensure that your virtual environment is active and all dependencies from `requirements.txt` are installed. Then either run `python scripts/build.py`, or execute the following command directly in the main directory of the project:
 
 ```bash
-pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --name "GoonerApp" main.py
+pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --icon "res/icons/favicon.ico" --name "GoonerApp" main.py
 ```
 
 ### What does this command do?
 * `--onefile`: Packages everything into a single executable `.exe` file.
 * `--windowed`: Prevents an unsightly console window from opening in the background when starting the app.
 * `--add-data "res;res"`: Embeds the entire resource folder (sounds and callouts) directly into the `.exe`.
+* `--icon "res/icons/favicon.ico"`: Sets the `.exe`'s icon.
 * `--name "GoonerApp"`: Renames the final output file.
 
 After a successful build, you will find the finished file **`GoonerApp.exe`** in the newly created **`dist/`** directory. You can now move and distribute this file as you wish!
