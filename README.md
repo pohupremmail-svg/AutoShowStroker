@@ -1,89 +1,89 @@
 # Auto Hero Generation (GoonerApp)
 
-Eine spezialisierte, interaktive PyQt6-Multimedia-Anwendung, die Ihre lokale Medienbibliothek (Bilder, GIFs und Videos) in eine dynamische, personalisierte "Cock Hero"-Session verwandelt. Die App kombiniert eine zufällige Playlist mit einem konfigurierbaren, interaktiven Taktgeber ("Strokemeter") und motivierenden Textanweisungen (Callouts).
+A specialized, interactive PyQt6 multimedia application designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter") and motivational text instructions (callouts).
 
 ## ✨ Features
 
-* **Playlist-Funktionalität:** Wählen Sie einen beliebigen lokalen Ordner aus. Die Anwendung sucht rekursiv nach allen unterstützten Medienformaten (`.mp4`, `.gif`, `.jpeg`, `.jpg`, `.png`).
-* **Zufällige Wiedergabe:** Die Reihenfolge der Medien wird bei jedem Laden komplett zufällig gemischt (`random.shuffle`).
-* **Interaktives Strokemeter (Beat Timer):** Ein dynamischer Taktgeber im Footer der Anwendung:
-    * Automatisch variierende Beat-Frequenzen und Rhythmus-Muster (z. B. *Standard Beat*, *Quick Swing*, *Simple Bounce*, *Double Tap*).
-    * Visuelles Feedback durch rhythmischen Farbwechsel ("UP" / "DOWN").
-    * Akustisches Feedback durch einen präzisen Soundeffekt bei jedem Beat.
-* **Zufällige Pausenphasen:** Das Strokemeter wechselt unerwartet in eine kontrollierte Pause mit Countdown-Anzeige im grün gefärbten Footer.
-* **Mehrsprachige Callouts (Teases):** Zufällige Textanweisungen passend zum aktuellen Geschehen (z. B. bei Tempowechseln, Pausen oder Medienwechseln). Unterstützt Deutsch und Englisch (erweiterbar über JSON-Dateien).
-* **Detaillierte Session-Statistiken:** Am Ende der Session erhalten Sie eine detaillierte Auswertung (Dauer, Anzahl der Beats, Lieblings-Rhythmus, Pausen-Statistiken).
-* **Flexible Steuerung:** Tastatur-Shortcuts für schnelle Navigation und Anpassung während der Session.
+* **Playlist Functionality:** Select any local folder. The application recursively searches for all supported media formats (`.mp4`, `.gif`, `.jpeg`, `.jpg`, `.png`).
+* **Randomized Playback:** The order of the media is completely shuffled (`random.shuffle`) each time a folder is loaded.
+* **Interactive Strokemeter (Beat Timer):** A dynamic rhythm generator located in the application's footer:
+    * Automatically varying beat frequencies and rhythm patterns (e.g., *Standard Beat*, *Quick Swing*, *Simple Bounce*, *Double Tap*).
+    * Visual feedback through rhythmic color changes ("UP" / "DOWN").
+    * Audio feedback with a precise sound effect played on every beat.
+* **Random Pause Phases:** The Strokemeter unexpectedly transitions into a controlled pause featuring a countdown display in the green-colored footer.
+* **Multilingual Callouts (Teases):** Random text instructions tailored to the current event (e.g., during tempo changes, pauses, or media transitions). Supports German and English (expandable via JSON files).
+* **Detailed Session Statistics:** At the end of each session, you receive a detailed evaluation (duration, number of beats, favorite rhythm, pause statistics).
+* **Flexible Control:** Keyboard shortcuts for rapid navigation and adjustments during the session.
 
-## 🚀 Installation & Ausführung (Entwickler)
+## 🚀 Installation & Execution (Developers)
 
-Um die Anwendung lokal auszuführen, benötigen Sie **Python 3.8+** und die entsprechenden Abhängigkeiten.
+To run the application locally, you need **Python 3.8+** and the appropriate dependencies.
 
-### 1. Virtuelle Python-Umgebung erstellen und aktivieren
+### 1. Create and Activate a Virtual Python Environment
 ```bash
-# Virtuelle Umgebung erstellen
+# Create a virtual environment
 python -m venv .venv
 
-# Unter Windows (PowerShell):
+# On Windows (PowerShell):
 .\.venv\Scripts\activate.ps1
 
-# Unter Linux/macOS oder Git Bash:
+# On Linux/macOS or Git Bash:
 source .venv/bin/activate
 ```
 
-### 2. Abhängigkeiten installieren
+### 2. Install Dependencies
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Anwendung starten
+### 3. Start the Application
 ```bash
 python main.py
 ```
 
-## 📦 Als eigenständige .exe kompilieren (PyInstaller)
+## 📦 Compile as a Standalone .exe (PyInstaller)
 
-Sie können die gesamte Anwendung inklusive aller Sounds und Sprachdateien in eine einzige, tragbare `.exe`-Datei packen. Diese benötigt beim Endnutzer kein installiertes Python mehr.
+You can package the entire application, including all sounds and language files, into a single, portable `.exe` file. This eliminates the need for the end-user to have Python installed.
 
-Stellen Sie sicher, dass Ihre virtuelle Umgebung aktiv ist und alle Abhängigkeiten aus der `requirements.txt` installiert sind. Führen Sie dann folgenden Befehl im Hauptverzeichnis des Projekts aus:
+Ensure that your virtual environment is active and all dependencies from `requirements.txt` are installed. Then, execute the following command in the main directory of the project:
 
 ```bash
 pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --name "GoonerApp" main.py
 ```
 
-### Was macht dieser Befehl?
-* `--onefile`: Packt alles in eine einzige ausführbare `.exe`-Datei.
-* `--windowed`: Verhindert, dass sich beim Starten der App ein unschönes Konsolenfenster im Hintergrund öffnet.
-* `--add-data "res;res"`: Bettet den gesamten Ressourcen-Ordner (Sound und Callouts) direkt in die `.exe` ein.
-* `--name "GoonerApp"`: Benennt die fertige Datei um.
+### What does this command do?
+* `--onefile`: Packages everything into a single executable `.exe` file.
+* `--windowed`: Prevents an unsightly console window from opening in the background when starting the app.
+* `--add-data "res;res"`: Embeds the entire resource folder (sounds and callouts) directly into the `.exe`.
+* `--name "GoonerApp"`: Renames the final output file.
 
-Nach erfolgreichem Build finden Sie die fertige Datei **`GoonerApp.exe`** im neu erstellten Ordner **`dist/`**. Diese Datei können Sie nun beliebig verschieben und weitergeben!
+After a successful build, you will find the finished file **`GoonerApp.exe`** in the newly created **`dist/`** directory. You can now move and distribute this file as you wish!
 
-## 🎮 Bedienung & Steuerung
+## 🎮 Operation & Controls
 
-1. **Ordner laden:** Klicken Sie auf "Add Gooning Folder" und wählen Sie das Verzeichnis mit Ihren Bildern und Videos aus. Die Diashow startet sofort automatisch.
+1. **Load Folder:** Click "Add Gooning Folder" and select the directory containing your images and videos. The slideshow will start automatically.
 2. **Navigation:**
-    * **Nächstes Medium:** Taste `Pfeil rechts` oder Klick auf "Skip >>".
-    * **Vorheriges Medium:** Taste `Pfeil links` oder Klick auf "<< Previous".
-3. **Einstellungen:** Drücken Sie `Strg + S` oder nutzen Sie das Menü oben links, um Frequenzen, Beat-Muster, Pausendauern und die Sprache der Callouts anzupassen.
-4. **Layout anpassen:** Die Grenze zwischen dem Medienbereich und dem Strokemeter lässt sich per Drag-and-Drop verschieben, um das Verhältnis nach eigenen Wünschen anzupassen.
+    * **Next Media:** `Right Arrow` key or click "Skip >>".
+    * **Previous Media:** `Left Arrow` key or click "<< Previous".
+3. **Settings:** Press `Ctrl + S` or use the menu in the top left corner to adjust frequencies, beat patterns, pause durations, and the language of the callouts.
+4. **Adjust Layout:** The boundary between the media area and the Strokemeter can be adjusted via drag-and-drop to customize the ratio to your liking.
 
-## 📂 Projektstruktur
+## 📂 Project Structure
 
-* `src/GoonerApp.py` - Hauptfenster, Mediensteuerung und GUI-Layout.
-* `src/BeatHandler.py` - Logik für Rhythmus, Sound-Wiedergabe und Pausen.
-* `src/CalloutHandler.py` - Verwaltung und Auswahl der mehrsprachigen Textanweisungen.
-* `src/ScoreTracker.py` - Aufzeichnung der Session-Statistiken.
-* `res/callouts/` - JSON-Dateien für Übersetzungen (`de.json`, `en.json`).
+* `src/GoonerApp.py` - Main window, media control, and GUI layout.
+* `src/BeatHandler.py` - Logic for rhythm, audio playback, and pauses.
+* `src/CalloutHandler.py` - Management and selection of multilingual text instructions.
+* `src/ScoreTracker.py` - Recording of session statistics.
+* `res/callouts/` - JSON files for translations (`de.json`, `en.json`).
 
 ## 📸 Screenshots
 
-![Hauptbildschirm](demo_screens/demo_main_screen.png)
-*Der Hauptbildschirm mit geladenen Medien und dem inaktiven Strokemeter.*
+![Main Screen](demo_screens/demo_main_screen.png)
+*The main screen with loaded media and the inactive Strokemeter.*
 
-![Laufende Session](demo_screens/demo_main_screen_running_censored.png)
-*Die laufende Session mit aktivem Taktgeber und farblichem Feedback.*
+![Running Session](demo_screens/demo_main_screen_running_censored.png)
+*The running session with an active rhythm generator and color feedback.*
 
-![Statistik-Fenster](demo_screens/demo_stat_screen.png)
-*Die detaillierte Auswertung am Ende einer erfolgreichen Session.*
+![Statistics Window](demo_screens/demo_stat_screen.png)
+*The detailed evaluation at the end of a successful session.*
