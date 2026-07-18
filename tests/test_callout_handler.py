@@ -123,3 +123,41 @@ def test_beat_change_general_picks_slower_when_freq_decreases(handler, monkeypat
         handler.beat_change_general(1.0, "Standard Beat")
 
     assert blocker.args == ["en beat_change_slower phrase"]
+
+
+# --- directory-loading edge cases ---
+
+
+def test_missing_callout_dir_raises(qapp, tmp_path, monkeypatch):
+    monkeypatch.setattr(callout_module, "get_resource_path", lambda _relative_path: str(tmp_path / "does-not-exist"))
+    with pytest.raises(AssertionError):
+        CalloutHandler()
+
+
+def test_empty_callout_dir_does_not_crash_and_disables_callouts(qapp, tmp_path, monkeypatch):
+    monkeypatch.setattr(callout_module, "get_resource_path", lambda _relative_path: str(tmp_path))
+
+    handler = CalloutHandler()
+
+    assert handler.available_languages == []
+    assert handler.callout_data == {}
+    # active_callout defaults False anyway, but even if turned on, there is no
+    # data to select from - select_and_output_sentence must not raise.
+    handler.active_callout = True
+    handler.talking_chance = 1.0
+    handler.select_and_output_sentence("session_started")
+
+
+def test_invalid_json_file_is_skipped_but_language_stays_listed(qapp, tmp_path, monkeypatch):
+    (tmp_path / "en.json").write_text("{not valid json", encoding="utf-8")
+    monkeypatch.setattr(callout_module, "get_resource_path", lambda _relative_path: str(tmp_path))
+
+    handler = CalloutHandler()
+
+    assert handler.available_languages == ["en"]
+    assert handler.callout_data == {}
+    # lang falls back to "en" but there's no data loaded for it - selecting
+    # a sentence must degrade gracefully rather than raise.
+    handler.active_callout = True
+    handler.talking_chance = 1.0
+    handler.select_and_output_sentence("session_started")
