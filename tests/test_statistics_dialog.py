@@ -1,4 +1,5 @@
 import pytest
+from PyQt6.QtWidgets import QLabel
 
 from src.StatisticsDialog import StatisticsDialog
 
@@ -15,6 +16,7 @@ FULL_STATS = {
     "skips": 1,
     "repeats": 0,
     "climax_outcome": None,
+    "fakeout_count": 3,
 }
 
 
@@ -40,7 +42,30 @@ def test_format_time(dialog, seconds, expected):
 
 
 def test_populate_table_has_a_row_per_metric(dialog):
-    assert dialog.stats_table.rowCount() == 13
+    assert dialog.stats_table.rowCount() == 14
+
+
+def test_fakeout_row_shows_value(dialog):
+    for row in range(dialog.stats_table.rowCount()):
+        if dialog.stats_table.item(row, 0).text() == "Fakeouts survived":
+            assert dialog.stats_table.item(row, 1).text() == "3"
+            break
+    else:
+        pytest.fail("Fakeouts survived row not found")
+
+
+def test_missing_fakeout_count_shows_na(qtbot):
+    partial = dict(FULL_STATS)
+    del partial["fakeout_count"]
+    d = StatisticsDialog(partial)
+    qtbot.addWidget(d)
+
+    for row in range(d.stats_table.rowCount()):
+        if d.stats_table.item(row, 0).text() == "Fakeouts survived":
+            assert d.stats_table.item(row, 1).text() == "N/A"
+            break
+    else:
+        pytest.fail("Fakeouts survived row not found")
 
 
 def test_missing_optional_key_shows_na(qtbot):
@@ -133,3 +158,46 @@ def test_adjust_table_height_matches_computed_size(dialog):
 
     assert dialog.stats_table.minimumHeight() == expected
     assert dialog.stats_table.maximumHeight() == expected
+
+
+# --- new personal record cards ---
+
+
+def test_no_record_cards_when_new_records_is_none(qtbot):
+    d = StatisticsDialog(dict(FULL_STATS), new_records=None)
+    qtbot.addWidget(d)
+    assert d.record_cards == []
+
+
+def test_no_record_cards_when_new_records_is_empty(qtbot):
+    d = StatisticsDialog(dict(FULL_STATS), new_records={})
+    qtbot.addWidget(d)
+    assert d.record_cards == []
+
+
+def test_one_card_per_new_record(qtbot):
+    d = StatisticsDialog(dict(FULL_STATS), new_records={"total_dur_sec": 100.0, "fakeout_count": 1})
+    qtbot.addWidget(d)
+    assert len(d.record_cards) == 2
+
+
+def test_record_card_shows_metric_label_new_value_and_previous_best(qtbot):
+    stats = dict(FULL_STATS)  # total_dur_sec = 125.0 -> "2 Min 5s"
+    d = StatisticsDialog(stats, new_records={"total_dur_sec": 100.0})  # previous best 100.0 -> "1 Min 40s"
+    qtbot.addWidget(d)
+
+    card_text = " ".join(label.text() for label in d.record_cards[0].findChildren(QLabel))
+    assert "Total Duration" in card_text
+    assert "2 Min 5s" in card_text
+    assert "1 Min 40s" in card_text
+
+
+def test_record_card_formats_count_metrics_as_plain_numbers(qtbot):
+    stats = dict(FULL_STATS)  # fakeout_count = 3
+    d = StatisticsDialog(stats, new_records={"fakeout_count": 1})
+    qtbot.addWidget(d)
+
+    card_text = " ".join(label.text() for label in d.record_cards[0].findChildren(QLabel))
+    assert "Fakeouts Survived" in card_text
+    assert "3" in card_text
+    assert "1" in card_text

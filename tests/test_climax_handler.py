@@ -328,6 +328,36 @@ def test_fake_climax_reveal_fires_via_real_timer(handler, beat_handler, callout_
     assert handler._fake_climax_pending is False
 
 
+def test_trigger_fake_climax_emits_fake_climax_triggered_event(
+    handler, beat_handler, callout_handler, qtbot, monkeypatch
+):
+    handler.fake_climax_active = True
+    handler.fake_climax_chance = 1.0
+    handler.climax_active = False
+    beat_handler.is_ramp_complete.return_value = False
+    monkeypatch.setattr(random, "uniform", lambda _a, _b: 0.0)
+
+    with qtbot.waitSignal(handler.fake_climax_triggered_event, timeout=1000):
+        handler.on_beat_change(2.0, "Standard Beat")
+
+
+def test_real_climax_does_not_emit_fake_climax_triggered_event(
+    handler, beat_handler, callout_handler, qtbot, monkeypatch
+):
+    handler.fake_climax_active = False
+    handler.climax_active = True
+    handler.climax_chance = 1.0
+    beat_handler.is_ramp_complete.return_value = True
+    monkeypatch.setattr(random, "uniform", lambda _a, _b: 0.0)
+
+    received = []
+    handler.fake_climax_triggered_event.connect(lambda: received.append(True))
+
+    handler.on_beat_change(2.0, "Standard Beat")
+
+    assert received == []
+
+
 def test_session_started_resets_state(handler):
     handler.climax_triggered = True
     handler._fake_climax_pending = True

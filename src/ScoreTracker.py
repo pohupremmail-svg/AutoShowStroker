@@ -1,9 +1,41 @@
+import json
 import time
+
+from src import utils
 
 
 class ScoreTracker:
 
-    def __init__(self):
+    # Metrics tracked as personal records across sessions, and their display labels -
+    # single source of truth for StatisticsDialog's "New Record!" cards and
+    # LongTermStatisticsDialog's all-time-bests summary.
+    PR_METRICS = ("total_dur_sec", "total_num_beat", "average_beat_speed_active", "fakeout_count")
+    PR_METRIC_LABELS = {
+        "total_dur_sec": "Total Duration",
+        "total_num_beat": "Total Beats",
+        "average_beat_speed_active": "Active Beat Speed",
+        "fakeout_count": "Fakeouts Survived",
+    }
+    PR_METRIC_UNITS = {
+        "total_dur_sec": "s",
+        "total_num_beat": "beats",
+        "average_beat_speed_active": "beats/sec",
+        "fakeout_count": "fakeouts",
+    }
+    # Bounds the size of the JSON blob persisted in QSettings (the Windows registry has no
+    # practical need to grow this without limit).
+    MAX_HISTORY_ENTRIES = 200
+
+    @staticmethod
+    def format_metric_value(metric: str, value) -> str:
+        if metric == "total_dur_sec":
+            return utils.format_duration(value)
+        if metric == "average_beat_speed_active":
+            return f"{value:.2f} beats/sec"
+        return f"{value}"
+
+    def __init__(self, settings=None):
+        self.settings = settings
         self.number_of_pauses = 0
         self.total_duration_of_pauses = 0
         self.beat_count = 0
@@ -18,6 +50,9 @@ class ScoreTracker:
         self.skips = 0
         self.repeats = 0
         self.climax_outcome = None
+        self.fakeout_count = 0
+        self.history = self._load_history()
+        self.last_session_new_records = {}
 
     def climax_decided(self, outcome):
         self.climax_outcome = outcome
@@ -55,6 +90,7 @@ class ScoreTracker:
         self.number_of_beat_changes = 0
         self.patterns = {}
         self.climax_outcome = None
+        self.fakeout_count = 0
 
     def session_ended(self):
         print("Session Ended")
@@ -75,6 +111,8 @@ class ScoreTracker:
         else:
             self.average_beat_speed_active = 0
 
+        self._record_history_and_detect_prs()
+
     def deliver_infos(self) -> dict:
         return {
             'total_dur_sec': self.total_run_time,
@@ -88,7 +126,8 @@ class ScoreTracker:
             'most_used_pattern': self._find_fav_pattern(),
             'skips': self.skips,
             'repeats': self.repeats,
-            'climax_outcome': self.climax_outcome
+            'climax_outcome': self.climax_outcome,
+            'fakeout_count': self.fakeout_count,
         }
 
     def beat_changed(self, _, new_pattern):
@@ -99,6 +138,9 @@ class ScoreTracker:
     def beat(self):
         self.beat_count += 1
 
+    def fake_climax_triggered(self):
+        self.fakeout_count += 1
+
     def _find_fav_pattern(self):
         max_count = 0
         fav_patttern = None
@@ -108,3 +150,48 @@ class ScoreTracker:
                 fav_patttern = pattern
 
         return fav_patttern
+
+    def get_history(self) -> list:
+        return list(self.history)
+
+    def get_all_time_bests(self) -> dict:
+        return self._compute_bests(self.history)
+
+    def _compute_bests(self, history: list) -> dict:
+        bests = {}
+        for entry in history:
+            for metric in self.PR_METRICS:
+                value = entry.get(metric)
+                if value is None:
+                    continue
+                if metric not in bests or value > bests[metric]:
+                    bests[metric] = value
+        return bests
+
+    def _record_history_and_detect_prs(self):
+        info = self.deliver_infos()
+        current = {metric: info[metric] for metric in self.PR_METRICS}
+        previous_bests = self._compute_bests(self.history)
+
+        self.last_session_new_records = {
+            metric: previous_bests[metric]
+            for metric in self.PR_METRICS
+            if metric in previous_bests and current[metric] > previous_bests[metric]
+        }
+
+        entry = {"ended_at": time.strftime("%Y-%m-%d %H:%M", time.localtime())}
+        entry.update(current)
+        self.history.append(entry)
+        self.history = self.history[-self.MAX_HISTORY_ENTRIES:]
+        self._save_history()
+
+    def _load_history(self) -> list:
+        if not self.settings:
+            return []
+        raw_history = self.settings.value("ScoreTracker/session_history")
+        return json.loads(raw_history) if raw_history else []
+
+    def _save_history(self):
+        if not self.settings:
+            return
+        self.settings.setValue("ScoreTracker/session_history", json.dumps(self.history))

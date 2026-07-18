@@ -25,6 +25,7 @@ from src import changelog, theme
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
 from src.ClimaxHandler import ClimaxHandler
+from src.LongTermStatisticsDialog import LongTermStatisticsDialog
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
@@ -224,7 +225,7 @@ class GoonerApp(QMainWindow):
 
         self.callout_handler = CalloutHandler(self.settings)
 
-        self.score_tracker = ScoreTracker()
+        self.score_tracker = ScoreTracker(settings=self.settings)
 
         self.climax_handler = ClimaxHandler(self.beat_handler, self.callout_handler, settings=self.settings)
 
@@ -280,6 +281,7 @@ class GoonerApp(QMainWindow):
         self.climax_handler.register_outcome_event(self.score_tracker.climax_decided)
         self.climax_handler.register_outcome_event(self._on_climax_outcome)
         self.climax_handler.register_status_event(self._update_climax_status_label)
+        self.climax_handler.register_fake_climax_event(self.score_tracker.fake_climax_triggered)
 
         self.register_start_event(self.score_tracker.session_started)
         self.register_start_event(self.callout_handler.session_started)
@@ -316,6 +318,12 @@ class GoonerApp(QMainWindow):
         whats_new_action = QAction("What's New", self)
         whats_new_action.triggered.connect(self.show_whats_new_dialog)
         help_menu.addAction(whats_new_action)
+
+        stats_menu = menu_bar.addMenu("Statistics")
+
+        long_term_stats_action = QAction("Long-term Statistics", self)
+        long_term_stats_action.triggered.connect(self.show_long_term_statistics)
+        stats_menu.addAction(long_term_stats_action)
 
     def maybe_show_whats_new_on_startup(self):
         current_version = get_current_version()
@@ -527,5 +535,17 @@ class GoonerApp(QMainWindow):
         self.media_repeated_event.connect(handler)
 
     def show_statistics(self):
-        dialog = StatisticsDialog(self.score_tracker.deliver_infos(), parent=self)
+        dialog = StatisticsDialog(
+            self.score_tracker.deliver_infos(),
+            new_records=self.score_tracker.last_session_new_records,
+            parent=self,
+        )
+        dialog.exec()
+
+    def show_long_term_statistics(self):
+        dialog = LongTermStatisticsDialog(
+            self.score_tracker.get_history(),
+            self.score_tracker.get_all_time_bests(),
+            parent=self,
+        )
         dialog.exec()

@@ -464,6 +464,74 @@ def test_climax_handler_status_event_wired_to_label(app):
     assert app.climax_status_label.text() == "RUINED"
 
 
+def test_climax_handler_fake_climax_event_wired_to_score_tracker(app):
+    app.climax_handler.fake_climax_triggered_event.emit()
+    assert app.score_tracker.fakeout_count == 1
+
+
+def test_score_tracker_uses_app_settings(app):
+    assert app.score_tracker.settings is app.settings
+
+
+def test_show_statistics_passes_new_records(app, monkeypatch):
+    app.score_tracker.last_session_new_records = {"total_dur_sec": 42.0}
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, stats_data, new_records=None, parent=None):
+            captured["new_records"] = new_records
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.StatisticsDialog", FakeDialog)
+
+    app.show_statistics()
+
+    assert captured["new_records"] == {"total_dur_sec": 42.0}
+
+
+def test_statistics_menu_has_long_term_statistics_action(app, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, history, all_time_bests, parent=None):
+            captured["shown"] = True
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.LongTermStatisticsDialog", FakeDialog)
+
+    menu_bar = app.menuBar()
+    stats_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Statistics")
+    action = next(a for a in stats_menu.actions() if a.text() == "Long-term Statistics")
+    action.trigger()
+
+    assert captured.get("shown") is True
+
+
+def test_show_long_term_statistics_passes_history_and_bests(app, monkeypatch):
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, history, all_time_bests, parent=None):
+            captured["history"] = history
+            captured["all_time_bests"] = all_time_bests
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.LongTermStatisticsDialog", FakeDialog)
+
+    app.show_long_term_statistics()
+
+    assert captured["history"] == app.score_tracker.get_history()
+    assert captured["all_time_bests"] == app.score_tracker.get_all_time_bests()
+
+
 def test_defaults_dict_matches_init_defaults(app):
     for var_name, default_value in GoonerApp.DEFAULTS.items():
         assert getattr(app, var_name) == default_value

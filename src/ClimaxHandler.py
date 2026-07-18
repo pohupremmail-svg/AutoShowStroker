@@ -7,6 +7,7 @@ class ClimaxHandler(QObject):
 
     outcome_decided_event = pyqtSignal(str)  # "real" | "ruined" | "denied"
     status_changed_event = pyqtSignal(str)  # "cum" | "ruined" | "denied" | "neutral" - for UI display
+    fake_climax_triggered_event = pyqtSignal()
 
     # Keep in sync with the literal defaults set in __init__ below - single source of truth
     # for the SettingsDialog "Reset to defaults" buttons.
@@ -97,6 +98,7 @@ class ClimaxHandler(QObject):
 
     def _trigger_fake_climax(self):
         self._fake_climax_pending = True
+        self.fake_climax_triggered_event.emit()
         # Reuses the real-climax phrasing on purpose - the fake-out only works if it's
         # indistinguishable from the real thing until the reveal.
         self.callout_handler.force_output_sentence("climax_real")
@@ -139,3 +141,6 @@ class ClimaxHandler(QObject):
 
     def register_status_event(self, handler):
         self.status_changed_event.connect(handler)
+
+    def register_fake_climax_event(self, handler):
+        self.fake_climax_triggered_event.connect(handler)
