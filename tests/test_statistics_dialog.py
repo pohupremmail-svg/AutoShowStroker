@@ -54,3 +54,33 @@ def test_missing_optional_key_shows_na(qtbot):
             break
     else:
         pytest.fail("Skips row not found")
+
+
+def test_gen_conc_text_formats_summary(dialog):
+    text = dialog.conclusion_label.text()
+
+    assert "2 Min 5s" in text  # total_dur_sec formatted
+    assert "1 Min 55s" in text  # active_time = total_dur_sec - pause_dur_sec, formatted
+    assert "0.43 beats per second" in text  # average_beat_speed_active, 2 decimals
+    assert "skipped 1 media files and repeated 0 of them" in text
+    assert "'Standard Beat'" in text
+
+
+def test_gen_conc_text_defaults_missing_skips_and_repeats_to_zero(qtbot):
+    partial = dict(FULL_STATS)
+    del partial["skips"]
+    del partial["repeats"]
+    d = StatisticsDialog(partial)
+    qtbot.addWidget(d)
+
+    assert "skipped 0 media files and repeated 0 of them" in d.conclusion_label.text()
+
+
+def test_adjust_table_height_matches_computed_size(dialog):
+    header_height = dialog.stats_table.horizontalHeader().height()
+    row_heights = sum(dialog.stats_table.rowHeight(i) for i in range(dialog.stats_table.rowCount()))
+    frame_margin = dialog.stats_table.frameWidth() * 2
+    expected = header_height + row_heights + frame_margin
+
+    assert dialog.stats_table.minimumHeight() == expected
+    assert dialog.stats_table.maximumHeight() == expected
