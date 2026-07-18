@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QMouseEvent, QPainter
+from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
 from PyQt6.QtWidgets import QWidget
 
 from src import theme
@@ -28,11 +28,16 @@ class PatternStepWidget(QWidget):
         self.set_value(value, emit=False)
         self._press_pos = None
         self._dragged = False
+        self._highlighted = False
         self.setFixedSize(_WIDTH, _HEIGHT)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def get_value(self) -> int:
         return self._weight if self._audible else -self._weight
+
+    def set_highlighted(self, highlighted: bool) -> None:
+        self._highlighted = highlighted
+        self.update()
 
     def set_value(self, value: int, emit: bool = True) -> None:
         self._audible = value > 0
@@ -92,4 +97,10 @@ class PatternStepWidget(QWidget):
         )
         painter.setBrush(bar_color)
         painter.drawRoundedRect(bar_rect, 6, 6)
+
+        if self._highlighted:
+            painter.setPen(QPen(QColor(theme.TEXT), 2))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRoundedRect(track_rect, 6, 6)
+
         painter.end()

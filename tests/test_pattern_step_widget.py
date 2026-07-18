@@ -82,3 +82,12 @@ def test_drag_near_bottom_sets_min_weight(qtbot):
     qtbot.addWidget(widget)
     _drag(widget, start_y=2, end_y=118)
     assert widget.get_value() == MIN_WEIGHT
+
+
+def test_set_highlighted_updates_state(qtbot):
+    widget = PatternStepWidget(1)
+    qtbot.addWidget(widget)
+    widget.set_highlighted(True)
+    assert widget._highlighted is True
+    widget.set_highlighted(False)
+    assert widget._highlighted is False
