@@ -172,6 +172,7 @@ class GoonerApp(QMainWindow):
         self.vid_loudness = 1.0
 
         self.is_running = False
+        self._was_maximized_before_fullscreen = False
 
         self.callout_handler = CalloutHandler(self.settings)
 
@@ -195,13 +196,17 @@ class GoonerApp(QMainWindow):
 
     def _enter_fullscreen(self):
         if not self.isFullScreen():
+            self._was_maximized_before_fullscreen = self.isMaximized()
             self.controls_container.hide()
             self.showFullScreen()
 
     def _leave_fullscreen(self):
         if self.isFullScreen():
             self.controls_container.show()
-            self.showNormal()
+            if self._was_maximized_before_fullscreen:
+                self.showMaximized()
+            else:
+                self.showNormal()
 
     def display_new_tease(self, tease: str):
         self.callout_label.setText(tease)

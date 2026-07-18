@@ -4,28 +4,6 @@ from PyQt6.QtCore import QSettings
 from src.BeatHandler import BeatHandler
 
 
-class _FakeSoundEffect:
-    """Stands in for QSoundEffect so tests don't touch the real audio backend."""
-
-    def setSource(self, _url):
-        pass
-
-    def setVolume(self, _volume):
-        pass
-
-    def play(self):
-        pass
-
-
-@pytest.fixture(autouse=True)
-def _no_real_audio(monkeypatch):
-    monkeypatch.setattr(
-        BeatHandler,
-        "init_beat_sound",
-        lambda self, _file_path: setattr(self, "sound_effect", _FakeSoundEffect()),
-    )
-
-
 @pytest.fixture
 def handler(qtbot):
     h = BeatHandler()
