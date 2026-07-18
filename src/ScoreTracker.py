@@ -58,7 +58,7 @@ class ScoreTracker:
             self.average_pause_duration = self.total_duration_of_pauses / self.number_of_pauses
         else:
             self.average_pause_duration = None
-        
+
         if self.total_run_time > 0:
             self.average_beat_speed = self.beat_count / self.total_run_time
         else:

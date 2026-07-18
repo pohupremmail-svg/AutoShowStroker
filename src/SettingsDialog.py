@@ -1,8 +1,15 @@
-from sys import int_info
 
-from PyQt6.QtCore import QSettings
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDoubleSpinBox, QPushButton, QGridLayout, \
-    QCheckBox, QComboBox
+from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDoubleSpinBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+)
 
 
 class SettingsDialog(QDialog):
@@ -73,12 +80,12 @@ class SettingsDialog(QDialog):
         }
 
     def accept_settings(self):
-        settings = QSettings("GoonerCock", "GoonerApp")
+        settings = self.main_app.settings
 
         for var_name, data in self.settings_fields.items():
             new_value = data['widget'].value()
 
-            if data['type'] == int:
+            if data['type'] is int:
                 setattr(data['object'], var_name, int(new_value))
             else:
                 setattr(data['object'], var_name, new_value)
@@ -150,4 +157,6 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(self.callout_active_checkbox)
         self.layout.addWidget(self.callout_selected_lang)
 
-        self.add_setting("Chance for callouts to happen during events", "talking_chance", self.callout_handler, float, 0, 1, 0.01)
+        self.add_setting(
+            "Chance for callouts to happen during events", "talking_chance", self.callout_handler, float, 0, 1, 0.01
+        )

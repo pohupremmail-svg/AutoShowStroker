@@ -1,10 +1,10 @@
 import json
+import os
 import random
 import sys
-import os
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal, QTimer, QObject
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 
 def get_resource_path(relative_path):
@@ -52,12 +52,14 @@ class CalloutHandler(QObject):
             self.available_languages.append(lang_code)
 
             try:
-                with open(json_file, 'r', encoding='utf-8') as f:
+                with open(json_file, encoding='utf-8') as f:
                     self.callout_data[lang_code] = json.load(f)
             except Exception as e:
                 print(f"Error loading the callout file {json_file}: {e}")
 
-        if self.lang not in self.callout_data or self.lang not in self.available_languages:
+        if self.available_languages and (
+            self.lang not in self.callout_data or self.lang not in self.available_languages
+        ):
             self.set_lang(self.available_languages[0])
 
 
@@ -106,7 +108,7 @@ class CalloutHandler(QObject):
             self.new_tease_event.emit(tease)
             self.is_teasing = True
             self.tease_active_timer.start(self.tease_time)
-        except:
+        except (KeyError, IndexError):
             print(f"Category {category} is empty or not present.")
 
     def _tease_timer_handler(self):

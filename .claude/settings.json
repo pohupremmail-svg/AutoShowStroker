@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/py_syntax_check.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

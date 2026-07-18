@@ -1,10 +1,10 @@
-import random
-import time
-import sys
 import os
+import random
+import sys
+import time
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, QMutex, pyqtSignal, QObject
+from PyQt6.QtCore import QMutex, QObject, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtWidgets import QLabel
 
@@ -83,7 +83,9 @@ class BeatHandler(QObject):
             self.min_pause_dur = int(float(self.settings.value("BeatHandler/min_pause_dur", self.min_pause_dur)))
             self.max_pause_dur = int(float(self.settings.value("BeatHandler/max_pause_dur", self.max_pause_dur)))
             self.pause_chance = float(self.settings.value("BeatHandler/pause_chance", self.pause_chance))
-            self.beat_change_chance = float(self.settings.value("BeatHandler/beat_change_chance", self.beat_change_chance))
+            self.beat_change_chance = float(
+                self.settings.value("BeatHandler/beat_change_chance", self.beat_change_chance)
+            )
             loaded_patterns = self.settings.value("BeatHandler/selected_beat_patterns")
             if loaded_patterns:
                 # Das geladene Muster ist eine Liste von Strings (Namen)
@@ -141,7 +143,7 @@ class BeatHandler(QObject):
         self.target_beat_dur = random.uniform(self.min_beat_dur, self.max_beat_dur)
         self.beat_pattern_mutex.lock()
         self.current_beat_position = 0
-        if type(self.selected_beat_patterns) != list:
+        if not isinstance(self.selected_beat_patterns, list):
             self.selected_beat_patterns = list(self.selected_beat_patterns)
         self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
         self.beat_pattern_mutex.unlock()
@@ -220,7 +222,7 @@ class BeatHandler(QObject):
         self.beat_meter_pause_timer.stop()
         self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
         self.beat_meter.setText("Strokemeter appears here.")
-        
+
     def register_beat_pause_events(self, pause_start_event, pause_resume_event):
         self.beat_paused_event.connect(pause_start_event)
         self.beat_resumed_event.connect(pause_resume_event)
