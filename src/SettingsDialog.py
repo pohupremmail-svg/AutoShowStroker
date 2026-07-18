@@ -21,6 +21,7 @@ class SettingsDialog(QDialog):
         self.main_app = parent
         self.beat_handler = self.main_app.beat_handler
         self.callout_handler = self.main_app.callout_handler
+        self.climax_handler = self.main_app.climax_handler
 
         self.layout = QVBoxLayout(self)
         self.settings_fields = {}
@@ -52,6 +53,43 @@ class SettingsDialog(QDialog):
         )
         self.add_setting(
             "Ramp window width (0-1):", "ramp_window_width", self.beat_handler, float, 0.05, 1.0, 0.05
+        )
+
+        self.add_section_header("Climax")
+        self.climax_active_checkbox = QCheckBox("Climax prompts active")
+        self.climax_active_checkbox.setChecked(self.climax_handler.climax_active)
+        self.layout.addWidget(self.climax_active_checkbox)
+        self.add_setting(
+            "Climax chance (per beat change, after ramp)", "climax_chance", self.climax_handler, float, 0.0, 1.0, 0.01
+        )
+
+        self.ruined_orgasm_active_checkbox = QCheckBox("Allow ruined orgasm outcome")
+        self.ruined_orgasm_active_checkbox.setChecked(self.climax_handler.ruined_orgasm_active)
+        self.layout.addWidget(self.ruined_orgasm_active_checkbox)
+        self.add_setting(
+            "Ruined orgasm chance (of this session's climax)",
+            "ruined_orgasm_chance", self.climax_handler, float, 0.0, 1.0, 0.01
+        )
+
+        self.denied_orgasm_active_checkbox = QCheckBox("Allow full denial outcome")
+        self.denied_orgasm_active_checkbox.setChecked(self.climax_handler.denied_orgasm_active)
+        self.layout.addWidget(self.denied_orgasm_active_checkbox)
+        self.add_setting(
+            "Denied orgasm chance (of this session's climax)",
+            "denied_orgasm_chance", self.climax_handler, float, 0.0, 1.0, 0.01
+        )
+
+        self.fake_climax_active_checkbox = QCheckBox("Fake climax cues active")
+        self.fake_climax_active_checkbox.setChecked(self.climax_handler.fake_climax_active)
+        self.layout.addWidget(self.fake_climax_active_checkbox)
+        self.add_setting(
+            "Fake climax chance (per beat change)", "fake_climax_chance", self.climax_handler, float, 0.0, 1.0, 0.01
+        )
+        self.add_setting(
+            "Fake climax reveal delay Min. (s)", "min_fake_climax_delay", self.climax_handler, float, 1.0, 30.0, 0.5
+        )
+        self.add_setting(
+            "Fake climax reveal delay Max. (s)", "max_fake_climax_delay", self.climax_handler, float, 1.0, 30.0, 0.5
         )
 
         self.add_section_header("General Settings")
@@ -120,6 +158,18 @@ class SettingsDialog(QDialog):
 
         settings.setValue("BeatHandler/ramping_active", self.ramping_active_checkbox.isChecked())
         self.beat_handler.ramping_active = self.ramping_active_checkbox.isChecked()
+
+        settings.setValue("ClimaxHandler/climax_active", self.climax_active_checkbox.isChecked())
+        self.climax_handler.climax_active = self.climax_active_checkbox.isChecked()
+
+        settings.setValue("ClimaxHandler/ruined_orgasm_active", self.ruined_orgasm_active_checkbox.isChecked())
+        self.climax_handler.ruined_orgasm_active = self.ruined_orgasm_active_checkbox.isChecked()
+
+        settings.setValue("ClimaxHandler/denied_orgasm_active", self.denied_orgasm_active_checkbox.isChecked())
+        self.climax_handler.denied_orgasm_active = self.denied_orgasm_active_checkbox.isChecked()
+
+        settings.setValue("ClimaxHandler/fake_climax_active", self.fake_climax_active_checkbox.isChecked())
+        self.climax_handler.fake_climax_active = self.fake_climax_active_checkbox.isChecked()
 
         settings.setValue("CalloutHandler/active_callout", self.callout_active_checkbox.isChecked())
         self.callout_handler.active_callout = self.callout_active_checkbox.isChecked()

@@ -108,3 +108,46 @@ def test_accept_settings_updates_ramping_active(app, dialog):
 
     assert app.beat_handler.ramping_active == expected
     assert app.settings.value("BeatHandler/ramping_active", type=bool) == expected
+
+
+def test_climax_fields_initialized_from_climax_handler(app, dialog):
+    assert dialog.climax_active_checkbox.isChecked() == app.climax_handler.climax_active
+    assert dialog.ruined_orgasm_active_checkbox.isChecked() == app.climax_handler.ruined_orgasm_active
+    assert dialog.denied_orgasm_active_checkbox.isChecked() == app.climax_handler.denied_orgasm_active
+    assert dialog.fake_climax_active_checkbox.isChecked() == app.climax_handler.fake_climax_active
+    assert dialog.settings_fields["climax_chance"]["object"] is app.climax_handler
+    assert dialog.settings_fields["ruined_orgasm_chance"]["object"] is app.climax_handler
+    assert dialog.settings_fields["denied_orgasm_chance"]["object"] is app.climax_handler
+    assert dialog.settings_fields["fake_climax_chance"]["object"] is app.climax_handler
+    assert dialog.settings_fields["min_fake_climax_delay"]["object"] is app.climax_handler
+    assert dialog.settings_fields["max_fake_climax_delay"]["object"] is app.climax_handler
+
+
+def test_accept_settings_updates_climax_toggles(app, dialog):
+    dialog.climax_active_checkbox.setChecked(not app.climax_handler.climax_active)
+    dialog.ruined_orgasm_active_checkbox.setChecked(not app.climax_handler.ruined_orgasm_active)
+    dialog.denied_orgasm_active_checkbox.setChecked(not app.climax_handler.denied_orgasm_active)
+    dialog.fake_climax_active_checkbox.setChecked(not app.climax_handler.fake_climax_active)
+    expected_climax = dialog.climax_active_checkbox.isChecked()
+    expected_ruined = dialog.ruined_orgasm_active_checkbox.isChecked()
+    expected_denied = dialog.denied_orgasm_active_checkbox.isChecked()
+    expected_fake = dialog.fake_climax_active_checkbox.isChecked()
+
+    dialog.accept_settings()
+
+    assert app.climax_handler.climax_active == expected_climax
+    assert app.climax_handler.ruined_orgasm_active == expected_ruined
+    assert app.climax_handler.denied_orgasm_active == expected_denied
+    assert app.climax_handler.fake_climax_active == expected_fake
+    assert app.settings.value("ClimaxHandler/climax_active", type=bool) == expected_climax
+    assert app.settings.value("ClimaxHandler/ruined_orgasm_active", type=bool) == expected_ruined
+    assert app.settings.value("ClimaxHandler/denied_orgasm_active", type=bool) == expected_denied
+    assert app.settings.value("ClimaxHandler/fake_climax_active", type=bool) == expected_fake
+
+
+def test_accept_settings_applies_climax_spinbox_values(app, dialog):
+    dialog.settings_fields["climax_chance"]["widget"].setValue(0.42)
+
+    dialog.accept_settings()
+
+    assert app.climax_handler.climax_chance == pytest.approx(0.42)

@@ -15,6 +15,10 @@ TRIGGER_KEYS = [
     "media_skipped",
     "media_repeated",
     "session_started",
+    "climax_real",
+    "climax_ruined",
+    "climax_denied",
+    "fake_climax_reveal",
 ]
 
 
@@ -121,6 +125,20 @@ class CalloutHandler(QObject):
             self.tease_active_timer.start(self.tease_time)
         except (KeyError, IndexError):
             print(f"Category {category} is empty or not present.")
+
+    def force_output_sentence(self, category):
+        """Emits a phrase from `category` unconditionally, skipping the active_callout/
+        talking_chance/is_teasing gates that select_and_output_sentence uses. For scripted
+        narrative beats (climax outcome, fake-climax reveal) that must always display,
+        not ambient flavor text."""
+        try:
+            tease = random.choice(self.callout_data[self.lang][category])
+        except (KeyError, IndexError):
+            print(f"Category {category} is empty or not present.")
+            return
+        self.new_tease_event.emit(tease)
+        self.is_teasing = True
+        self.tease_active_timer.start(self.tease_time)
 
     def _tease_timer_handler(self):
         self.hide_tease_event.emit()

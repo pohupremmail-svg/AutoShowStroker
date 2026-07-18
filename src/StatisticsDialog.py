@@ -10,8 +10,9 @@ class StatisticsDialog(QDialog):
 
         main_layout = QVBoxLayout(self)
 
-        title = QLabel("Congratulations to your successful session.\nI hope you came a lot!")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #FF69B4;")
+        title_text = self._title_for_outcome(stats_data.get("climax_outcome"))
+        self.title_label = QLabel(title_text)
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #FF69B4;")
 
         self.stats_table = QTableWidget()
         self.stats_table.setColumnCount(2)
@@ -24,10 +25,17 @@ class StatisticsDialog(QDialog):
         self.conclusion_label.setWordWrap(True)
         self.conclusion_label.setStyleSheet("font-size: 14px; margin-bottom: 15px; color: #E0E0E0; font-style: italic;")
 
-        main_layout.addWidget(title)
+        main_layout.addWidget(self.title_label)
         main_layout.addWidget(self.conclusion_label)
         main_layout.addWidget(self.stats_table)
         self._gen_conc_text(stats_data)
+
+    def _title_for_outcome(self, outcome):
+        if outcome == "denied":
+            return "Session over.\nNot today - no cumming for you."
+        if outcome == "ruined":
+            return "Congratulations on your session.\nEnjoy your ruined orgasm."
+        return "Congratulations to your successful session.\nI hope you came a lot!"  # "real" or None
 
     def _format_time(self, seconds: float) -> str:
         if seconds is None:
@@ -73,6 +81,7 @@ class StatisticsDialog(QDialog):
             ("Favourite pattern", lambda x: f"{x['most_used_pattern']}"),
             ("Skips", lambda x: f"{x['skips']}"),
             ("Repeats", lambda x: f"{x['repeats']}"),
+            ("Climax outcome", lambda x: f"{x['climax_outcome'] or 'N/A'}"),
         ]
 
         self.stats_table.setRowCount(len(display_order))

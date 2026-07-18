@@ -72,6 +72,33 @@ def test_select_and_output_sentence_respects_talking_chance(handler, qtbot):
         handler.select_and_output_sentence("session_started")
 
 
+def test_force_output_sentence_ignores_active_callout_flag(handler, qtbot):
+    handler.active_callout = False
+    with qtbot.waitSignal(handler.new_tease_event, timeout=1000) as blocker:
+        handler.force_output_sentence("session_started")
+    assert blocker.args == ["en session_started phrase"]
+
+
+def test_force_output_sentence_ignores_talking_chance(handler, qtbot):
+    handler.active_callout = True
+    handler.talking_chance = 0.0
+    with qtbot.waitSignal(handler.new_tease_event, timeout=1000):
+        handler.force_output_sentence("session_started")
+
+
+def test_force_output_sentence_overrides_in_progress_tease(handler, qtbot):
+    handler.active_callout = True
+    handler.is_teasing = True
+    with qtbot.waitSignal(handler.new_tease_event, timeout=1000):
+        handler.force_output_sentence("session_started")
+    assert handler.is_teasing is True
+
+
+def test_force_output_sentence_missing_category_does_not_raise(handler, qtbot):
+    with qtbot.assertNotEmitted(handler.new_tease_event, wait=200):
+        handler.force_output_sentence("does_not_exist")
+
+
 def test_missing_category_does_not_raise(handler):
     handler.active_callout = True
     handler.talking_chance = 1.0

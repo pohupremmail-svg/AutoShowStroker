@@ -44,6 +44,10 @@ The available Trigger Keys at the moment are:
 | `media_skipped`       | Fired when the user skips the currently displayed media.                                     |
 | `media_repeated`      | Fired when the user decides to repeat the current media file by pressing the `previous` key. |
 | `session_started`     | Fired when the session is started using the `Set gooning folder and start` button.           |
+| `climax_real`         | Fired once per session when the climax system decides on a real orgasm outcome.              |
+| `climax_ruined`       | Fired once per session when the climax system decides on a ruined orgasm outcome.             |
+| `climax_denied`       | Fired once per session when the climax system decides the session ends without an orgasm.     |
+| `fake_climax_reveal`  | Fired a few seconds after a fake climax cue (which reuses `climax_real`) to reveal it was a joke. |
 
 #### 3. How to Contribute Phrases
 
