@@ -47,6 +47,18 @@ CHANGELOG = {
         "</ul>"
         "Head to Settings > Beat &amp; Rhythm > Manage Custom Patterns and compose your own edge."
     ),
+    "0.4.0": (
+        "GoonerApp now remembers every session you've ever survived - and isn't shy about it."
+        "<ul>"
+        "<li>Break a personal best and the end-of-session recap throws up a glowing "
+        "\"New Personal Record\" card for it, right on the spot</li>"
+        "<li>A new Statistics menu holds your full history: sessions played, all-time bests, "
+        "and a trend chart charting how your stamina climbs over time</li>"
+        "<li>Fakeouts now count toward something - survive enough of them and that's a record "
+        "too</li>"
+        "</ul>"
+        "Check the Statistics menu after your next session and watch the line go up."
+    ),
 }
 
 
