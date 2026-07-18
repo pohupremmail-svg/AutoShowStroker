@@ -57,7 +57,9 @@ class CalloutHandler(QObject):
             except Exception as e:
                 print(f"Error loading the callout file {json_file}: {e}")
 
-        if self.lang not in self.callout_data or self.lang not in self.available_languages:
+        if self.available_languages and (
+            self.lang not in self.callout_data or self.lang not in self.available_languages
+        ):
             self.set_lang(self.available_languages[0])
 
 

@@ -34,10 +34,10 @@ class GoonerApp(QMainWindow):
     media_repeated_event = pyqtSignal()
     media_skipped_event = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, settings: QSettings | None = None):
         super().__init__()
 
-        self.settings = QSettings("GoonerCock", "GoonerApp")
+        self.settings = settings if settings is not None else QSettings("GoonerCock", "GoonerApp")
 
         self.setWindowTitle("Auto Hero Generation")
 
@@ -172,6 +172,7 @@ class GoonerApp(QMainWindow):
         self.vid_loudness = 1.0
 
         self.is_running = False
+        self._was_maximized_before_fullscreen = False
 
         self.callout_handler = CalloutHandler(self.settings)
 
@@ -195,8 +196,17 @@ class GoonerApp(QMainWindow):
 
     def _enter_fullscreen(self):
         if not self.isFullScreen():
+            self._was_maximized_before_fullscreen = self.isMaximized()
             self.controls_container.hide()
             self.showFullScreen()
+
+    def _leave_fullscreen(self):
+        if self.isFullScreen():
+            self.controls_container.show()
+            if self._was_maximized_before_fullscreen:
+                self.showMaximized()
+            else:
+                self.showNormal()
 
     def display_new_tease(self, tease: str):
         self.callout_label.setText(tease)
@@ -270,7 +280,7 @@ class GoonerApp(QMainWindow):
 
     def finde_unterstützte_dateien(self, verzeichnis_pfad: str) -> list[Path]:
         pfad = Path(verzeichnis_pfad)
-        unterstützte_endungen = ['.mp4', '.gif', '.jpeg', '.jpg', '.png']
+        unterstützte_endungen = ['.mp4', '.avi', '.mov', '.mkv', '.gif', '.jpeg', '.jpg', '.png', '.bmp']
         gefundene_dateien = []
 
         for datei in pfad.rglob('*'):

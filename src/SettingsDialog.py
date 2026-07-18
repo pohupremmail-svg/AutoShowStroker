@@ -1,5 +1,4 @@
 
-from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -81,7 +80,7 @@ class SettingsDialog(QDialog):
         }
 
     def accept_settings(self):
-        settings = QSettings("GoonerCock", "GoonerApp")
+        settings = self.main_app.settings
 
         for var_name, data in self.settings_fields.items():
             new_value = data['widget'].value()
