@@ -8,8 +8,13 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
+    QTabWidget,
     QVBoxLayout,
+    QWidget,
 )
+
+from src import theme
 
 
 class SettingsDialog(QDialog):
@@ -25,12 +30,24 @@ class SettingsDialog(QDialog):
 
         self.layout = QVBoxLayout(self)
         self.settings_fields = {}
+        self.resize(560, 640)
 
+        self.tabs = QTabWidget()
+
+        self._current_layout = self._new_tab("Playback")
         self.add_section_header("Slideshow Timing (Pictures/GIFs)")
         self.add_setting("Min. duration (s):", "min_dur", self.main_app, float, 0.1, 60.0, 0.1)
         self.add_setting("Max. duration (s):", "max_dur", self.main_app, float, 0.1, 60.0, 0.1)
         self.add_setting("Video Min. duration (s):", "video_min_dur", self.main_app, float, 0.5, 30.0, 0.1)
+        self.add_section_header("General Settings")
+        self.add_setting("Beat Volume", "beat_loudness", self.beat_handler, float, 0.0, 1.0, 0.1)
+        self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
+        self.playback_reset_button = self.add_reset_button(
+            ["min_dur", "max_dur", "video_min_dur", "beat_loudness", "vid_loudness"]
+        )
+        self._current_layout.addStretch()
 
+        self._current_layout = self._new_tab("Beat && Rhythm")
         self.add_section_header("Beat Timing (BeatHandler)")
         self.add_setting("Beat Min. frequency (Hz):", "min_beat_freq", self.beat_handler, float, 0.1, 20.0, 0.1)
         self.add_setting("Beat Max. frequency (Hz):", "max_beat_freq", self.beat_handler, float, 0.1, 20.0, 0.1)
@@ -44,7 +61,7 @@ class SettingsDialog(QDialog):
         self.add_section_header("Difficulty Ramping")
         self.ramping_active_checkbox = QCheckBox("Difficulty ramping active")
         self.ramping_active_checkbox.setChecked(self.beat_handler.ramping_active)
-        self.layout.addWidget(self.ramping_active_checkbox)
+        self._current_layout.addWidget(self.ramping_active_checkbox)
         self.add_setting(
             "Ramp Min. duration (s):", "min_ramp_duration", self.beat_handler, float, 10.0, 7200.0, 10.0
         )
@@ -55,17 +72,32 @@ class SettingsDialog(QDialog):
             "Ramp window width (0-1):", "ramp_window_width", self.beat_handler, float, 0.05, 1.0, 0.05
         )
 
+        self.add_beat_selection()
+        self.beat_reset_button = self.add_reset_button(
+            [
+                "min_beat_freq", "max_beat_freq", "min_beat_dur", "max_beat_dur",
+                "min_pause_dur", "max_pause_dur", "beat_change_chance", "pause_chance",
+                "min_ramp_duration", "max_ramp_duration", "ramp_window_width",
+            ],
+            checkbox_defaults=[
+                (self.ramping_active_checkbox, self.beat_handler.DEFAULTS["ramping_active"]),
+            ],
+            extra_reset=lambda: [cb.setChecked(True) for cb in self.beat_checkboxes.values()],
+        )
+        self._current_layout.addStretch()
+
+        self._current_layout = self._new_tab("Climax")
         self.add_section_header("Climax")
         self.climax_active_checkbox = QCheckBox("Climax prompts active")
         self.climax_active_checkbox.setChecked(self.climax_handler.climax_active)
-        self.layout.addWidget(self.climax_active_checkbox)
+        self._current_layout.addWidget(self.climax_active_checkbox)
         self.add_setting(
             "Climax chance (per beat change, after ramp)", "climax_chance", self.climax_handler, float, 0.0, 1.0, 0.01
         )
 
         self.ruined_orgasm_active_checkbox = QCheckBox("Allow ruined orgasm outcome")
         self.ruined_orgasm_active_checkbox.setChecked(self.climax_handler.ruined_orgasm_active)
-        self.layout.addWidget(self.ruined_orgasm_active_checkbox)
+        self._current_layout.addWidget(self.ruined_orgasm_active_checkbox)
         self.add_setting(
             "Ruined orgasm chance (of this session's climax)",
             "ruined_orgasm_chance", self.climax_handler, float, 0.0, 1.0, 0.01
@@ -73,7 +105,7 @@ class SettingsDialog(QDialog):
 
         self.denied_orgasm_active_checkbox = QCheckBox("Allow full denial outcome")
         self.denied_orgasm_active_checkbox.setChecked(self.climax_handler.denied_orgasm_active)
-        self.layout.addWidget(self.denied_orgasm_active_checkbox)
+        self._current_layout.addWidget(self.denied_orgasm_active_checkbox)
         self.add_setting(
             "Denied orgasm chance (of this session's climax)",
             "denied_orgasm_chance", self.climax_handler, float, 0.0, 1.0, 0.01
@@ -81,7 +113,7 @@ class SettingsDialog(QDialog):
 
         self.fake_climax_active_checkbox = QCheckBox("Fake climax cues active")
         self.fake_climax_active_checkbox.setChecked(self.climax_handler.fake_climax_active)
-        self.layout.addWidget(self.fake_climax_active_checkbox)
+        self._current_layout.addWidget(self.fake_climax_active_checkbox)
         self.add_setting(
             "Fake climax chance (per beat change)", "fake_climax_chance", self.climax_handler, float, 0.0, 1.0, 0.01
         )
@@ -91,23 +123,79 @@ class SettingsDialog(QDialog):
         self.add_setting(
             "Fake climax reveal delay Max. (s)", "max_fake_climax_delay", self.climax_handler, float, 1.0, 30.0, 0.5
         )
+        self.climax_reset_button = self.add_reset_button(
+            [
+                "climax_chance", "ruined_orgasm_chance", "denied_orgasm_chance",
+                "fake_climax_chance", "min_fake_climax_delay", "max_fake_climax_delay",
+            ],
+            checkbox_defaults=[
+                (self.climax_active_checkbox, self.climax_handler.DEFAULTS["climax_active"]),
+                (self.ruined_orgasm_active_checkbox, self.climax_handler.DEFAULTS["ruined_orgasm_active"]),
+                (self.denied_orgasm_active_checkbox, self.climax_handler.DEFAULTS["denied_orgasm_active"]),
+                (self.fake_climax_active_checkbox, self.climax_handler.DEFAULTS["fake_climax_active"]),
+            ],
+        )
+        self._current_layout.addStretch()
 
-        self.add_section_header("General Settings")
-        self.add_setting("Beat Volume", "beat_loudness", self.beat_handler, float, 0.0, 1.0, 0.1)
-        self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
-
-        self.add_beat_selection()
-
+        self._current_layout = self._new_tab("Callouts")
         self.add_callout_selection()
+        self.callout_reset_button = self.add_reset_button(
+            ["talking_chance"],
+            checkbox_defaults=[
+                (self.callout_active_checkbox, self.callout_handler.DEFAULTS["active_callout"]),
+            ],
+            extra_reset=self._reset_callout_lang,
+        )
+        self._current_layout.addStretch()
+
+        self.layout.addWidget(self.tabs)
 
         self.button_ok = QPushButton("Save & Close Settings")
+        self.button_ok.setObjectName("primary")
         self.button_ok.clicked.connect(self.accept_settings)
         self.layout.addWidget(self.button_ok)
 
+    def _new_tab(self, title):
+        content = QWidget()
+        layout = QVBoxLayout(content)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(content)
+
+        self.tabs.addTab(scroll, title)
+        return layout
+
+    def add_reset_button(self, spinbox_names, checkbox_defaults=None, extra_reset=None):
+        """Adds a 'Reset to defaults' button to the current tab. Only resets widget values -
+        the user still has to press Save & Close Settings to actually apply/persist them,
+        same as any other change made in this dialog."""
+        checkbox_defaults = checkbox_defaults or []
+        button = QPushButton("Reset to defaults")
+
+        def do_reset():
+            for var_name in spinbox_names:
+                field = self.settings_fields[var_name]
+                field['widget'].setValue(field['object'].DEFAULTS[var_name])
+            for checkbox, default_value in checkbox_defaults:
+                checkbox.setChecked(default_value)
+            if extra_reset:
+                extra_reset()
+
+        button.clicked.connect(do_reset)
+        self._current_layout.addWidget(button)
+        return button
+
+    def _reset_callout_lang(self):
+        default_lang = self.callout_handler.DEFAULTS["lang"]
+        index = self.callout_selected_lang.findText(default_lang)
+        if index != -1:
+            self.callout_selected_lang.setCurrentIndex(index)
+
     def add_section_header(self, title):
         header = QLabel(f"--- <b>{title}</b> ---")
-        header.setStyleSheet("font-size: 14px; margin-top: 10px;")
-        self.layout.addWidget(header)
+        header.setStyleSheet(f"font-size: 14px; margin-top: 10px; color: {theme.ACCENT}; font-weight: bold;")
+        self._current_layout.addWidget(header)
 
     def add_setting(self, label_text, var_name, target_object, var_type, min_val, max_val, step):
         h_layout = QHBoxLayout()
@@ -123,7 +211,7 @@ class SettingsDialog(QDialog):
         spinbox.setValue(initial_value)
 
         h_layout.addWidget(spinbox, stretch=2)
-        self.layout.addLayout(h_layout)
+        self._current_layout.addLayout(h_layout)
 
         self.settings_fields[var_name] = {
             'widget': spinbox,
@@ -207,7 +295,7 @@ class SettingsDialog(QDialog):
                 col = 0
                 row += 1
 
-        self.layout.addLayout(grid)
+        self._current_layout.addLayout(grid)
 
     def add_callout_selection(self):
         self.add_section_header("Callouts")
@@ -221,8 +309,8 @@ class SettingsDialog(QDialog):
         if inital_index != -1:
             self.callout_selected_lang.setCurrentIndex(inital_index)
 
-        self.layout.addWidget(self.callout_active_checkbox)
-        self.layout.addWidget(self.callout_selected_lang)
+        self._current_layout.addWidget(self.callout_active_checkbox)
+        self._current_layout.addWidget(self.callout_selected_lang)
 
         self.add_setting(
             "Chance for callouts to happen during events", "talking_chance", self.callout_handler, float, 0, 1, 0.01

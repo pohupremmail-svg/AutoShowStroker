@@ -4,11 +4,12 @@ import time
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QAction, QIcon, QMovie, QPixmap
+from PyQt6.QtGui import QAction, QColor, QIcon, QMovie, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
     QFileDialog,
+    QGraphicsDropShadowEffect,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -20,13 +21,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src import changelog, theme
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
 from src.ClimaxHandler import ClimaxHandler
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
-from src.utils import get_project_root
+from src.utils import get_current_version, get_project_root
+from src.WhatsNewDialog import WhatsNewDialog
 
 
 class GoonerApp(QMainWindow):
@@ -34,6 +37,15 @@ class GoonerApp(QMainWindow):
     session_ended_event = pyqtSignal()
     media_repeated_event = pyqtSignal()
     media_skipped_event = pyqtSignal()
+
+    # Keep in sync with the literal defaults set in __init__ below - single source of truth
+    # for the SettingsDialog "Reset to defaults" button.
+    DEFAULTS = {
+        "min_dur": 0.5,
+        "max_dur": 4.0,
+        "video_min_dur": 1.5,
+        "vid_loudness": 1.0,
+    }
 
     def __init__(self, settings: QSettings | None = None):
         super().__init__()
@@ -74,7 +86,9 @@ class GoonerApp(QMainWindow):
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.image_label.setMinimumSize(1, 1)
-        self.image_label.setStyleSheet("background-color: #222; color: #FFF; font-size: 20px;")
+        self.image_label.setStyleSheet(
+            f"background-color: {theme.SURFACE_DARK}; color: {theme.TEXT}; font-size: 20px; border-radius: 12px;"
+        )
         self.media_stack.addWidget(self.image_label)
 
         self.video_widget = QVideoWidget()
@@ -90,12 +104,12 @@ class GoonerApp(QMainWindow):
         self.callout_label.setWordWrap(True)
         self.callout_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter)
 
-        self.callout_label.setStyleSheet("""
-                    color: #FF69B4;
+        self.callout_label.setStyleSheet(f"""
+                    color: {theme.ACCENT};
                     font-size: 24px;
-                    padding: 5px;
-                    background-color: rgba(0, 0, 0, 0.8);
-                    border-radius: 5px;
+                    padding: 8px;
+                    background-color: rgba(45, 29, 58, 0.9);
+                    border-radius: 10px;
                 """)
         self.callout_label.hide()
 
@@ -127,7 +141,13 @@ class GoonerApp(QMainWindow):
         self.btn_prev.setToolTip("Left Arrow Key")
 
         self.btn_load = QPushButton("Set Gooning Folder and Start.")
+        self.btn_load.setObjectName("primary")
         self.btn_load.clicked.connect(self.open_folder)
+        btn_load_glow = QGraphicsDropShadowEffect()
+        btn_load_glow.setColor(QColor(theme.ACCENT))
+        btn_load_glow.setBlurRadius(50)
+        btn_load_glow.setOffset(0, 0)
+        self.btn_load.setGraphicsEffect(btn_load_glow)
 
         self.btn_next = QPushButton("Skip >>")
         self.btn_next.clicked.connect(self.btn_next_action)
@@ -162,6 +182,11 @@ class GoonerApp(QMainWindow):
         self.climax_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.climax_status_label.setStyleSheet(self._climax_label_style("transparent"))
         self.climax_status_label.hide()
+        climax_glow = QGraphicsDropShadowEffect()
+        climax_glow.setColor(QColor(theme.ACCENT))
+        climax_glow.setBlurRadius(30)
+        climax_glow.setOffset(0, 0)
+        self.climax_status_label.setGraphicsEffect(climax_glow)
 
         self.climax_blink_timer = QTimer()
         self.climax_blink_timer.timeout.connect(self._toggle_climax_blink)
@@ -285,6 +310,25 @@ class GoonerApp(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         settings_menu.addAction(exit_action)
+
+        help_menu = menu_bar.addMenu("Help")
+
+        whats_new_action = QAction("What's New", self)
+        whats_new_action.triggered.connect(self.show_whats_new_dialog)
+        help_menu.addAction(whats_new_action)
+
+    def maybe_show_whats_new_on_startup(self):
+        current_version = get_current_version()
+        last_seen_version = str(self.settings.value("GoonerApp/last_seen_version", ""))
+        entries = changelog.entries_since(last_seen_version, current_version)
+        if entries:
+            dialog = WhatsNewDialog(entries, parent=self)
+            dialog.exec()
+        self.settings.setValue("GoonerApp/last_seen_version", current_version)
+
+    def show_whats_new_dialog(self):
+        dialog = WhatsNewDialog(changelog.CHANGELOG, parent=self)
+        dialog.exec()
 
     def btn_next_action(self):
         self.show_next()
@@ -431,13 +475,16 @@ class GoonerApp(QMainWindow):
             QTimer.singleShot(5000, self.stop)
 
     CLIMAX_STATUS_COLORS = {
-        "cum": ("#FF1493", "#FF69B4"),
-        "ruined": ("#FF8C00", "#FFA500"),
-        "denied": ("#B22222", "#DC143C"),
+        "cum": (theme.ACCENT, theme.ACCENT_HOVER),
+        "ruined": (theme.RUINED, theme.RUINED_DIM),
+        "denied": (theme.DENIED, theme.DENIED_DIM),
     }
 
     def _climax_label_style(self, background):
-        return f"font-size: 28px; font-weight: bold; padding: 10px; color: white; background-color: {background};"
+        return (
+            f"font-size: 28px; font-weight: bold; padding: 10px; color: white; "
+            f"background-color: {background}; border-radius: 12px;"
+        )
 
     def _update_climax_status_label(self, status):
         if status not in self.CLIMAX_STATUS_COLORS:

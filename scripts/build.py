@@ -23,7 +23,8 @@ def build_exe() -> Path:
     subprocess.run(
         [
             find_pyinstaller(), "--noconfirm", "--onefile", "--windowed",
-            "--add-data", "res;res", "--icon", "res/icons/favicon.ico", "--name", "GoonerApp", "main.py",
+            "--add-data", "res;res", "--add-data", "VERSION;.",
+            "--icon", "res/icons/favicon.ico", "--name", "GoonerApp", "main.py",
         ],
         cwd=ROOT, check=True,
     )

@@ -8,6 +8,21 @@ class ClimaxHandler(QObject):
     outcome_decided_event = pyqtSignal(str)  # "real" | "ruined" | "denied"
     status_changed_event = pyqtSignal(str)  # "cum" | "ruined" | "denied" | "neutral" - for UI display
 
+    # Keep in sync with the literal defaults set in __init__ below - single source of truth
+    # for the SettingsDialog "Reset to defaults" buttons.
+    DEFAULTS = {
+        "climax_active": True,
+        "climax_chance": 0.15,
+        "ruined_orgasm_active": False,
+        "ruined_orgasm_chance": 0.5,
+        "denied_orgasm_active": False,
+        "denied_orgasm_chance": 0.5,
+        "fake_climax_active": True,
+        "fake_climax_chance": 0.05,
+        "min_fake_climax_delay": 3.0,
+        "max_fake_climax_delay": 8.0,
+    }
+
     def __init__(self, beat_handler, callout_handler, settings=None):
         super().__init__()
         self.beat_handler = beat_handler

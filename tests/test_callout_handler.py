@@ -30,6 +30,11 @@ def test_defaults_to_english(handler):
     assert handler.lang == "en"
 
 
+def test_defaults_dict_matches_init_defaults(handler):
+    for var_name, default_value in CalloutHandler.DEFAULTS.items():
+        assert getattr(handler, var_name) == default_value
+
+
 def test_set_lang_switches_language(handler):
     handler.set_lang("de")
     assert handler.lang == "de"

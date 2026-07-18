@@ -34,6 +34,14 @@ class CalloutHandler(QObject):
     new_tease_event = pyqtSignal(str)
     hide_tease_event = pyqtSignal()
 
+    # Keep in sync with the literal defaults set in __init__ below - single source of truth
+    # for the SettingsDialog "Reset to defaults" button.
+    DEFAULTS = {
+        "active_callout": False,
+        "talking_chance": 0.5,
+        "lang": "en",
+    }
+
     def __init__(self, settings=None):
         super().__init__()
         self.tease_active_timer = QTimer()

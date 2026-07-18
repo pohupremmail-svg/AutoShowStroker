@@ -25,3 +25,7 @@ def get_project_root() -> Path:
     # (z.B. wenn man ohne Git arbeitet).
     # Hier könnte man hartkodiert `..` nutzen, falls GoonerApp.py in src/ liegt.
     return start_path.parent.parent  # Entspricht ../.. wenn start_path in src/ liesgt
+
+
+def get_current_version() -> str:
+    return (get_project_root() / "VERSION").read_text(encoding="utf-8").strip()
