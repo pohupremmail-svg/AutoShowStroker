@@ -1,7 +1,9 @@
 import sys
 
+import pytest
+
 from src import utils
-from src.utils import get_current_version, get_project_root
+from src.utils import format_duration, get_current_version, get_project_root
 
 
 def test_get_project_root_finds_repo_root_from_script():
@@ -26,3 +28,17 @@ def test_get_current_version_strips_whitespace(monkeypatch, tmp_path):
     monkeypatch.setattr(utils, "get_project_root", lambda: tmp_path)
 
     assert get_current_version() == "0.1.0"
+
+
+@pytest.mark.parametrize(
+    ("seconds", "expected"),
+    [
+        (None, "N/A"),
+        (0, "0s"),
+        (45, "45s"),
+        (60, "1 Min"),
+        (125, "2 Min 5s"),
+    ],
+)
+def test_format_duration(seconds, expected):
+    assert format_duration(seconds) == expected

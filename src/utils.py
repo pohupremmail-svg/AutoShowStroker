@@ -29,3 +29,16 @@ def get_project_root() -> Path:
 
 def get_current_version() -> str:
     return (get_project_root() / "VERSION").read_text(encoding="utf-8").strip()
+
+
+def format_duration(seconds: float) -> str:
+    if seconds is None:
+        return "N/A"
+    total_seconds = int(round(seconds))
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+    minutes = total_seconds // 60
+    secs = total_seconds % 60
+    if secs == 0:
+        return f"{minutes} Min"
+    return f"{minutes} Min {secs}s"

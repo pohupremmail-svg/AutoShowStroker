@@ -299,3 +299,19 @@ def test_get_all_time_bests_reflects_max_across_history(monkeypatch):
     bests = tracker.get_all_time_bests()
     assert bests["total_dur_sec"] == pytest.approx(10.0)
     assert bests["total_num_beat"] == 50
+
+
+# --- shared metric-value formatting ---
+
+
+def test_format_metric_value_formats_duration_as_time():
+    assert ScoreTracker.format_metric_value("total_dur_sec", 125.0) == "2 Min 5s"
+
+
+def test_format_metric_value_formats_speed_with_unit():
+    assert ScoreTracker.format_metric_value("average_beat_speed_active", 0.4321) == "0.43 beats/sec"
+
+
+def test_format_metric_value_formats_counts_as_plain_numbers():
+    assert ScoreTracker.format_metric_value("total_num_beat", 42) == "42"
+    assert ScoreTracker.format_metric_value("fakeout_count", 3) == "3"

@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from src import theme
+from src import theme, utils
 from src.ScoreTracker import ScoreTracker
 
 
@@ -85,11 +85,7 @@ class StatisticsDialog(QDialog):
         return card
 
     def _format_metric_value(self, metric: str, value) -> str:
-        if metric == "total_dur_sec":
-            return self._format_time(value)
-        if metric == "average_beat_speed_active":
-            return f"{value:.2f} beats/sec"
-        return f"{value}"
+        return ScoreTracker.format_metric_value(metric, value)
 
     def _title_for_outcome(self, outcome):
         if outcome == "denied":
@@ -99,16 +95,7 @@ class StatisticsDialog(QDialog):
         return "Congratulations to your successful session.\nI hope you came a lot!"  # "real" or None
 
     def _format_time(self, seconds: float) -> str:
-        if seconds is None:
-            return "N/A"
-        total_seconds = int(round(seconds))
-        if total_seconds < 60:
-            return f"{total_seconds}s"
-        minutes = total_seconds // 60
-        secs = total_seconds % 60
-        if secs == 0:
-            return f"{minutes} Min"
-        return f"{minutes} Min {secs}s"
+        return utils.format_duration(seconds)
 
     def _gen_conc_text(self, stats_data: dict):
         active_time = stats_data['total_dur_sec'] - stats_data['pause_dur_sec']

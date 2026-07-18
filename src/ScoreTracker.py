@@ -1,6 +1,8 @@
 import json
 import time
 
+from src import utils
+
 
 class ScoreTracker:
 
@@ -17,6 +19,14 @@ class ScoreTracker:
     # Bounds the size of the JSON blob persisted in QSettings (the Windows registry has no
     # practical need to grow this without limit).
     MAX_HISTORY_ENTRIES = 200
+
+    @staticmethod
+    def format_metric_value(metric: str, value) -> str:
+        if metric == "total_dur_sec":
+            return utils.format_duration(value)
+        if metric == "average_beat_speed_active":
+            return f"{value:.2f} beats/sec"
+        return f"{value}"
 
     def __init__(self, settings=None):
         self.settings = settings
