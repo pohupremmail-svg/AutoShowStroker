@@ -1,6 +1,8 @@
+import json
 import time
 
 import pytest
+from PyQt6.QtCore import QSettings
 
 from src.ScoreTracker import ScoreTracker
 
@@ -132,3 +134,168 @@ def test_session_started_resets_climax_outcome():
     tracker.climax_outcome = "denied"
     tracker.session_started()
     assert tracker.climax_outcome is None
+
+
+# --- fakeout counter ---
+
+
+def test_fake_climax_triggered_increments_fakeout_count():
+    tracker = ScoreTracker()
+    tracker.fake_climax_triggered()
+    tracker.fake_climax_triggered()
+    assert tracker.fakeout_count == 2
+    assert tracker.deliver_infos()["fakeout_count"] == 2
+
+
+def test_session_started_resets_fakeout_count():
+    tracker = ScoreTracker()
+    tracker.fakeout_count = 3
+    tracker.session_started()
+    assert tracker.fakeout_count == 0
+
+
+# --- session history persistence ---
+
+
+def test_history_empty_by_default():
+    tracker = ScoreTracker()
+    assert tracker.get_history() == []
+
+
+def test_session_ended_appends_a_history_entry(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 10
+    monkeypatch.setattr(time, "time", lambda: 10.0)
+
+    tracker.session_ended()
+
+    history = tracker.get_history()
+    assert len(history) == 1
+    assert history[0]["total_dur_sec"] == pytest.approx(10.0)
+    assert history[0]["total_num_beat"] == 10
+    assert "ended_at" in history[0]
+
+
+def test_session_ended_persists_history_to_settings(tmp_path, monkeypatch):
+    ini = tmp_path / "settings.ini"
+    settings = QSettings(str(ini), QSettings.Format.IniFormat)
+    tracker = ScoreTracker(settings=settings)
+    tracker.session_start_time = 0.0
+    monkeypatch.setattr(time, "time", lambda: 5.0)
+
+    tracker.session_ended()
+
+    saved = json.loads(settings.value("ScoreTracker/session_history"))
+    assert len(saved) == 1
+    assert saved[0]["total_dur_sec"] == pytest.approx(5.0)
+
+
+def test_history_loaded_from_settings(tmp_path):
+    ini = tmp_path / "settings.ini"
+    settings = QSettings(str(ini), QSettings.Format.IniFormat)
+    settings.setValue(
+        "ScoreTracker/session_history",
+        json.dumps(
+            [
+                {
+                    "ended_at": "2026-01-01 00:00",
+                    "total_dur_sec": 42.0,
+                    "total_num_beat": 1,
+                    "average_beat_speed_active": 1.0,
+                    "fakeout_count": 0,
+                }
+            ]
+        ),
+    )
+
+    tracker = ScoreTracker(settings=settings)
+
+    assert len(tracker.get_history()) == 1
+    assert tracker.get_history()[0]["total_dur_sec"] == 42.0
+
+
+def test_history_capped_at_max_entries(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.history = [
+        {
+            "ended_at": f"entry-{i}",
+            "total_dur_sec": 1.0,
+            "total_num_beat": 1,
+            "average_beat_speed_active": 1.0,
+            "fakeout_count": 0,
+        }
+        for i in range(ScoreTracker.MAX_HISTORY_ENTRIES)
+    ]
+    tracker.session_start_time = 0.0
+    monkeypatch.setattr(time, "time", lambda: 1.0)
+
+    tracker.session_ended()
+
+    history = tracker.get_history()
+    assert len(history) == ScoreTracker.MAX_HISTORY_ENTRIES
+    assert history[0]["ended_at"] == "entry-1"  # oldest (entry-0) dropped
+
+
+# --- personal-record detection ---
+
+
+def test_first_ever_session_sets_no_new_records(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 50
+    monkeypatch.setattr(time, "time", lambda: 100.0)
+
+    tracker.session_ended()
+
+    assert tracker.last_session_new_records == {}
+
+
+def test_second_session_beating_one_metric_flags_only_that_metric(monkeypatch):
+    tracker = ScoreTracker()
+
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 5
+    monkeypatch.setattr(time, "time", lambda: 10.0)
+    tracker.session_ended()
+
+    tracker.session_started()
+    tracker.session_start_time = 100.0
+    tracker.beat_count = 3
+    monkeypatch.setattr(time, "time", lambda: 120.0)  # 20s, beats the 10s record; fewer beats doesn't
+    tracker.session_ended()
+
+    assert set(tracker.last_session_new_records.keys()) == {"total_dur_sec"}
+    assert tracker.last_session_new_records["total_dur_sec"] == pytest.approx(10.0)
+
+
+def test_tying_previous_best_is_not_a_new_record(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_start_time = 0.0
+    monkeypatch.setattr(time, "time", lambda: 10.0)
+    tracker.session_ended()
+
+    tracker.session_started()
+    tracker.session_start_time = 100.0
+    monkeypatch.setattr(time, "time", lambda: 110.0)  # same 10s duration again
+    tracker.session_ended()
+
+    assert "total_dur_sec" not in tracker.last_session_new_records
+
+
+def test_get_all_time_bests_reflects_max_across_history(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 5
+    monkeypatch.setattr(time, "time", lambda: 10.0)
+    tracker.session_ended()
+
+    tracker.session_started()
+    tracker.session_start_time = 100.0
+    tracker.beat_count = 50
+    monkeypatch.setattr(time, "time", lambda: 105.0)
+    tracker.session_ended()
+
+    bests = tracker.get_all_time_bests()
+    assert bests["total_dur_sec"] == pytest.approx(10.0)
+    assert bests["total_num_beat"] == 50
