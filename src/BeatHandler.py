@@ -28,7 +28,8 @@ class BeatHandler(QObject):
         "Syncopated 4/4": [1, -1, 1, -1, 1, 1, 1],
 
         # --- Long Pauses & Gaps ---
-        "Long Rest": [1, -2, -2, -2],
+        "Slow Pulse": [1, 1, -1, -1, -1, -1, -1, -1],
+        "Held Breath": [3, -1, -1, -1, -1, -1, 3],
         "Double Tap Pause": [2, 2, -1, -1, -1, -1],
 
         # --- Complex & Off-Beat ---
@@ -40,6 +41,7 @@ class BeatHandler(QObject):
         "Build Up": [1, 2, 3, 4, -4, -4],
         "Slow Down": [4, 3, 2, 1, -2],
         "Speed Change": [1, 1, 1, 1, 2, 2, 2, 2],
+        "Suspense Build": [2, -4, -3, -2, -1, 3],
     }
 
     beat_paused_event = pyqtSignal()
@@ -74,6 +76,14 @@ class BeatHandler(QObject):
         self.pause_chance = 0.05
         self.beat_change_chance = 0.1
 
+        self.ramping_active = True
+        self.min_ramp_duration = 600.0
+        self.max_ramp_duration = 1800.0
+        self.ramp_window_width = 0.4
+
+        self.session_start_time = 0.0
+        self.ramp_target_duration = 0.0
+
         # --- Laden, falls QSettings existieren ---
         if self.settings:
             self.max_beat_dur = float(self.settings.value("BeatHandler/max_beat_dur", self.max_beat_dur))
@@ -85,6 +95,18 @@ class BeatHandler(QObject):
             self.pause_chance = float(self.settings.value("BeatHandler/pause_chance", self.pause_chance))
             self.beat_change_chance = float(
                 self.settings.value("BeatHandler/beat_change_chance", self.beat_change_chance)
+            )
+            self.ramping_active = bool(
+                self.settings.value("BeatHandler/ramping_active", self.ramping_active, type=bool)
+            )
+            self.min_ramp_duration = float(
+                self.settings.value("BeatHandler/min_ramp_duration", self.min_ramp_duration)
+            )
+            self.max_ramp_duration = float(
+                self.settings.value("BeatHandler/max_ramp_duration", self.max_ramp_duration)
+            )
+            self.ramp_window_width = float(
+                self.settings.value("BeatHandler/ramp_window_width", self.ramp_window_width)
             )
             loaded_patterns = self.settings.value("BeatHandler/selected_beat_patterns")
             if loaded_patterns:
@@ -114,9 +136,13 @@ class BeatHandler(QObject):
         self.current_beat_position = 0
         self.available_beat_patterns = self.BEAT_PATTERNS_MAP
         self.beat_pattern_mutex = QMutex()
+        self._pattern_audible_count = 1
+        self._pattern_inv_sum = 1.0
 
 
     def start_beat(self):
+        self.session_start_time = time.time()
+        self.ramp_target_duration = random.uniform(self.min_ramp_duration, self.max_ramp_duration)
         self.reset_beat_timer()
 
 
@@ -132,13 +158,33 @@ class BeatHandler(QObject):
                     return
                 self.recalc_beat()
         self.beat_pattern_mutex.lock()
-        beat_time_ms = int((1/self.cur_freq)*1000/abs(self.current_beat_pattern[self.current_beat_position]))
+        if self._pattern_audible_count > 0:
+            base_step_sec = self._pattern_audible_count / (self.cur_freq * self._pattern_inv_sum)
+        else:
+            base_step_sec = 1 / self.cur_freq  # defensive fallback, no current pattern lacks a beat
+        beat_time_ms = int(base_step_sec * 1000 / abs(self.current_beat_pattern[self.current_beat_position]))
         self.current_beat_position = (self.current_beat_position + 1) % len(self.current_beat_pattern)
         self.beat_pattern_mutex.unlock()
         self.beat_meter_timer.start(beat_time_ms)
 
+    def _ramp_progress(self):
+        if self.ramp_target_duration <= 0:
+            return None  # ramping not initialized (e.g. recalc_beat() called before start_beat())
+        elapsed = time.time() - self.session_start_time
+        return min(1.0, max(0.0, elapsed / self.ramp_target_duration))
+
+    def _current_freq_range(self):
+        corridor = self.max_beat_freq - self.min_beat_freq
+        progress = self._ramp_progress()
+        if not self.ramping_active or progress is None or corridor <= 0:
+            return self.min_beat_freq, self.max_beat_freq
+        width = corridor * self.ramp_window_width
+        window_min = self.min_beat_freq + progress * (corridor - width)
+        return window_min, window_min + width
+
     def recalc_beat(self):
-        self.cur_freq = random.uniform(self.min_beat_freq, self.max_beat_freq)
+        window_min, window_max = self._current_freq_range()
+        self.cur_freq = random.uniform(window_min, window_max)
         self.cur_beat_start_time = time.time()
         self.target_beat_dur = random.uniform(self.min_beat_dur, self.max_beat_dur)
         self.beat_pattern_mutex.lock()
@@ -146,6 +192,8 @@ class BeatHandler(QObject):
         if not isinstance(self.selected_beat_patterns, list):
             self.selected_beat_patterns = list(self.selected_beat_patterns)
         self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
+        self._pattern_audible_count = sum(1 for v in self.current_beat_pattern if v > 0)
+        self._pattern_inv_sum = sum(1 / abs(v) for v in self.current_beat_pattern)
         self.beat_pattern_mutex.unlock()
 
         # Mark a new beat or speed with a different color for one beat:

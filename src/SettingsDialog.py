@@ -40,6 +40,20 @@ class SettingsDialog(QDialog):
         self.add_setting("Beat change chance", "beat_change_chance", self.beat_handler, float, 0.01, 1, 0.01)
         self.add_setting("Pause chance", "pause_chance", self.beat_handler, float, 0.001, 1, 0.001)
 
+        self.add_section_header("Difficulty Ramping")
+        self.ramping_active_checkbox = QCheckBox("Difficulty ramping active")
+        self.ramping_active_checkbox.setChecked(self.beat_handler.ramping_active)
+        self.layout.addWidget(self.ramping_active_checkbox)
+        self.add_setting(
+            "Ramp Min. duration (s):", "min_ramp_duration", self.beat_handler, float, 10.0, 7200.0, 10.0
+        )
+        self.add_setting(
+            "Ramp Max. duration (s):", "max_ramp_duration", self.beat_handler, float, 10.0, 7200.0, 10.0
+        )
+        self.add_setting(
+            "Ramp window width (0-1):", "ramp_window_width", self.beat_handler, float, 0.05, 1.0, 0.05
+        )
+
         self.add_section_header("General Settings")
         self.add_setting("Beat Volume", "beat_loudness", self.beat_handler, float, 0.0, 1.0, 0.1)
         self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
@@ -103,6 +117,9 @@ class SettingsDialog(QDialog):
         self.beat_handler.selected_beat_patterns = new_selected_patterns
 
         settings.setValue("BeatHandler/selected_beat_patterns", new_selected_patterns)
+
+        settings.setValue("BeatHandler/ramping_active", self.ramping_active_checkbox.isChecked())
+        self.beat_handler.ramping_active = self.ramping_active_checkbox.isChecked()
 
         settings.setValue("CalloutHandler/active_callout", self.callout_active_checkbox.isChecked())
         self.callout_handler.active_callout = self.callout_active_checkbox.isChecked()

@@ -91,3 +91,20 @@ def test_accept_settings_does_not_recalculate_beat_when_stopped(app, dialog, mon
     monkeypatch.setattr(app.beat_handler, "recalc_beat", lambda: pytest.fail("should not recalc"))
 
     dialog.accept_settings()
+
+
+def test_ramping_fields_initialized_from_beat_handler(app, dialog):
+    assert dialog.ramping_active_checkbox.isChecked() == app.beat_handler.ramping_active
+    assert dialog.settings_fields["min_ramp_duration"]["object"] is app.beat_handler
+    assert dialog.settings_fields["max_ramp_duration"]["object"] is app.beat_handler
+    assert dialog.settings_fields["ramp_window_width"]["object"] is app.beat_handler
+
+
+def test_accept_settings_updates_ramping_active(app, dialog):
+    dialog.ramping_active_checkbox.setChecked(not app.beat_handler.ramping_active)
+    expected = dialog.ramping_active_checkbox.isChecked()
+
+    dialog.accept_settings()
+
+    assert app.beat_handler.ramping_active == expected
+    assert app.settings.value("BeatHandler/ramping_active", type=bool) == expected
