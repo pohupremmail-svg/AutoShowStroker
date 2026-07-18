@@ -12,7 +12,8 @@ A specialized, interactive PyQt6 multimedia application designed to transform yo
     * Audio feedback with a precise sound effect played on every beat.
 * **Random Pause Phases:** The Strokemeter unexpectedly transitions into a controlled pause featuring a countdown display in the green-colored footer.
 * **Multilingual Callouts (Teases):** Random text instructions tailored to the current event (e.g., during tempo changes, pauses, or media transitions). Supports German and English (expandable via JSON files).
-* **Detailed Session Statistics:** At the end of each session, you receive a detailed evaluation (duration, number of beats, favorite rhythm, pause statistics).
+* **Detailed Session Statistics:** At the end of each session, you receive a detailed evaluation (duration, number of beats, favorite rhythm, pause statistics), with a highlighted card for every personal record you just broke.
+* **Long-term Statistics:** Track how your stamina develops over time. A dedicated "Statistics" menu opens a history view with your all-time bests and a trend chart across every session you've ever played.
 * **Flexible Control:** Keyboard shortcuts for rapid navigation and adjustments during the session.
 
 ## 🚀 Installation & Execution (Developers)
@@ -106,6 +107,16 @@ how to validate your file, and how to submit it as a Pull Request.
     <td width="50%">
       <img src="demo_screens/demo_settings_dialog.png" alt="Settings Dialog" width="100%">
       <p align="center"><em>Tabbed settings for playback, rhythm, climax chances, and callouts.</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="demo_screens/demo_new_record.png" alt="New Personal Record" width="100%">
+      <p align="center"><em>Broke a personal best? The end-of-session statistics call it out.</em></p>
+    </td>
+    <td width="50%">
+      <img src="demo_screens/demo_long_term_stats.png" alt="Long-term Statistics" width="100%">
+      <p align="center"><em>Long-term Statistics: all-time bests and a trend chart across every session.</em></p>
     </td>
   </tr>
 </table>
