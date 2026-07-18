@@ -1,64 +1,71 @@
 # Auto Hero Generation (GoonerApp)
 
-This is a specialized PyQt6 multimedia application designed to play a list of media files (images, GIFs, and videos) in a randomized order. It features a customizable "Strokemeter" (beat timer) for interactive rhythmic feedback.
+Eine spezialisierte, interaktive PyQt6-Multimedia-Anwendung, die Ihre lokale Medienbibliothek (Bilder, GIFs und Videos) in eine dynamische, personalisierte "Cock Hero"-Session verwandelt. Die App kombiniert eine zufällige Playlist mit einem konfigurierbaren, interaktiven Taktgeber ("Strokemeter") und motivierenden Textanweisungen (Callouts).
 
 ## ✨ Features
 
-* **Playlist Functionality:** Select a folder, and the application recursively gathers all supported media files (`.mp4`, `.gif`, `.jpeg`, `.jpg`, `.png`).
-* **Randomized Order:** The playback order of the media files is randomized upon loading (`random.shuffle`).
-* **Strokemeter (Beat Timer):** A dynamic rhythm indicator located in the footer. It features:
-    * Randomly calculated beat frequency and duration (`min_beat_freq` to `max_beat_freq`).
-    * Visual toggle between "UP" (Red) and "DOWN" (Grey/White).
-    * A custom sound effect on every beat.
-* **Pause Function:** The Strokemeter can randomly enter a controlled pause phase (`min_pause_dur` to `max_pause_dur`).
-* **Navigation:** Manual control via keyboard shortcuts (**Left Arrow** / **Right Arrow**) and buttons ("Previous" / "Skip").
-
-## Contribution
-
-I am looking for people to extend the languages for the teasing support. Please take a look at ![Contributing](CONTRIBUTING.md)
+* **Playlist-Funktionalität:** Wählen Sie einen beliebigen lokalen Ordner aus. Die Anwendung sucht rekursiv nach allen unterstützten Medienformaten (`.mp4`, `.gif`, `.jpeg`, `.jpg`, `.png`).
+* **Zufällige Wiedergabe:** Die Reihenfolge der Medien wird bei jedem Laden komplett zufällig gemischt (`random.shuffle`).
+* **Interaktives Strokemeter (Beat Timer):** Ein dynamischer Taktgeber im Footer der Anwendung:
+    * Automatisch variierende Beat-Frequenzen und Rhythmus-Muster (z. B. *Standard Beat*, *Quick Swing*, *Simple Bounce*, *Double Tap*).
+    * Visuelles Feedback durch rhythmischen Farbwechsel ("UP" / "DOWN").
+    * Akustisches Feedback durch einen präzisen Soundeffekt bei jedem Beat.
+* **Zufällige Pausenphasen:** Das Strokemeter wechselt unerwartet in eine kontrollierte Pause mit Countdown-Anzeige im grün gefärbten Footer.
+* **Mehrsprachige Callouts (Teases):** Zufällige Textanweisungen passend zum aktuellen Geschehen (z. B. bei Tempowechseln, Pausen oder Medienwechseln). Unterstützt Deutsch und Englisch (erweiterbar über JSON-Dateien).
+* **Detaillierte Session-Statistiken:** Am Ende der Session erhalten Sie eine detaillierte Auswertung (Dauer, Anzahl der Beats, Lieblings-Rhythmus, Pausen-Statistiken).
+* **Flexible Steuerung:** Tastatur-Shortcuts für schnelle Navigation und Anpassung während der Session.
 
 ## 🚀 Installation
 
-To run the application locally, you need **Python 3.8+** and the necessary PyQt6 libraries.
+Um die Anwendung lokal auszuführen, benötigen Sie **Python 3.8+** und die entsprechenden Abhängigkeiten.
 
-### 1. Create and enter a virtual python environment.
-```
-# Create and activate a virtual environment
+### 1. Virtuelle Python-Umgebung erstellen und aktivieren
+```bash
+# Virtuelle Umgebung erstellen
 python -m venv .venv
 
-# On Windows PowerShell:
+# Unter Windows (PowerShell):
 .\.venv\Scripts\activate.ps1
 
-# On Linux/macOS or Git Bash:
+# Unter Linux/macOS oder Git Bash:
 source .venv/bin/activate
 ```
 
-### 2. Install the requirements:
-```
-py -m pip install --upgrade pip
+### 2. Abhängigkeiten installieren
+```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Run the app
-```
+### 3. Anwendung starten
+```bash
 python main.py
 ```
 
-### 4. Enjoy
-1. Load Files: Click the "Add Gooning Folder." button and select the directory containing your media.
+## 🎮 Bedienung & Steuerung
 
-1. Playback: The slideshow starts automatically, and the Strokemeter begins ticking.
+1. **Ordner laden:** Klicken Sie auf "Add Gooning Folder" und wählen Sie das Verzeichnis mit Ihren Bildern und Videos aus. Die Diashow startet sofort automatisch.
+2. **Navigation:**
+    * **Nächstes Medium:** Taste `Pfeil rechts` oder Klick auf "Skip >>".
+    * **Vorheriges Medium:** Taste `Pfeil links` oder Klick auf "<< Previous".
+3. **Einstellungen:** Drücken Sie `Strg + S` oder nutzen Sie das Menü oben links, um Frequenzen, Beat-Muster, Pausendauern und die Sprache der Callouts anzupassen.
+4. **Layout anpassen:** Die Grenze zwischen dem Medienbereich und dem Strokemeter lässt sich per Drag-and-Drop verschieben, um das Verhältnis nach eigenen Wünschen anzupassen.
 
-1. Control:
-    - Manual Skip: Press Right Arrow or click "Skip >>".
-    - Manual Back: Press Left Arrow or click "<< Previous".
-    - Pause Indicator: The footer will turn Green and display a countdown during a mandatory pause.
-    - Drag the border between the beatmeter and the media control buttons to your liking customizing the relation between the media screen and the beatmeter
-    - Modify your settings via the settings field in the top left corner. Or use the shortcut Ctrl+S
+## 📂 Projektstruktur
 
+* `src/GoonerApp.py` - Hauptfenster, Mediensteuerung und GUI-Layout.
+* `src/BeatHandler.py` - Logik für Rhythmus, Sound-Wiedergabe und Pausen.
+* `src/CalloutHandler.py` - Verwaltung und Auswahl der mehrsprachigen Textanweisungen.
+* `src/ScoreTracker.py` - Aufzeichnung der Session-Statistiken.
+* `res/callouts/` - JSON-Dateien für Übersetzungen (`de.json`, `en.json`).
 
-## Sample Screenshots
+## 📸 Screenshots
 
-![Main Screen](demo_screens/demo_main_screen.png)
-![Running Main Screen](demo_screens/demo_main_screen_running_censored.png)
-![Statistics Window](demo_screens/demo_stat_screen.png)
+![Hauptbildschirm](demo_screens/demo_main_screen.png)
+*Der Hauptbildschirm mit geladenen Medien und dem inaktiven Strokemeter.*
+
+![Laufende Session](demo_screens/demo_main_screen_running_censored.png)
+*Die laufende Session mit aktivem Taktgeber und farblichem Feedback.*
+
+![Statistik-Fenster](demo_screens/demo_stat_screen.png)
+*Die detaillierte Auswertung am Ende einer erfolgreichen Session.*
