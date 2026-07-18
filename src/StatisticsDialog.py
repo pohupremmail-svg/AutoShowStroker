@@ -11,7 +11,7 @@ class StatisticsDialog(QDialog):
         main_layout = QVBoxLayout(self)
 
         title = QLabel("Congratulations to your successful session.\nI hope you came a lot!")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px;")
+        title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #FF69B4;")
 
         self.stats_table = QTableWidget()
         self.stats_table.setColumnCount(2)
@@ -22,12 +22,24 @@ class StatisticsDialog(QDialog):
 
         self.conclusion_label = QLabel()
         self.conclusion_label.setWordWrap(True)
-        self.conclusion_label.setStyleSheet("font-size: 14px; margin-bottom: 15px; color: #333; font-style: italic;")
+        self.conclusion_label.setStyleSheet("font-size: 14px; margin-bottom: 15px; color: #E0E0E0; font-style: italic;")
 
         main_layout.addWidget(title)
         main_layout.addWidget(self.conclusion_label)
         main_layout.addWidget(self.stats_table)
         self._gen_conc_text(stats_data)
+
+    def _format_time(self, seconds: float) -> str:
+        if seconds is None:
+            return "N/A"
+        total_seconds = int(round(seconds))
+        if total_seconds < 60:
+            return f"{total_seconds}s"
+        minutes = total_seconds // 60
+        secs = total_seconds % 60
+        if secs == 0:
+            return f"{minutes} Min"
+        return f"{minutes} Min {secs}s"
 
     def _gen_conc_text(self, stats_data: dict):
         active_time = stats_data['total_dur_sec'] - stats_data['pause_dur_sec']
@@ -35,9 +47,12 @@ class StatisticsDialog(QDialog):
         repeats = stats_data.get('repeats', 0)
         avg_speed = stats_data.get('average_beat_speed_active', 0)
 
+        formatted_total = self._format_time(stats_data['total_dur_sec'])
+        formatted_active = self._format_time(active_time)
+
         text = (
-            f"You survived a total of {stats_data['total_dur_sec'] / 60:.2f} minutes! "
-            f"During this session, you spent {active_time / 60:.2f} minutes actively stroking "
+            f"You survived a total of {formatted_total}! "
+            f"During this session, you spent {formatted_active} actively stroking "
             f"with an average speed of {avg_speed:.2f} beats per second.\n"
             f"You skipped {skips} media files and repeated {repeats} of them. "
             f"Your favorite rhythm pattern was '{stats_data['most_used_pattern']}'."
@@ -46,13 +61,13 @@ class StatisticsDialog(QDialog):
 
     def _populate_table(self, stats_data: dict):
         display_order = [
-            ("Total duration (min)", lambda x: f"{x['total_dur_sec'] / 60:.2f}"),
-            ("Active Time (min)", lambda x: f"{(x['total_dur_sec'] - x['pause_dur_sec']) / 60:.2f}"),
-            ("Pause duration (sec)", lambda x: f"{x['pause_dur_sec']:.1f}"),
+            ("Total duration", lambda x: self._format_time(x['total_dur_sec'])),
+            ("Active Time", lambda x: self._format_time(x['total_dur_sec'] - x['pause_dur_sec'])),
+            ("Pause duration", lambda x: self._format_time(x['pause_dur_sec'])),
             ("Total number of pauses", lambda x: f"{x['total_num_pauses']}"),
             ("Total number of beats", lambda x: f"{x['total_num_beat']}"),
             ("Total number of beat changes", lambda x: f"{x['total_num_beat_change']}"),
-            ("Average pause duration (sec)", lambda x: f"{x['average_pause_dur_sec']:.2f}" if x['average_pause_dur_sec'] else "N/A"),
+            ("Average pause duration", lambda x: self._format_time(x['average_pause_dur_sec'])),
             ("Average beat speed (1/sec)", lambda x: f"{x['average_beat_speed']:.2f}"),
             ("Average beat speed during active time (1/sec)", lambda x: f"{x['average_beat_speed_active']:.2f}"),
             ("Favourite pattern", lambda x: f"{x['most_used_pattern']}"),
