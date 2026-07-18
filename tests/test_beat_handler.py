@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from PyQt6.QtCore import QSettings
 
@@ -253,3 +255,91 @@ def test_reset_beat_timer_interval_normalizes_audible_rate_for_sparse_pattern(ha
     base_step_sec = audible_count / (2.0 * inv_sum)
     expected_ms = int(base_step_sec * 1000 / 1)  # position 0 has value 1
     assert handler.beat_meter_timer.interval() == expected_ms
+
+
+# --- custom beat patterns ---
+
+
+def test_custom_pattern_merges_into_available_patterns(handler):
+    handler.add_or_update_custom_pattern("My Pattern", [1, -1, 2])
+    assert handler.available_beat_patterns["My Pattern"] == [1, -1, 2]
+    assert "Standard Beat" in handler.available_beat_patterns  # built-ins untouched
+
+
+def test_add_custom_pattern_auto_selects_it(handler):
+    handler.add_or_update_custom_pattern("My Pattern", [1, -1, 2])
+    assert "My Pattern" in handler.selected_beat_patterns
+
+
+def test_add_custom_pattern_persists_to_settings(qtbot, tmp_path):
+    ini = tmp_path / "settings.ini"
+    settings = QSettings(str(ini), QSettings.Format.IniFormat)
+    handler = BeatHandler(settings=settings)
+    qtbot.addWidget(handler.beat_meter)
+
+    handler.add_or_update_custom_pattern("My Pattern", [1, -1, 2])
+
+    saved = json.loads(settings.value("BeatHandler/custom_patterns"))
+    assert saved == {"My Pattern": [1, -1, 2]}
+    assert "My Pattern" in settings.value("BeatHandler/selected_beat_patterns")
+    handler.stop()
+
+
+def test_update_existing_custom_pattern_does_not_duplicate_selection(handler):
+    handler.add_or_update_custom_pattern("My Pattern", [1, -1, 2])
+    handler.add_or_update_custom_pattern("My Pattern", [2, -2])
+    assert handler.available_beat_patterns["My Pattern"] == [2, -2]
+    assert handler.selected_beat_patterns.count("My Pattern") == 1
+
+
+def test_custom_patterns_loaded_from_settings(qtbot, tmp_path):
+    ini = tmp_path / "settings.ini"
+    settings = QSettings(str(ini), QSettings.Format.IniFormat)
+    settings.setValue("BeatHandler/custom_patterns", json.dumps({"Loaded": [1, -1]}))
+
+    handler = BeatHandler(settings=settings)
+    qtbot.addWidget(handler.beat_meter)
+
+    assert handler.available_beat_patterns["Loaded"] == [1, -1]
+    handler.stop()
+
+
+def test_delete_custom_pattern_removes_it_everywhere(handler):
+    handler.add_or_update_custom_pattern("My Pattern", [1, -1, 2])
+    handler.delete_custom_pattern("My Pattern")
+    assert "My Pattern" not in handler.available_beat_patterns
+    assert "My Pattern" not in handler.selected_beat_patterns
+    assert "My Pattern" not in handler.custom_beat_patterns
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        [],
+        [-1, -2],  # no audible step
+        [0, 1],  # zero not allowed
+        [1, 5],  # magnitude out of 1-4 range
+    ],
+)
+def test_add_custom_pattern_rejects_invalid_steps(handler, steps):
+    with pytest.raises(ValueError):
+        handler.add_or_update_custom_pattern("Bad Pattern", steps)
+    assert "Bad Pattern" not in handler.available_beat_patterns
+
+
+def test_add_custom_pattern_rejects_name_colliding_with_builtin(handler):
+    with pytest.raises(ValueError):
+        handler.add_or_update_custom_pattern("Standard Beat", [1, -1])
+
+
+def test_add_custom_pattern_rejects_empty_name(handler):
+    with pytest.raises(ValueError):
+        handler.add_or_update_custom_pattern("", [1, -1])
+
+
+def test_recalc_beat_emits_pattern_name(handler, qtbot):
+    handler.selected_beat_patterns = ["Standard Beat"]
+    with qtbot.waitSignal(handler.beat_change_event, timeout=1000) as blocker:
+        handler.recalc_beat()
+    _freq, pattern_name = blocker.args
+    assert pattern_name == "Standard Beat"

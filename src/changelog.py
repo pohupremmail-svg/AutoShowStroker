@@ -33,6 +33,20 @@ CHANGELOG = {
         "</ul>"
         "Go on, undress the new Settings menu and see for yourself."
     ),
+    "0.3.0": (
+        "GoonerApp hands you the sticks - build your own rhythm from scratch."
+        "<ul>"
+        "<li>A brand-new Pattern Editor: drag each step's bar to set how long it lingers, "
+        "1 (longest) to 4 (shortest)</li>"
+        "<li>A dedicated Beat/Pause button per step, so a pause can tease just as long "
+        "(or as short) as you want it to</li>"
+        "<li>Live preview playback, so you can hear exactly what you're building before "
+        "you commit to it</li>"
+        "<li>Your own patterns sit right alongside the built-in ones in the Active Rhythms "
+        "list, ready to be picked at random</li>"
+        "</ul>"
+        "Head to Settings > Beat &amp; Rhythm > Manage Custom Patterns and compose your own edge."
+    ),
 }
 
 

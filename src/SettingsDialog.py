@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src import theme
+from src.PatternEditorDialog import PatternEditorDialog
 
 
 class SettingsDialog(QDialog):
@@ -271,7 +272,21 @@ class SettingsDialog(QDialog):
     def add_beat_selection(self):
         self.add_section_header("Active Rhythms")
 
-        grid = QGridLayout()
+        self.beat_grid_layout = QGridLayout()
+        self.beat_checkboxes = {}
+        self._populate_beat_grid()
+        self._current_layout.addLayout(self.beat_grid_layout)
+
+        self.manage_patterns_button = QPushButton("Manage Custom Patterns...")
+        self.manage_patterns_button.clicked.connect(self._open_pattern_editor)
+        self._current_layout.addWidget(self.manage_patterns_button)
+
+    def _populate_beat_grid(self):
+        while self.beat_grid_layout.count():
+            item = self.beat_grid_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
         self.beat_checkboxes = {}
 
         patterns = self.beat_handler.available_beat_patterns
@@ -287,7 +302,7 @@ class SettingsDialog(QDialog):
             if name in self.beat_handler.selected_beat_patterns:
                 checkbox.setChecked(True)
 
-            grid.addWidget(checkbox, row, col)
+            self.beat_grid_layout.addWidget(checkbox, row, col)
             self.beat_checkboxes[name] = checkbox
 
             col += 1
@@ -295,7 +310,12 @@ class SettingsDialog(QDialog):
                 col = 0
                 row += 1
 
-        self._current_layout.addLayout(grid)
+    def refresh_beat_selection(self):
+        self._populate_beat_grid()
+
+    def _open_pattern_editor(self):
+        PatternEditorDialog(self.beat_handler, parent=self).exec()
+        self.refresh_beat_selection()
 
     def add_callout_selection(self):
         self.add_section_header("Callouts")

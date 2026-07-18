@@ -30,6 +30,35 @@ def test_beat_selection_reflects_currently_selected_patterns(app, qtbot):
     assert dialog.beat_checkboxes[other].isChecked() is False
 
 
+def test_manage_patterns_button_opens_editor_and_refreshes_selection(app, dialog, monkeypatch):
+    opened = {}
+
+    class FakePatternEditorDialog:
+        def __init__(self, beat_handler, parent=None):
+            opened["beat_handler"] = beat_handler
+            beat_handler.add_or_update_custom_pattern("From Editor", [1, -1])
+
+        def exec(self):
+            return None
+
+    monkeypatch.setattr("src.SettingsDialog.PatternEditorDialog", FakePatternEditorDialog)
+
+    dialog.manage_patterns_button.click()
+
+    assert opened["beat_handler"] is app.beat_handler
+    assert "From Editor" in dialog.beat_checkboxes
+
+
+def test_refresh_beat_selection_drops_deleted_custom_patterns(app, dialog):
+    app.beat_handler.add_or_update_custom_pattern("Temp Pattern", [1, -1])
+    dialog.refresh_beat_selection()
+    assert "Temp Pattern" in dialog.beat_checkboxes
+
+    app.beat_handler.delete_custom_pattern("Temp Pattern")
+    dialog.refresh_beat_selection()
+    assert "Temp Pattern" not in dialog.beat_checkboxes
+
+
 def test_callout_selection_reflects_current_state(app, dialog):
     assert dialog.callout_selected_lang.currentText() == app.callout_handler.lang
     assert dialog.callout_active_checkbox.isChecked() == app.callout_handler.active_callout
