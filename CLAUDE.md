@@ -53,12 +53,11 @@ Version lives in `VERSION` at the repo root (plain semver, e.g. `0.2.0`) — the
 - **`feat:` PRs bump MINOR** (`0.1.0` → `0.2.0`) as the final commit on the feature branch — after tests pass, right before push — in its own commit: `chore: bump version to 0.2.0`.
 - **Critical `fix:` PRs bump PATCH** (`0.2.0` → `0.2.1`) the same way. "Critical" = crash, data loss, or a core feature completely broken — a judgment call; ask the user if unsure.
 - **Routine `fix:`/`test:`/`content:`/`docs:`/`chore:` PRs** don't bump the version and don't trigger a build.
-- **After a version-bumping PR is merged**, as part of the usual post-merge sync + branch cleanup, run:
-  ```
-  .venv\Scripts\python.exe scripts/release.py --notes "<short summary of what changed>"
-  ```
-  This builds `dist/GoonerApp.exe` (same flags as the Build section above) and publishes it as a GitHub Release tagged `v<VERSION>` — `gh release create` creates and pushes the tag automatically, no separate `git tag` step needed.
+- **After a version-bumping PR is merged**, as part of the usual post-merge sync + branch cleanup:
+  1. Build: `.venv\Scripts\python.exe scripts/build.py` — produces `dist/GoonerApp.exe`.
+  2. Publish: `gh release create v<VERSION> dist/GoonerApp.exe --title "v<VERSION>" --notes "<short summary of what changed>"` — creates and pushes the `v<VERSION>` tag automatically, no separate `git tag` step needed.
 - Manual, Claude-driven step (no CI) — follow this after merging a qualifying PR without waiting to be asked, same as branch cleanup already happens automatically after every merge.
+- `scripts/build.py` deliberately only builds — it never calls `gh` or touches GitHub in any way, so anyone who clones the repo can safely run it to build their own copy locally. Publishing a release is a separate, manual `gh release create` step that only happens on this maintainer's machine — never put GitHub-push/release capability inside a script that ships in the repo.
 
 ## Content note
 
