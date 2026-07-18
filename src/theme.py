@@ -4,6 +4,8 @@ Palette derived from the app logo (qUloN.png): neon pink line-art on a
 near-black purple background.
 """
 
+from PyQt6.QtGui import QColor, QPalette
+
 BACKGROUND = "#2D1D3A"
 ACCENT = "#FF00BF"
 ACCENT_HOVER = "#FF33CC"
@@ -25,6 +27,29 @@ RUINED = "#FFA733"
 RUINED_DIM = "#CC7A00"
 DENIED = "#FF3B3B"
 DENIED_DIM = "#B31212"
+
+
+def build_palette() -> QPalette:
+    """QSS alone doesn't reliably color natively-drawn sub-elements (spin box up/down
+    arrows, combo box drop-down arrow) - those follow QPalette. Without this, arrows render
+    in the OS default color, which is nearly invisible against a dark theme."""
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor(BACKGROUND))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(TEXT))
+    palette.setColor(QPalette.ColorRole.Base, QColor(SURFACE))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(SURFACE_DARK))
+    palette.setColor(QPalette.ColorRole.Text, QColor(TEXT))
+    palette.setColor(QPalette.ColorRole.Button, QColor(SECONDARY))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(TEXT))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(ACCENT))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(ACCENT))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(BACKGROUND))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(SURFACE))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(TEXT))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(DISABLED_TEXT))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(DISABLED_TEXT))
+    return palette
+
 
 GLOBAL_QSS = f"""
 QMainWindow, QDialog, QWidget {{
@@ -85,6 +110,9 @@ QComboBox, QDoubleSpinBox, QSpinBox {{
     border-radius: 6px;
     padding: 4px 8px;
 }}
+QDoubleSpinBox, QSpinBox {{
+    padding-right: 22px;
+}}
 QComboBox:hover, QDoubleSpinBox:hover, QSpinBox:hover {{
     border-color: {ACCENT};
 }}
@@ -94,6 +122,50 @@ QComboBox QAbstractItemView {{
     selection-background-color: {ACCENT};
     selection-color: {BACKGROUND};
     border: 1px solid {SECONDARY};
+}}
+QComboBox::drop-down {{
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid {SECONDARY};
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    background-color: {SECONDARY};
+}}
+QComboBox::down-arrow {{
+    width: 10px;
+    height: 10px;
+}}
+QDoubleSpinBox::up-button, QSpinBox::up-button {{
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    height: 13px;
+    border-left: 1px solid {SECONDARY};
+    border-bottom: 1px solid {SECONDARY};
+    border-top-right-radius: 6px;
+    background-color: {SECONDARY};
+}}
+QDoubleSpinBox::down-button, QSpinBox::down-button {{
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 20px;
+    height: 13px;
+    border-left: 1px solid {SECONDARY};
+    border-bottom-right-radius: 6px;
+    background-color: {SECONDARY};
+}}
+QDoubleSpinBox::up-button:hover, QSpinBox::up-button:hover,
+QDoubleSpinBox::down-button:hover, QSpinBox::down-button:hover {{
+    background-color: {ACCENT};
+}}
+QDoubleSpinBox::up-arrow, QSpinBox::up-arrow {{
+    width: 8px;
+    height: 8px;
+}}
+QDoubleSpinBox::down-arrow, QSpinBox::down-arrow {{
+    width: 8px;
+    height: 8px;
 }}
 QTableWidget {{
     background-color: {SURFACE_DARK};

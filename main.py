@@ -7,6 +7,8 @@ from src.GoonerApp import GoonerApp
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    app.setPalette(theme.build_palette())
     app.setStyleSheet(theme.GLOBAL_QSS)
     window = GoonerApp()
     window.showMaximized()
