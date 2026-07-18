@@ -4,18 +4,7 @@ import random
 import pytest
 
 from src import CalloutHandler as callout_module
-from src.CalloutHandler import CalloutHandler
-
-TRIGGER_KEYS = [
-    "beat_change_general",
-    "beat_change_faster",
-    "beat_change_slower",
-    "pause_start",
-    "pause_end",
-    "media_skipped",
-    "media_repeated",
-    "session_started",
-]
+from src.CalloutHandler import TRIGGER_KEYS, CalloutHandler
 
 
 @pytest.fixture
