@@ -77,6 +77,12 @@ After a successful build, you will find the finished file **`GoonerApp.exe`** in
 * `src/ScoreTracker.py` - Recording of session statistics.
 * `res/callouts/` - JSON files for translations (`de.json`, `en.json`).
 
+## 🌍 Contributing (New Languages & Phrases)
+
+Want to add your own language, or new teasing phrases to an existing one? No Python knowledge required — see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, including which Trigger Key fires for which in-app event,
+how to validate your file, and how to submit it as a Pull Request.
+
 ## 📸 Screenshots
 
 ![Main Screen](demo_screens/demo_main_screen.png)

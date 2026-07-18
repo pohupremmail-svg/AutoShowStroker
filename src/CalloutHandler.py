@@ -6,6 +6,17 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
+TRIGGER_KEYS = [
+    "beat_change_general",
+    "beat_change_faster",
+    "beat_change_slower",
+    "pause_start",
+    "pause_end",
+    "media_skipped",
+    "media_repeated",
+    "session_started",
+]
+
 
 def get_resource_path(relative_path):
     """ Liefert den absoluten Pfad zur Ressource, passend für Entwicklung und PyInstaller-EXE """

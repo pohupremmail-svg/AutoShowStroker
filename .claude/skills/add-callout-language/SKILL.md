@@ -30,4 +30,6 @@ Follow this to add or extend a language file for `CalloutHandler` (`src/CalloutH
 
 ## Verification
 
-There's no automated test for this. After editing, ask the user to run the app (`python main.py`), select the new/changed language in Settings, and confirm phrases appear during a session — don't claim this is verified without that manual check.
+`tests/test_callout_language_files.py` automatically discovers every file in `res/callouts/*.json` and checks: valid JSON, all 8 required trigger keys present, no unknown/typo'd keys, and all values are lists of strings. Run `python -m pytest tests/test_callout_language_files.py -v` after adding or editing a language file — this catches the exact "silently no-op" trap described above (missing key or typo'd key name) without needing to launch the app.
+
+This only validates structure, not content — it does not check that phrase arrays are non-empty or that translations read well. After the automated check passes, still ask the user to run the app (`python main.py`), select the new/changed language in Settings, and confirm phrases appear and read correctly during a session before claiming the work is fully verified.
