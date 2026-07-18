@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QSettings, pyqtSignal
-from PyQt6.QtGui import QPixmap, QMovie, QAction
+from PyQt6.QtGui import QPixmap, QMovie, QAction, QIcon
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter, QGridLayout)
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -16,6 +16,7 @@ from src.CalloutHandler import CalloutHandler
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
+from src.utils import get_project_root
 
 
 class GoonerApp(QMainWindow):
@@ -32,6 +33,17 @@ class GoonerApp(QMainWindow):
         self.setWindowTitle("Auto Hero Generation")
 
         self.current_movie = None
+
+        project_root = get_project_root()  # Siehe Funktion oben
+
+        icon_path = project_root / 'res' / 'icons' / 'favicon.ico'
+
+        str_icon_path = str(icon_path.resolve())
+
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str_icon_path))
+        else:
+            print(f"Fehler: Icon nicht gefunden unter: {str_icon_path}")
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
