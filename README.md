@@ -87,11 +87,25 @@ how to validate your file, and how to submit it as a Pull Request.
 
 ## 📸 Screenshots
 
-![Main Screen](demo_screens/demo_main_screen.png)
-*The main screen with loaded media and the inactive Strokemeter.*
-
-![Running Session](demo_screens/demo_main_screen_running_censored.png)
-*The running session with an active rhythm generator and color feedback.*
-
-![Statistics Window](demo_screens/demo_stat_screen.png)
-*The detailed evaluation at the end of a successful session.*
+<table>
+  <tr>
+    <td width="50%">
+      <img src="demo_screens/demo_main_screen.png" alt="Main Screen" width="100%">
+      <p align="center"><em>The main screen with the neon cyber theme, waiting for a folder.</em></p>
+    </td>
+    <td width="50%">
+      <img src="demo_screens/demo_main_screen_running_censored.png" alt="Running Session" width="100%">
+      <p align="center"><em>An active session: rhythm generator, callouts, and a climax banner.</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="demo_screens/demo_stat_screen.png" alt="Statistics Window" width="100%">
+      <p align="center"><em>The detailed evaluation at the end of a session.</em></p>
+    </td>
+    <td width="50%">
+      <img src="demo_screens/demo_settings_dialog.png" alt="Settings Dialog" width="100%">
+      <p align="center"><em>Tabbed settings for playback, rhythm, climax chances, and callouts.</em></p>
+    </td>
+  </tr>
+</table>
