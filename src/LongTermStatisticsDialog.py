@@ -21,7 +21,9 @@ class LongTermStatisticsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Long-term Statistics")
         self.setModal(True)
-        self.resize(560, 480)
+        # Roughly a third of a 1920x1080 (Full HD) screen by area, so the chart has real
+        # room to breathe on first open - still just an initial size, freely resizable.
+        self.resize(960, 720)
 
         self.history = history
         self.all_time_bests = all_time_bests
