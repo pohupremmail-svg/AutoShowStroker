@@ -410,7 +410,7 @@ class GoonerApp(QMainWindow):
             self.btn_next.setEnabled(False)
             self.btn_prev.setEnabled(False)
             self.btn_stop.setEnabled(False)
-            self._update_climax_status_label("neutral")
+            self._freeze_climax_blink()
             self.session_ended_event.emit()
             self.show_statistics()
 
@@ -459,6 +459,13 @@ class GoonerApp(QMainWindow):
         self._climax_blink_on = not self._climax_blink_on
         color = self._climax_status_colors[0 if self._climax_blink_on else 1]
         self.climax_status_label.setStyleSheet(self._climax_label_style(color))
+
+    def _freeze_climax_blink(self):
+        """Stops the blink but keeps the banner visible with its last outcome - used on
+        Stop, where the result should stay readable rather than disappear or flash forever."""
+        self.climax_blink_timer.stop()
+        if self._climax_status_text:
+            self.climax_status_label.setStyleSheet(self._climax_label_style(self._climax_status_colors[0]))
 
     def register_start_event(self, handler):
         self.session_started_event.connect(handler)

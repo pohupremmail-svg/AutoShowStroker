@@ -287,7 +287,7 @@ def test_stop_when_not_running_is_noop(app, qtbot):
         app.stop()
 
 
-def test_stop_hides_climax_banner_and_stops_blink(app, tmp_path):
+def test_stop_freezes_climax_banner_without_hiding_it(app, tmp_path):
     img = tmp_path / "a.png"
     img.write_bytes(b"")
     app.playlist = [img]
@@ -297,8 +297,22 @@ def test_stop_hides_climax_banner_and_stops_blink(app, tmp_path):
 
     app.stop()
 
+    assert not app.climax_status_label.isHidden()
+    assert app.climax_status_label.text() == "CUM"
+    assert not app.climax_blink_timer.isActive()
+    on_color, _off_color = app.CLIMAX_STATUS_COLORS["cum"]
+    assert on_color in app.climax_status_label.styleSheet()
+
+
+def test_stop_when_no_climax_outcome_active_is_still_safe(app, tmp_path):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+
+    app.stop()
+
     assert app.climax_status_label.isHidden()
-    assert app.climax_status_label.text() == ""
     assert not app.climax_blink_timer.isActive()
 
 
