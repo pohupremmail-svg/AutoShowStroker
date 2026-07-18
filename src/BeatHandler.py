@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import sys
@@ -139,8 +140,12 @@ class BeatHandler(QObject):
                 # Standard: Alle Muster aktiv
                 self.selected_beat_patterns = list(self.BEAT_PATTERNS_MAP.keys())
 
+            raw_custom_patterns = self.settings.value("BeatHandler/custom_patterns")
+            self.custom_beat_patterns = json.loads(raw_custom_patterns) if raw_custom_patterns else {}
+
         else:
             self.selected_beat_patterns = list(self.BEAT_PATTERNS_MAP.keys())
+            self.custom_beat_patterns = {}
 
         self.beat_meter_timer = QTimer()
         self.beat_meter_timer.timeout.connect(self.beat)
@@ -156,8 +161,9 @@ class BeatHandler(QObject):
         self.init_beat_sound(str(beat_file.absolute()))
 
         self.current_beat_pattern = None
+        self.current_beat_pattern_name = None
         self.current_beat_position = 0
-        self.available_beat_patterns = self.BEAT_PATTERNS_MAP
+        self.available_beat_patterns = {**self.BEAT_PATTERNS_MAP, **self.custom_beat_patterns}
         self.beat_pattern_mutex = QMutex()
         self._pattern_audible_count = 1
         self._pattern_inv_sum = 1.0
@@ -218,7 +224,8 @@ class BeatHandler(QObject):
         self.current_beat_position = 0
         if not isinstance(self.selected_beat_patterns, list):
             self.selected_beat_patterns = list(self.selected_beat_patterns)
-        self.current_beat_pattern = self.available_beat_patterns[random.choice(self.selected_beat_patterns)]
+        self.current_beat_pattern_name = random.choice(self.selected_beat_patterns)
+        self.current_beat_pattern = self.available_beat_patterns[self.current_beat_pattern_name]
         self._pattern_audible_count = sum(1 for v in self.current_beat_pattern if v > 0)
         self._pattern_inv_sum = sum(1 / abs(v) for v in self.current_beat_pattern)
         self.beat_pattern_mutex.unlock()
@@ -230,7 +237,7 @@ class BeatHandler(QObject):
         )
         self.just_changed_beat = True
         self.beat_changed_counter = 5
-        self.beat_change_event.emit(self.cur_freq, str(self.current_beat_pattern))
+        self.beat_change_event.emit(self.cur_freq, self.current_beat_pattern_name)
 
     def init_beat_sound(self, file_path):
         self.sound_effect = QSoundEffect()
@@ -312,3 +319,39 @@ class BeatHandler(QObject):
 
     def register_beat_change_event(self, handler):
         self.beat_change_event.connect(handler)
+
+    @staticmethod
+    def _validate_pattern_steps(steps):
+        if not steps:
+            raise ValueError("A pattern needs at least one step.")
+        if not all(1 <= abs(v) <= 4 for v in steps):
+            raise ValueError("Every step's weight must have a magnitude between 1 and 4.")
+        if not any(v > 0 for v in steps):
+            raise ValueError("A pattern needs at least one audible step.")
+
+    def add_or_update_custom_pattern(self, name, steps):
+        name = name.strip() if name else ""
+        if not name:
+            raise ValueError("Pattern name must not be empty.")
+        if name in self.BEAT_PATTERNS_MAP:
+            raise ValueError(f"'{name}' collides with a built-in pattern name.")
+        self._validate_pattern_steps(steps)
+
+        self.custom_beat_patterns[name] = list(steps)
+        self.available_beat_patterns = {**self.BEAT_PATTERNS_MAP, **self.custom_beat_patterns}
+        if name not in self.selected_beat_patterns:
+            self.selected_beat_patterns.append(name)
+        self._save_custom_patterns()
+
+    def delete_custom_pattern(self, name):
+        self.custom_beat_patterns.pop(name, None)
+        self.available_beat_patterns = {**self.BEAT_PATTERNS_MAP, **self.custom_beat_patterns}
+        if name in self.selected_beat_patterns:
+            self.selected_beat_patterns.remove(name)
+        self._save_custom_patterns()
+
+    def _save_custom_patterns(self):
+        if not self.settings:
+            return
+        self.settings.setValue("BeatHandler/custom_patterns", json.dumps(self.custom_beat_patterns))
+        self.settings.setValue("BeatHandler/selected_beat_patterns", self.selected_beat_patterns)
