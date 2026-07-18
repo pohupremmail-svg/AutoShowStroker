@@ -135,7 +135,7 @@ class GoonerApp(QMainWindow):
         self.btn_load.clicked.connect(self.open_folder)
         btn_load_glow = QGraphicsDropShadowEffect()
         btn_load_glow.setColor(QColor(theme.ACCENT))
-        btn_load_glow.setBlurRadius(24)
+        btn_load_glow.setBlurRadius(50)
         btn_load_glow.setOffset(0, 0)
         self.btn_load.setGraphicsEffect(btn_load_glow)
 

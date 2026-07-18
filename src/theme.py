@@ -54,7 +54,7 @@ QPushButton#primary {{
     background-color: {ACCENT};
     color: {BACKGROUND};
     font-weight: bold;
-    border: none;
+    border: 1px solid {TEXT};
 }}
 QPushButton#primary:hover {{
     background-color: {ACCENT_HOVER};
@@ -98,20 +98,30 @@ QComboBox QAbstractItemView {{
 QTableWidget {{
     background-color: {SURFACE_DARK};
     color: {TEXT};
-    gridline-color: {SECONDARY};
     border: 1px solid {SECONDARY};
-    border-radius: 8px;
+    border-radius: 10px;
+    gridline-color: transparent;
+    outline: none;
 }}
-QTableWidget::item:selected {{
-    background-color: {ACCENT};
-    color: {BACKGROUND};
+QTableWidget::item {{
+    padding: 6px 12px;
+    border: none;
+}}
+QTableWidget::item:alternate {{
+    background-color: {SURFACE};
 }}
 QHeaderView::section {{
     background-color: {SURFACE};
-    color: {TEXT};
+    color: {ACCENT};
+    font-weight: bold;
     border: none;
-    border-bottom: 1px solid {SECONDARY};
-    padding: 6px;
+    padding: 8px 12px;
+}}
+QHeaderView::section:first {{
+    border-top-left-radius: 10px;
+}}
+QHeaderView::section:last {{
+    border-top-right-radius: 10px;
 }}
 QSplitter::handle {{
     background-color: {SECONDARY};
@@ -129,5 +139,29 @@ QScrollBar::handle {{
 }}
 QScrollBar::handle:hover {{
     background-color: {ACCENT};
+}}
+QTabWidget::pane {{
+    border: 1px solid {SECONDARY};
+    border-radius: 8px;
+    top: -1px;
+}}
+QTabBar::tab {{
+    background-color: {SURFACE};
+    color: {TEXT};
+    padding: 8px 16px;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    margin-right: 2px;
+}}
+QTabBar::tab:selected {{
+    background-color: {ACCENT};
+    color: {BACKGROUND};
+    font-weight: bold;
+}}
+QTabBar::tab:hover {{
+    background-color: {SECONDARY_HOVER};
+}}
+QScrollArea {{
+    border: none;
 }}
 """

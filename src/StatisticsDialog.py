@@ -22,6 +22,12 @@ class StatisticsDialog(QDialog):
         self.stats_table.setColumnCount(2)
         self.stats_table.setHorizontalHeaderLabels(["metric", "value"])
         self.stats_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.stats_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.stats_table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.stats_table.verticalHeader().setVisible(False)
+        self.stats_table.setShowGrid(False)
+        self.stats_table.setAlternatingRowColors(True)
+        self.stats_table.horizontalHeader().setStretchLastSection(True)
 
         self._populate_table(stats_data)
 
