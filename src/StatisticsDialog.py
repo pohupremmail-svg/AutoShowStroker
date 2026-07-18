@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QAbstractItemView, QDialog, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout
 
 
 class StatisticsDialog(QDialog):

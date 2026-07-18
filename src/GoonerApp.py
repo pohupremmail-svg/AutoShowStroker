@@ -1,15 +1,24 @@
-import random
 import os
+import random
 import time
 from pathlib import Path
-from typing import List
 
-from PyQt6.QtCore import Qt, QTimer, QUrl, QSettings, pyqtSignal
-from PyQt6.QtGui import QPixmap, QMovie, QAction, QIcon
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
-                             QLabel, QPushButton, QFileDialog, QStackedWidget, QHBoxLayout, QSplitter, QGridLayout)
-from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PyQt6.QtCore import QSettings, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QAction, QIcon, QMovie, QPixmap
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QSplitter,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
@@ -104,7 +113,7 @@ class GoonerApp(QMainWindow):
 
         media_layout.addWidget(self.overlay_widget, stretch=4)
 
-        self.playlist: List[Path] = []
+        self.playlist: list[Path] = []
         self.current_index = 0
 
         self.controls_container = QWidget()
@@ -259,7 +268,7 @@ class GoonerApp(QMainWindow):
     def recalc_autoplay_timer(self):
         self.auto_play_timer.start(int(random.uniform(self.min_dur, self.max_dur) * 1000))
 
-    def finde_unterstützte_dateien(self, verzeichnis_pfad: str) -> List[Path]:
+    def finde_unterstützte_dateien(self, verzeichnis_pfad: str) -> list[Path]:
         pfad = Path(verzeichnis_pfad)
         unterstützte_endungen = ['.mp4', '.gif', '.jpeg', '.jpg', '.png']
         gefundene_dateien = []
@@ -283,17 +292,20 @@ class GoonerApp(QMainWindow):
                 self.stop()
 
     def show_next(self):
-        if not self.playlist: return
+        if not self.playlist:
+            return
         self.current_index = (self.current_index + 1) % len(self.playlist)
         self.load_current_index()
 
     def show_prev(self):
-        if not self.playlist: return
+        if not self.playlist:
+            return
         self.current_index = (self.current_index - 1) % len(self.playlist)
         self.load_current_index()
 
     def load_current_index(self):
-        if not self.playlist: return
+        if not self.playlist:
+            return
         file_path = str(self.playlist[self.current_index])
         self.load_media(file_path)
 
