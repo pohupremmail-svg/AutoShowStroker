@@ -65,9 +65,9 @@ class CalloutHandler(QObject):
     def media_repeated(self):
         self.select_and_output_sentence("media_repeated")
     def pause_ended(self):
-        self.select_and_output_sentence("pause_ended")
+        self.select_and_output_sentence("pause_end")
     def pause_started(self):
-        self.select_and_output_sentence("pause_started")
+        self.select_and_output_sentence("pause_start")
     def beat_change_slower(self, freq, pattern):
         self.select_and_output_sentence("beat_change_slower")
     def beat_change_faster(self, freq, pattern):

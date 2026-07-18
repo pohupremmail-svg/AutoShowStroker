@@ -22,7 +22,7 @@ class StatisticsDialog(QDialog):
 
         self.conclusion_label = QLabel()
         self.conclusion_label.setWordWrap(True)
-        self.conclusion_label.setStyleSheet("font-size: 14px; margin-bottom: 15px; color: #555;")
+        self.conclusion_label.setStyleSheet("font-size: 14px; margin-bottom: 15px; color: #333; font-style: italic;")
 
         main_layout.addWidget(title)
         main_layout.addWidget(self.conclusion_label)
@@ -31,8 +31,18 @@ class StatisticsDialog(QDialog):
 
     def _gen_conc_text(self, stats_data: dict):
         active_time = stats_data['total_dur_sec'] - stats_data['pause_dur_sec']
-        skips = None  # TODO
-        average_speed = None # TODO
+        skips = stats_data.get('skips', 0)
+        repeats = stats_data.get('repeats', 0)
+        avg_speed = stats_data.get('average_beat_speed_active', 0)
+
+        text = (
+            f"You survived a total of {stats_data['total_dur_sec'] / 60:.2f} minutes! "
+            f"During this session, you spent {active_time / 60:.2f} minutes actively stroking "
+            f"with an average speed of {avg_speed:.2f} beats per second.\n"
+            f"You skipped {skips} media files and repeated {repeats} of them. "
+            f"Your favorite rhythm pattern was '{stats_data['most_used_pattern']}'."
+        )
+        self.conclusion_label.setText(text)
 
     def _populate_table(self, stats_data: dict):
         display_order = [
@@ -43,9 +53,11 @@ class StatisticsDialog(QDialog):
             ("Total number of beats", lambda x: f"{x['total_num_beat']}"),
             ("Total number of beat changes", lambda x: f"{x['total_num_beat_change']}"),
             ("Average pause duration (sec)", lambda x: f"{x['average_pause_dur_sec']:.2f}" if x['average_pause_dur_sec'] else "N/A"),
-            ("Average beat speed (1/sec)", lambda x: f"{x['average_beat_speed']}"),
-            ("Average beat speed during active time (1/sec)", lambda x: f"{x['average_beat_speed_active']}"),
+            ("Average beat speed (1/sec)", lambda x: f"{x['average_beat_speed']:.2f}"),
+            ("Average beat speed during active time (1/sec)", lambda x: f"{x['average_beat_speed_active']:.2f}"),
             ("Favourite pattern", lambda x: f"{x['most_used_pattern']}"),
+            ("Skips", lambda x: f"{x['skips']}"),
+            ("Repeats", lambda x: f"{x['repeats']}"),
         ]
 
         self.stats_table.setRowCount(len(display_order))

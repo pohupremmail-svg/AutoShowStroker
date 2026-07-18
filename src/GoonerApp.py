@@ -177,11 +177,6 @@ class GoonerApp(QMainWindow):
             self.controls_container.hide()
             self.showFullScreen()
 
-    def _leave_fullscreen(self):
-        if self.isFullScreen():
-            self.showMaximized()
-            self.controls_container.show()
-
     def display_new_tease(self, tease: str):
         self.callout_label.setText(tease)
         self.callout_label.show()
@@ -205,8 +200,10 @@ class GoonerApp(QMainWindow):
 
         self.register_end_event(self.score_tracker.session_ended)
 
+        self.register_media_skip_event(self.score_tracker.media_skipped)
         self.register_media_skip_event(self.callout_handler.media_skipped)
 
+        self.register_media_repeat_event(self.score_tracker.media_repeated)
         self.register_media_repeat_event(self.callout_handler.media_repeated)
 
         self.callout_handler.register_new_tease_event(self.display_new_tease, self.hide_last_tease)
