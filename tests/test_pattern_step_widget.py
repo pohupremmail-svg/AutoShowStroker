@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QEvent, QPointF, Qt
 from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtWidgets import QApplication
 
 from src.PatternStepWidget import MAX_WEIGHT, MIN_WEIGHT, PatternStepWidget
 
@@ -67,6 +68,16 @@ def test_small_movement_is_still_treated_as_click(qtbot):
     widget = PatternStepWidget(1)
     qtbot.addWidget(widget)
     _drag(widget, start_y=60, end_y=61)  # 1px movement, below drag threshold
+    assert widget.get_value() == -1
+
+
+def test_real_mouse_jitter_within_platform_click_threshold_still_toggles(qtbot):
+    # A real mouse/trackpad "click" almost always registers a few pixels of movement.
+    # Anything under the OS's own click/drag distance must still count as a click.
+    widget = PatternStepWidget(1)
+    qtbot.addWidget(widget)
+    jitter = QApplication.startDragDistance() - 1
+    _drag(widget, start_y=60, end_y=60 + jitter)
     assert widget.get_value() == -1
 
 

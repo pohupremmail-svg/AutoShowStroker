@@ -1,12 +1,11 @@
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QMouseEvent, QPainter, QPen
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from src import theme
 
 MIN_WEIGHT = 1
 MAX_WEIGHT = 4
-_CLICK_DRAG_THRESHOLD_PX = 4
 _WIDTH = 40
 _HEIGHT = 120
 
@@ -62,7 +61,11 @@ class PatternStepWidget(QWidget):
         if self._press_pos is None:
             return
         delta = (event.position() - self._press_pos).manhattanLength()
-        if delta < _CLICK_DRAG_THRESHOLD_PX:
+        # Use the platform's own click/drag distance, not an arbitrary pixel count - a
+        # real mouse/trackpad click almost always registers a few pixels of movement,
+        # and a too-tight threshold here misclassifies every click as a drag, which
+        # forces the step audible and makes muting a step impossible.
+        if delta < QApplication.startDragDistance():
             return
         self._dragged = True
         self._audible = True
