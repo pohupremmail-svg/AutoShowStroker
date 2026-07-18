@@ -17,6 +17,10 @@ class ScoreTracker:
         self.patterns = {}
         self.skips = 0
         self.repeats = 0
+        self.climax_outcome = None
+
+    def climax_decided(self, outcome):
+        self.climax_outcome = outcome
 
     def beat_paused(self):
         print("Beat Paused")
@@ -50,6 +54,7 @@ class ScoreTracker:
         self.beat_count = 0
         self.number_of_beat_changes = 0
         self.patterns = {}
+        self.climax_outcome = None
 
     def session_ended(self):
         print("Session Ended")
@@ -82,7 +87,8 @@ class ScoreTracker:
             'average_beat_speed_active': self.average_beat_speed_active,
             'most_used_pattern': self._find_fav_pattern(),
             'skips': self.skips,
-            'repeats': self.repeats
+            'repeats': self.repeats,
+            'climax_outcome': self.climax_outcome
         }
 
     def beat_changed(self, _, new_pattern):

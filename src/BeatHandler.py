@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QMutex, QObject, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtMultimedia import QSoundEffect
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QSizePolicy
 
 
 def get_resource_path(relative_path):
@@ -60,6 +60,7 @@ class BeatHandler(QObject):
 
         self.beat_meter = QLabel("Strokemeter appears here.")
         self.beat_meter.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.beat_meter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.footer_style_base = "font-weight: bold; font-size: 24px;"
         self.beat_meter.setStyleSheet(f"background-color: grey; color: white; {self.footer_style_base}")
@@ -166,6 +167,10 @@ class BeatHandler(QObject):
         self.current_beat_position = (self.current_beat_position + 1) % len(self.current_beat_pattern)
         self.beat_pattern_mutex.unlock()
         self.beat_meter_timer.start(beat_time_ms)
+
+    def is_ramp_complete(self):
+        progress = self._ramp_progress()
+        return progress is not None and progress >= 1.0
 
     def _ramp_progress(self):
         if self.ramp_target_duration <= 0:

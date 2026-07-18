@@ -189,6 +189,41 @@ def test_start_beat_draws_ramp_target_duration_from_configured_range(handler):
     assert handler.ramp_target_duration == 42.0
 
 
+def test_is_ramp_complete_false_before_start_beat_called(handler):
+    assert handler.is_ramp_complete() is False
+
+
+def test_is_ramp_complete_false_mid_ramp(handler, monkeypatch):
+    handler.min_ramp_duration = 100.0
+    handler.max_ramp_duration = 100.0
+    monkeypatch.setattr("src.BeatHandler.time.time", lambda: 1000.0)
+    handler.start_beat()
+
+    monkeypatch.setattr("src.BeatHandler.time.time", lambda: 1050.0)  # halfway
+    assert handler.is_ramp_complete() is False
+
+
+def test_is_ramp_complete_true_once_target_elapsed(handler, monkeypatch):
+    handler.min_ramp_duration = 100.0
+    handler.max_ramp_duration = 100.0
+    monkeypatch.setattr("src.BeatHandler.time.time", lambda: 1000.0)
+    handler.start_beat()
+
+    monkeypatch.setattr("src.BeatHandler.time.time", lambda: 5000.0)  # way past target
+    assert handler.is_ramp_complete() is True
+
+
+def test_is_ramp_complete_true_regardless_of_ramping_active_toggle(handler, monkeypatch):
+    handler.ramping_active = False
+    handler.min_ramp_duration = 100.0
+    handler.max_ramp_duration = 100.0
+    monkeypatch.setattr("src.BeatHandler.time.time", lambda: 1000.0)
+    handler.start_beat()
+
+    monkeypatch.setattr("src.BeatHandler.time.time", lambda: 5000.0)
+    assert handler.is_ramp_complete() is True
+
+
 # --- BPM normalization (cur_freq == real audible beats/sec, independent of pattern shape) ---
 
 

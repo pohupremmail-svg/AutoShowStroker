@@ -14,6 +14,7 @@ FULL_STATS = {
     "most_used_pattern": "Standard Beat",
     "skips": 1,
     "repeats": 0,
+    "climax_outcome": None,
 }
 
 
@@ -39,7 +40,7 @@ def test_format_time(dialog, seconds, expected):
 
 
 def test_populate_table_has_a_row_per_metric(dialog):
-    assert dialog.stats_table.rowCount() == 12
+    assert dialog.stats_table.rowCount() == 13
 
 
 def test_missing_optional_key_shows_na(qtbot):
@@ -74,6 +75,54 @@ def test_gen_conc_text_defaults_missing_skips_and_repeats_to_zero(qtbot):
     qtbot.addWidget(d)
 
     assert "skipped 0 media files and repeated 0 of them" in d.conclusion_label.text()
+
+
+def test_title_for_outcome_real(dialog):
+    assert dialog._title_for_outcome("real") == "Congratulations to your successful session.\nI hope you came a lot!"
+
+
+def test_title_for_outcome_ruined(dialog):
+    assert dialog._title_for_outcome("ruined") == "Congratulations on your session.\nEnjoy your ruined orgasm."
+
+
+def test_title_for_outcome_denied(dialog):
+    assert dialog._title_for_outcome("denied") == "Session over.\nNot today - no cumming for you."
+
+
+def test_title_for_outcome_none_defaults_to_classic_message(dialog):
+    assert dialog._title_for_outcome(None) == "Congratulations to your successful session.\nI hope you came a lot!"
+
+
+def test_dialog_title_reflects_denied_outcome(qtbot):
+    stats = dict(FULL_STATS)
+    stats["climax_outcome"] = "denied"
+    d = StatisticsDialog(stats)
+    qtbot.addWidget(d)
+
+    assert d.title_label.text() == "Session over.\nNot today - no cumming for you."
+
+
+def test_climax_outcome_row_shows_na_when_none(dialog):
+    for row in range(dialog.stats_table.rowCount()):
+        if dialog.stats_table.item(row, 0).text() == "Climax outcome":
+            assert dialog.stats_table.item(row, 1).text() == "N/A"
+            break
+    else:
+        pytest.fail("Climax outcome row not found")
+
+
+def test_climax_outcome_row_shows_outcome_value(qtbot):
+    stats = dict(FULL_STATS)
+    stats["climax_outcome"] = "ruined"
+    d = StatisticsDialog(stats)
+    qtbot.addWidget(d)
+
+    for row in range(d.stats_table.rowCount()):
+        if d.stats_table.item(row, 0).text() == "Climax outcome":
+            assert d.stats_table.item(row, 1).text() == "ruined"
+            break
+    else:
+        pytest.fail("Climax outcome row not found")
 
 
 def test_adjust_table_height_matches_computed_size(dialog):

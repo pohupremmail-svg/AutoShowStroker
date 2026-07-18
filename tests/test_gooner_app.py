@@ -95,6 +95,41 @@ def test_open_folder_with_files_starts_session(app, monkeypatch, tmp_path):
     assert app.is_running is True
 
 
+def test_open_folder_with_files_hides_climax_banner(app, monkeypatch, tmp_path):
+    old = tmp_path / "old.png"
+    old.write_bytes(b"")
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "a.png").write_bytes(b"")
+    app.playlist = [old]
+    app.start()
+    app._update_climax_status_label("ruined")
+    assert app.climax_blink_timer.isActive()
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(other))
+    app.open_folder()
+
+    assert app.climax_status_label.isHidden()
+    assert app.climax_status_label.text() == ""
+    assert not app.climax_blink_timer.isActive()
+
+
+def test_open_folder_no_supported_files_hides_climax_banner(app, monkeypatch, tmp_path):
+    old = tmp_path / "old.png"
+    old.write_bytes(b"")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    app.playlist = [old]
+    app.start()
+    app._update_climax_status_label("denied")
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(empty))
+    app.open_folder()
+
+    assert app.climax_status_label.isHidden()
+    assert not app.climax_blink_timer.isActive()
+
+
 # --- playlist navigation ---
 
 
@@ -252,6 +287,35 @@ def test_stop_when_not_running_is_noop(app, qtbot):
         app.stop()
 
 
+def test_stop_freezes_climax_banner_without_hiding_it(app, tmp_path):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+    app._update_climax_status_label("cum")
+    assert app.climax_blink_timer.isActive()
+
+    app.stop()
+
+    assert not app.climax_status_label.isHidden()
+    assert app.climax_status_label.text() == "CUM"
+    assert not app.climax_blink_timer.isActive()
+    on_color, _off_color = app.CLIMAX_STATUS_COLORS["cum"]
+    assert on_color in app.climax_status_label.styleSheet()
+
+
+def test_stop_when_no_climax_outcome_active_is_still_safe(app, tmp_path):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+
+    app.stop()
+
+    assert app.climax_status_label.isHidden()
+    assert not app.climax_blink_timer.isActive()
+
+
 # --- next/prev buttons ---
 
 
@@ -295,3 +359,104 @@ def test_hide_last_tease_hides_and_clears_label(app):
     app.hide_last_tease()
     assert app.callout_label.text() == ""
     assert app.callout_label.isHidden()
+
+
+# --- climax outcome ---
+
+
+def test_on_climax_outcome_denied_schedules_stop(app, monkeypatch):
+    called = {}
+    monkeypatch.setattr("src.GoonerApp.QTimer.singleShot", lambda ms, fn: called.update(ms=ms, fn=fn))
+
+    app._on_climax_outcome("denied")
+
+    assert called["ms"] == 5000
+    assert called["fn"] == app.stop
+
+
+@pytest.mark.parametrize("outcome", ["real", "ruined"])
+def test_on_climax_outcome_non_denied_does_not_schedule_stop(app, monkeypatch, outcome):
+    called = {}
+    monkeypatch.setattr("src.GoonerApp.QTimer.singleShot", lambda ms, fn: called.update(ms=ms, fn=fn))
+
+    app._on_climax_outcome(outcome)
+
+    assert called == {}
+
+
+# --- climax status banner ---
+
+
+def test_footer_container_has_fixed_height(app):
+    # Total footer height must never change, or the media area above it wobbles whenever
+    # the climax label appears/disappears - only the internal split (label vs. beat_meter)
+    # changes, via stretch factors.
+    assert app.footer_container.minimumHeight() == app.footer_container.maximumHeight()
+    assert app.footer_container.minimumHeight() > 0
+
+
+def test_beat_meter_gets_stretch_priority_over_climax_label(app):
+    # climax_status_label: index 0, stretch 0 (fixed to its own size hint when visible, 0
+    # space when hidden). beat_meter: index 1, stretch 1 (absorbs whatever space the label
+    # isn't using) - this is what lets the Strokebar reclaim full height when idle.
+    assert app.footer_layout.stretch(0) == 0
+    assert app.footer_layout.stretch(1) == 1
+
+
+def test_climax_status_label_hidden_by_default(app):
+    assert app.climax_status_label.isHidden()
+    assert app.climax_status_label.text() == ""
+    assert not app.climax_blink_timer.isActive()
+
+
+def test_update_climax_status_label_shows_cum(app):
+    app._update_climax_status_label("cum")
+    assert app.climax_status_label.text() == "CUM"
+    assert not app.climax_status_label.isHidden()
+    assert app.climax_blink_timer.isActive()
+
+
+def test_update_climax_status_label_shows_ruined(app):
+    app._update_climax_status_label("ruined")
+    assert app.climax_status_label.text() == "RUINED"
+    assert not app.climax_status_label.isHidden()
+    assert app.climax_blink_timer.isActive()
+
+
+def test_update_climax_status_label_shows_denied(app):
+    app._update_climax_status_label("denied")
+    assert app.climax_status_label.text() == "DENIED"
+    assert not app.climax_status_label.isHidden()
+    assert app.climax_blink_timer.isActive()
+
+
+def test_update_climax_status_label_neutral_hides_and_stops_blink(app):
+    app._update_climax_status_label("cum")
+    app._update_climax_status_label("neutral")
+    assert app.climax_status_label.isHidden()
+    assert app.climax_status_label.text() == ""
+    assert not app.climax_blink_timer.isActive()
+
+
+def test_toggle_climax_blink_alternates_colors_keeps_text(app):
+    app._update_climax_status_label("cum")
+    on_color, off_color = app.CLIMAX_STATUS_COLORS["cum"]
+    assert on_color in app.climax_status_label.styleSheet()
+    assert app.climax_status_label.text() == "CUM"
+
+    app._toggle_climax_blink()
+    assert off_color in app.climax_status_label.styleSheet()
+    assert app.climax_status_label.text() == "CUM"  # text never clears - only the color blinks
+
+    app._toggle_climax_blink()
+    assert on_color in app.climax_status_label.styleSheet()
+    assert app.climax_status_label.text() == "CUM"
+
+
+def test_climax_blink_interval_is_fast(app):
+    assert app.climax_blink_timer.interval() <= 150
+
+
+def test_climax_handler_status_event_wired_to_label(app):
+    app.climax_handler.status_changed_event.emit("ruined")
+    assert app.climax_status_label.text() == "RUINED"

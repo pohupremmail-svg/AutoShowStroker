@@ -112,3 +112,23 @@ def test_deliver_infos_contains_expected_data(monkeypatch):
     assert info["skips"] == 1
     assert info["repeats"] == 1
     assert info["most_used_pattern"] == "Standard Beat"
+
+
+def test_climax_outcome_defaults_to_none():
+    tracker = ScoreTracker()
+    assert tracker.climax_outcome is None
+    assert tracker.deliver_infos()["climax_outcome"] is None
+
+
+def test_climax_decided_sets_outcome():
+    tracker = ScoreTracker()
+    tracker.climax_decided("ruined")
+    assert tracker.climax_outcome == "ruined"
+    assert tracker.deliver_infos()["climax_outcome"] == "ruined"
+
+
+def test_session_started_resets_climax_outcome():
+    tracker = ScoreTracker()
+    tracker.climax_outcome = "denied"
+    tracker.session_started()
+    assert tracker.climax_outcome is None

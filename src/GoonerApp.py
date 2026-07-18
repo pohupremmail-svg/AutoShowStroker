@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
+from src.ClimaxHandler import ClimaxHandler
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
@@ -156,7 +157,29 @@ class GoonerApp(QMainWindow):
         self.main_splitter.addWidget(media_container)
 
         self.beat_handler = BeatHandler(settings=self.settings)
-        self.main_splitter.addWidget(self.beat_handler.beat_meter)
+
+        self.climax_status_label = QLabel("")
+        self.climax_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.climax_status_label.setStyleSheet(self._climax_label_style("transparent"))
+        self.climax_status_label.hide()
+
+        self.climax_blink_timer = QTimer()
+        self.climax_blink_timer.timeout.connect(self._toggle_climax_blink)
+        self._climax_blink_on = False
+        self._climax_status_text = ""
+        self._climax_status_colors = ("transparent", "transparent")
+
+        # Fixed total height so the media area above never wobbles when the climax label
+        # appears/disappears - only the split *within* this container changes (beat_meter
+        # expands to fill it via stretch when the label is hidden, shrinks when it's shown).
+        self.footer_container = QWidget()
+        self.footer_container.setFixedHeight(110)
+        self.footer_layout = QVBoxLayout(self.footer_container)
+        self.footer_layout.setContentsMargins(0, 0, 0, 0)
+        self.footer_layout.setSpacing(0)
+        self.footer_layout.addWidget(self.climax_status_label, stretch=0)
+        self.footer_layout.addWidget(self.beat_handler.beat_meter, stretch=1)
+        self.main_splitter.addWidget(self.footer_container)
 
         self.video_start_time = 0
 
@@ -177,6 +200,8 @@ class GoonerApp(QMainWindow):
         self.callout_handler = CalloutHandler(self.settings)
 
         self.score_tracker = ScoreTracker()
+
+        self.climax_handler = ClimaxHandler(self.beat_handler, self.callout_handler, settings=self.settings)
 
         self._setup_signal_handler()
 
@@ -226,8 +251,14 @@ class GoonerApp(QMainWindow):
         self.beat_handler.register_beat_change_event(self.score_tracker.beat_changed)
         self.beat_handler.register_beat_change_event(self.callout_handler.beat_change_general)
 
+        self.beat_handler.register_beat_change_event(self.climax_handler.on_beat_change)
+        self.climax_handler.register_outcome_event(self.score_tracker.climax_decided)
+        self.climax_handler.register_outcome_event(self._on_climax_outcome)
+        self.climax_handler.register_status_event(self._update_climax_status_label)
+
         self.register_start_event(self.score_tracker.session_started)
         self.register_start_event(self.callout_handler.session_started)
+        self.register_start_event(self.climax_handler.session_started)
 
         self.register_end_event(self.score_tracker.session_ended)
 
@@ -291,6 +322,7 @@ class GoonerApp(QMainWindow):
     def open_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Medien-Ordner wählen")
         if folder:
+            self._update_climax_status_label("neutral")
             files = self.finde_unterstützte_dateien(folder)
             if files:
                 random.shuffle(files)
@@ -378,6 +410,7 @@ class GoonerApp(QMainWindow):
             self.btn_next.setEnabled(False)
             self.btn_prev.setEnabled(False)
             self.btn_stop.setEnabled(False)
+            self._freeze_climax_blink()
             self.session_ended_event.emit()
             self.show_statistics()
 
@@ -392,6 +425,47 @@ class GoonerApp(QMainWindow):
             self.btn_load.setText("Change Gooning Folder.")
         self.load_current_index()
         self.recalc_autoplay_timer()
+
+    def _on_climax_outcome(self, outcome):
+        if outcome == "denied":
+            QTimer.singleShot(5000, self.stop)
+
+    CLIMAX_STATUS_COLORS = {
+        "cum": ("#FF1493", "#FF69B4"),
+        "ruined": ("#FF8C00", "#FFA500"),
+        "denied": ("#B22222", "#DC143C"),
+    }
+
+    def _climax_label_style(self, background):
+        return f"font-size: 28px; font-weight: bold; padding: 10px; color: white; background-color: {background};"
+
+    def _update_climax_status_label(self, status):
+        if status not in self.CLIMAX_STATUS_COLORS:
+            self.climax_blink_timer.stop()
+            self._climax_status_text = ""
+            self.climax_status_label.setText("")
+            self.climax_status_label.setStyleSheet(self._climax_label_style("transparent"))
+            self.climax_status_label.hide()
+            return
+        self._climax_status_text = status.upper()
+        self._climax_status_colors = self.CLIMAX_STATUS_COLORS[status]
+        self._climax_blink_on = True
+        self.climax_status_label.setText(self._climax_status_text)
+        self.climax_status_label.setStyleSheet(self._climax_label_style(self._climax_status_colors[0]))
+        self.climax_status_label.show()
+        self.climax_blink_timer.start(100)
+
+    def _toggle_climax_blink(self):
+        self._climax_blink_on = not self._climax_blink_on
+        color = self._climax_status_colors[0 if self._climax_blink_on else 1]
+        self.climax_status_label.setStyleSheet(self._climax_label_style(color))
+
+    def _freeze_climax_blink(self):
+        """Stops the blink but keeps the banner visible with its last outcome - used on
+        Stop, where the result should stay readable rather than disappear or flash forever."""
+        self.climax_blink_timer.stop()
+        if self._climax_status_text:
+            self.climax_status_label.setStyleSheet(self._climax_label_style(self._climax_status_colors[0]))
 
     def register_start_event(self, handler):
         self.session_started_event.connect(handler)
