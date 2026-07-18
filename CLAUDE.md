@@ -44,7 +44,21 @@ Coverage: `ScoreTracker`, `utils`, `BeatHandler`, `CalloutHandler` (including di
 
 ## Git workflow
 
-Use feature branches + PRs for changes, not direct commits to `main` — this is a deliberate move away from older direct-to-main history in this repo, so don't treat past commits as precedent. Never push to the remote (`origin`) without explicit user approval for that specific push. Do not add Claude/AI attribution (e.g. "Co-Authored-By: Claude") to commit messages in this repo.
+Use feature branches + PRs for changes, not direct commits to `main` — this is a deliberate move away from older direct-to-main history in this repo, so don't treat past commits as precedent. Never push to the remote (`origin`) without explicit user approval for that specific push. Do not add Claude/AI attribution (e.g. "Co-Authored-By: Claude") to commit messages in this repo. Commit immediately after each meaningful change lands, rather than batching several changes into one commit — squashing into fewer commits can still happen later, right before opening the PR, if desired.
+
+## Versioning & Releases
+
+Version lives in `VERSION` at the repo root (plain semver, e.g. `0.2.0`) — the single source of truth, nowhere else.
+
+- **`feat:` PRs bump MINOR** (`0.1.0` → `0.2.0`) as the final commit on the feature branch — after tests pass, right before push — in its own commit: `chore: bump version to 0.2.0`.
+- **Critical `fix:` PRs bump PATCH** (`0.2.0` → `0.2.1`) the same way. "Critical" = crash, data loss, or a core feature completely broken — a judgment call; ask the user if unsure.
+- **Routine `fix:`/`test:`/`content:`/`docs:`/`chore:` PRs** don't bump the version and don't trigger a build.
+- **After a version-bumping PR is merged**, as part of the usual post-merge sync + branch cleanup, run:
+  ```
+  .venv\Scripts\python.exe scripts/release.py --notes "<short summary of what changed>"
+  ```
+  This builds `dist/GoonerApp.exe` (same flags as the Build section above) and publishes it as a GitHub Release tagged `v<VERSION>` — `gh release create` creates and pushes the tag automatically, no separate `git tag` step needed.
+- Manual, Claude-driven step (no CI) — follow this after merging a qualifying PR without waiting to be asked, same as branch cleanup already happens automatically after every merge.
 
 ## Content note
 
