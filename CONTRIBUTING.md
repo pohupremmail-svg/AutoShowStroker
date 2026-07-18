@@ -84,6 +84,21 @@ else :D
 Once the file is saved, the application's Settings Window will automatically detect the new language and make it
 available for selection.
 
+#### 4. Validate Your File
+
+A missing or misspelled Trigger Key (e.g. `beat_changed_general` instead of `beat_change_general`) will not throw an
+error — the app just silently stays quiet for that event, which is easy to miss by playing the app alone. Before
+opening a PR, run the automated schema check, which verifies every file in `res/callouts/` against the required
+Trigger Keys:
+
+```bash
+python -m pytest tests/test_callout_language_files.py -v
+```
+
+This confirms your file has valid JSON, all required keys, no typo'd/unknown keys, and that every value is a list of
+strings. It does **not** check that your translations read well or that arrays are non-empty — for that, still run
+the app (`python main.py`), select your language in Settings, and play through a session.
+
 ---
 
 ### 🚀 Submitting Your Contribution (Pull Requests)
@@ -105,7 +120,16 @@ git checkout -b feature/add-french-callouts  # Use a descriptive name
 
 Please ensure your commit messages are descriptive and reference the area you are modifying.
 
-#### 3. Create the Pull Request (PR)
+#### 3. Run the Checks
+
+Before pushing, run the full test suite and linter to make sure nothing else broke:
+
+```bash
+python -m pytest
+ruff check .
+```
+
+#### 4. Create the Pull Request (PR)
 
 - Push your new branch to your fork.
 
