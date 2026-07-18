@@ -5,6 +5,8 @@ import pytest
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import QFileDialog
 
+from src.GoonerApp import GoonerApp
+
 # --- fullscreen ---
 
 
@@ -460,3 +462,8 @@ def test_climax_blink_interval_is_fast(app):
 def test_climax_handler_status_event_wired_to_label(app):
     app.climax_handler.status_changed_event.emit("ruined")
     assert app.climax_status_label.text() == "RUINED"
+
+
+def test_defaults_dict_matches_init_defaults(app):
+    for var_name, default_value in GoonerApp.DEFAULTS.items():
+        assert getattr(app, var_name) == default_value

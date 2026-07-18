@@ -16,6 +16,11 @@ def test_default_selected_patterns_is_all_patterns(handler):
     assert set(handler.selected_beat_patterns) == set(BeatHandler.BEAT_PATTERNS_MAP.keys())
 
 
+def test_defaults_dict_matches_init_defaults(handler):
+    for var_name, default_value in BeatHandler.DEFAULTS.items():
+        assert getattr(handler, var_name) == default_value
+
+
 def test_settings_override_defaults(qtbot, tmp_path):
     ini = tmp_path / "settings.ini"
     settings = QSettings(str(ini), QSettings.Format.IniFormat)

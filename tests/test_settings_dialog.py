@@ -151,3 +151,91 @@ def test_accept_settings_applies_climax_spinbox_values(app, dialog):
     dialog.accept_settings()
 
     assert app.climax_handler.climax_chance == pytest.approx(0.42)
+
+
+# --- reset to defaults ---
+
+
+def test_playback_reset_button_resets_fields(app, dialog):
+    dialog.settings_fields["min_dur"]["widget"].setValue(9.9)
+    dialog.settings_fields["max_dur"]["widget"].setValue(9.9)
+    dialog.settings_fields["video_min_dur"]["widget"].setValue(9.9)
+    dialog.settings_fields["beat_loudness"]["widget"].setValue(0.0)
+    dialog.settings_fields["vid_loudness"]["widget"].setValue(0.0)
+
+    dialog.playback_reset_button.click()
+
+    assert dialog.settings_fields["min_dur"]["widget"].value() == pytest.approx(app.DEFAULTS["min_dur"])
+    assert dialog.settings_fields["max_dur"]["widget"].value() == pytest.approx(app.DEFAULTS["max_dur"])
+    assert dialog.settings_fields["video_min_dur"]["widget"].value() == pytest.approx(
+        app.DEFAULTS["video_min_dur"]
+    )
+    assert dialog.settings_fields["beat_loudness"]["widget"].value() == pytest.approx(
+        app.beat_handler.DEFAULTS["beat_loudness"]
+    )
+    assert dialog.settings_fields["vid_loudness"]["widget"].value() == pytest.approx(app.DEFAULTS["vid_loudness"])
+
+
+def test_beat_reset_button_resets_fields(app, dialog):
+    dialog.settings_fields["min_beat_freq"]["widget"].setValue(19.0)
+    dialog.settings_fields["ramp_window_width"]["widget"].setValue(1.0)
+    dialog.ramping_active_checkbox.setChecked(False)
+    other = next(name for name in dialog.beat_checkboxes if name != "Standard Beat")
+    dialog.beat_checkboxes[other].setChecked(False)
+
+    dialog.beat_reset_button.click()
+
+    beat_defaults = app.beat_handler.DEFAULTS
+    assert dialog.settings_fields["min_beat_freq"]["widget"].value() == pytest.approx(
+        beat_defaults["min_beat_freq"]
+    )
+    assert dialog.settings_fields["ramp_window_width"]["widget"].value() == pytest.approx(
+        beat_defaults["ramp_window_width"]
+    )
+    assert dialog.ramping_active_checkbox.isChecked() == beat_defaults["ramping_active"]
+    assert all(checkbox.isChecked() for checkbox in dialog.beat_checkboxes.values())
+
+
+def test_climax_reset_button_resets_fields(app, dialog):
+    dialog.settings_fields["climax_chance"]["widget"].setValue(0.99)
+    dialog.climax_active_checkbox.setChecked(False)
+    dialog.ruined_orgasm_active_checkbox.setChecked(True)
+    dialog.denied_orgasm_active_checkbox.setChecked(True)
+    dialog.fake_climax_active_checkbox.setChecked(False)
+
+    dialog.climax_reset_button.click()
+
+    climax_defaults = app.climax_handler.DEFAULTS
+    assert dialog.settings_fields["climax_chance"]["widget"].value() == pytest.approx(
+        climax_defaults["climax_chance"]
+    )
+    assert dialog.climax_active_checkbox.isChecked() == climax_defaults["climax_active"]
+    assert dialog.ruined_orgasm_active_checkbox.isChecked() == climax_defaults["ruined_orgasm_active"]
+    assert dialog.denied_orgasm_active_checkbox.isChecked() == climax_defaults["denied_orgasm_active"]
+    assert dialog.fake_climax_active_checkbox.isChecked() == climax_defaults["fake_climax_active"]
+
+
+def test_callout_reset_button_resets_fields(app, dialog):
+    dialog.settings_fields["talking_chance"]["widget"].setValue(0.99)
+    dialog.callout_active_checkbox.setChecked(True)
+    other_lang = next(lang for lang in app.callout_handler.available_languages if lang != "en")
+    idx = dialog.callout_selected_lang.findText(other_lang)
+    dialog.callout_selected_lang.setCurrentIndex(idx)
+
+    dialog.callout_reset_button.click()
+
+    callout_defaults = app.callout_handler.DEFAULTS
+    assert dialog.settings_fields["talking_chance"]["widget"].value() == pytest.approx(
+        callout_defaults["talking_chance"]
+    )
+    assert dialog.callout_active_checkbox.isChecked() == callout_defaults["active_callout"]
+    assert dialog.callout_selected_lang.currentText() == callout_defaults["lang"]
+
+
+def test_reset_buttons_do_not_persist_until_save(app, dialog):
+    dialog.settings_fields["min_dur"]["widget"].setValue(9.9)
+    original = app.min_dur
+
+    dialog.playback_reset_button.click()
+
+    assert app.min_dur == original

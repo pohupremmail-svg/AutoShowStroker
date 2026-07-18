@@ -24,6 +24,11 @@ def handler(qtbot, beat_handler, callout_handler):
     return ClimaxHandler(beat_handler, callout_handler)
 
 
+def test_defaults_dict_matches_init_defaults(handler):
+    for var_name, default_value in ClimaxHandler.DEFAULTS.items():
+        assert getattr(handler, var_name) == default_value
+
+
 def test_settings_override_defaults(qtbot, beat_handler, callout_handler, tmp_path):
     ini = tmp_path / "settings.ini"
     settings = QSettings(str(ini), QSettings.Format.IniFormat)

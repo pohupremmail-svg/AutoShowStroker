@@ -37,6 +37,15 @@ class GoonerApp(QMainWindow):
     media_repeated_event = pyqtSignal()
     media_skipped_event = pyqtSignal()
 
+    # Keep in sync with the literal defaults set in __init__ below - single source of truth
+    # for the SettingsDialog "Reset to defaults" button.
+    DEFAULTS = {
+        "min_dur": 0.5,
+        "max_dur": 4.0,
+        "video_min_dur": 1.5,
+        "vid_loudness": 1.0,
+    }
+
     def __init__(self, settings: QSettings | None = None):
         super().__init__()
 

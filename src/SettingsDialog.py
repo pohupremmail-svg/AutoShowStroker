@@ -42,6 +42,9 @@ class SettingsDialog(QDialog):
         self.add_section_header("General Settings")
         self.add_setting("Beat Volume", "beat_loudness", self.beat_handler, float, 0.0, 1.0, 0.1)
         self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
+        self.playback_reset_button = self.add_reset_button(
+            ["min_dur", "max_dur", "video_min_dur", "beat_loudness", "vid_loudness"]
+        )
         self._current_layout.addStretch()
 
         self._current_layout = self._new_tab("Beat && Rhythm")
@@ -70,6 +73,17 @@ class SettingsDialog(QDialog):
         )
 
         self.add_beat_selection()
+        self.beat_reset_button = self.add_reset_button(
+            [
+                "min_beat_freq", "max_beat_freq", "min_beat_dur", "max_beat_dur",
+                "min_pause_dur", "max_pause_dur", "beat_change_chance", "pause_chance",
+                "min_ramp_duration", "max_ramp_duration", "ramp_window_width",
+            ],
+            checkbox_defaults=[
+                (self.ramping_active_checkbox, self.beat_handler.DEFAULTS["ramping_active"]),
+            ],
+            extra_reset=lambda: [cb.setChecked(True) for cb in self.beat_checkboxes.values()],
+        )
         self._current_layout.addStretch()
 
         self._current_layout = self._new_tab("Climax")
@@ -109,10 +123,29 @@ class SettingsDialog(QDialog):
         self.add_setting(
             "Fake climax reveal delay Max. (s)", "max_fake_climax_delay", self.climax_handler, float, 1.0, 30.0, 0.5
         )
+        self.climax_reset_button = self.add_reset_button(
+            [
+                "climax_chance", "ruined_orgasm_chance", "denied_orgasm_chance",
+                "fake_climax_chance", "min_fake_climax_delay", "max_fake_climax_delay",
+            ],
+            checkbox_defaults=[
+                (self.climax_active_checkbox, self.climax_handler.DEFAULTS["climax_active"]),
+                (self.ruined_orgasm_active_checkbox, self.climax_handler.DEFAULTS["ruined_orgasm_active"]),
+                (self.denied_orgasm_active_checkbox, self.climax_handler.DEFAULTS["denied_orgasm_active"]),
+                (self.fake_climax_active_checkbox, self.climax_handler.DEFAULTS["fake_climax_active"]),
+            ],
+        )
         self._current_layout.addStretch()
 
         self._current_layout = self._new_tab("Callouts")
         self.add_callout_selection()
+        self.callout_reset_button = self.add_reset_button(
+            ["talking_chance"],
+            checkbox_defaults=[
+                (self.callout_active_checkbox, self.callout_handler.DEFAULTS["active_callout"]),
+            ],
+            extra_reset=self._reset_callout_lang,
+        )
         self._current_layout.addStretch()
 
         self.layout.addWidget(self.tabs)
@@ -132,6 +165,32 @@ class SettingsDialog(QDialog):
 
         self.tabs.addTab(scroll, title)
         return layout
+
+    def add_reset_button(self, spinbox_names, checkbox_defaults=None, extra_reset=None):
+        """Adds a 'Reset to defaults' button to the current tab. Only resets widget values -
+        the user still has to press Save & Close Settings to actually apply/persist them,
+        same as any other change made in this dialog."""
+        checkbox_defaults = checkbox_defaults or []
+        button = QPushButton("Reset to defaults")
+
+        def do_reset():
+            for var_name in spinbox_names:
+                field = self.settings_fields[var_name]
+                field['widget'].setValue(field['object'].DEFAULTS[var_name])
+            for checkbox, default_value in checkbox_defaults:
+                checkbox.setChecked(default_value)
+            if extra_reset:
+                extra_reset()
+
+        button.clicked.connect(do_reset)
+        self._current_layout.addWidget(button)
+        return button
+
+    def _reset_callout_lang(self):
+        default_lang = self.callout_handler.DEFAULTS["lang"]
+        index = self.callout_selected_lang.findText(default_lang)
+        if index != -1:
+            self.callout_selected_lang.setCurrentIndex(index)
 
     def add_section_header(self, title):
         header = QLabel(f"--- <b>{title}</b> ---")

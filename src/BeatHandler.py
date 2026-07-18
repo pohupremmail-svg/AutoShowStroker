@@ -46,6 +46,24 @@ class BeatHandler(QObject):
         "Suspense Build": [2, -4, -3, -2, -1, 3],
     }
 
+    # Keep in sync with the literal defaults set in __init__ below - single source of truth
+    # for the SettingsDialog "Reset to defaults" buttons.
+    DEFAULTS = {
+        "max_beat_dur": 45.0,
+        "min_beat_dur": 15,
+        "max_beat_freq": 5.0,
+        "min_beat_freq": 0.5,
+        "min_pause_dur": 5,
+        "max_pause_dur": 20,
+        "pause_chance": 0.05,
+        "beat_change_chance": 0.1,
+        "ramping_active": True,
+        "min_ramp_duration": 600.0,
+        "max_ramp_duration": 1800.0,
+        "ramp_window_width": 0.4,
+        "beat_loudness": 1.0,
+    }
+
     beat_paused_event = pyqtSignal()
     beat_resumed_event = pyqtSignal()
     beat_change_event = pyqtSignal(float, str)
