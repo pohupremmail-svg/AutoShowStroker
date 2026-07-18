@@ -15,7 +15,7 @@ Eine spezialisierte, interaktive PyQt6-Multimedia-Anwendung, die Ihre lokale Med
 * **Detaillierte Session-Statistiken:** Am Ende der Session erhalten Sie eine detaillierte Auswertung (Dauer, Anzahl der Beats, Lieblings-Rhythmus, Pausen-Statistiken).
 * **Flexible Steuerung:** Tastatur-Shortcuts für schnelle Navigation und Anpassung während der Session.
 
-## 🚀 Installation
+## 🚀 Installation & Ausführung (Entwickler)
 
 Um die Anwendung lokal auszuführen, benötigen Sie **Python 3.8+** und die entsprechenden Abhängigkeiten.
 
@@ -41,6 +41,24 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+## 📦 Als eigenständige .exe kompilieren (PyInstaller)
+
+Sie können die gesamte Anwendung inklusive aller Sounds und Sprachdateien in eine einzige, tragbare `.exe`-Datei packen. Diese benötigt beim Endnutzer kein installiertes Python mehr.
+
+Stellen Sie sicher, dass Ihre virtuelle Umgebung aktiv ist und alle Abhängigkeiten aus der `requirements.txt` installiert sind. Führen Sie dann folgenden Befehl im Hauptverzeichnis des Projekts aus:
+
+```bash
+pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --name "GoonerApp" main.py
+```
+
+### Was macht dieser Befehl?
+* `--onefile`: Packt alles in eine einzige ausführbare `.exe`-Datei.
+* `--windowed`: Verhindert, dass sich beim Starten der App ein unschönes Konsolenfenster im Hintergrund öffnet.
+* `--add-data "res;res"`: Bettet den gesamten Ressourcen-Ordner (Sound und Callouts) direkt in die `.exe` ein.
+* `--name "GoonerApp"`: Benennt die fertige Datei um.
+
+Nach erfolgreichem Build finden Sie die fertige Datei **`GoonerApp.exe`** im neu erstellten Ordner **`dist/`**. Diese Datei können Sie nun beliebig verschieben und weitergeben!
 
 ## 🎮 Bedienung & Steuerung
 
