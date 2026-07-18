@@ -12,4 +12,5 @@ if __name__ == "__main__":
     app.setStyleSheet(theme.GLOBAL_QSS)
     window = GoonerApp()
     window.showMaximized()
+    window.maybe_show_whats_new_on_startup()
     sys.exit(app.exec())

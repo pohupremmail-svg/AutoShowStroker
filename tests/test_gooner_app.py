@@ -467,3 +467,96 @@ def test_climax_handler_status_event_wired_to_label(app):
 def test_defaults_dict_matches_init_defaults(app):
     for var_name, default_value in GoonerApp.DEFAULTS.items():
         assert getattr(app, var_name) == default_value
+
+
+# --- what's new ---
+
+
+def test_maybe_show_whats_new_shows_dialog_when_new_entries_exist(app, monkeypatch):
+    monkeypatch.setattr("src.GoonerApp.get_current_version", lambda: "0.2.0")
+    app.settings.setValue("GoonerApp/last_seen_version", "0.1.0")
+
+    fake_entries = {"0.2.0": "new stuff"}
+    monkeypatch.setattr("src.GoonerApp.changelog.entries_since", lambda last, current: fake_entries)
+
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, entries, parent=None):
+            captured["entries"] = entries
+            captured["parent"] = parent
+
+        def exec(self):
+            captured["exec_called"] = True
+
+    monkeypatch.setattr("src.GoonerApp.WhatsNewDialog", FakeDialog)
+
+    app.maybe_show_whats_new_on_startup()
+
+    assert captured["entries"] == fake_entries
+    assert captured["parent"] is app
+    assert captured.get("exec_called") is True
+    assert app.settings.value("GoonerApp/last_seen_version") == "0.2.0"
+
+
+def test_maybe_show_whats_new_skips_dialog_when_no_new_entries(app, monkeypatch):
+    monkeypatch.setattr("src.GoonerApp.get_current_version", lambda: "0.2.0")
+    app.settings.setValue("GoonerApp/last_seen_version", "0.2.0")
+    monkeypatch.setattr("src.GoonerApp.changelog.entries_since", lambda last, current: {})
+
+    called = {}
+
+    class FakeDialog:
+        def __init__(self, *a, **kw):
+            called["constructed"] = True
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.WhatsNewDialog", FakeDialog)
+
+    app.maybe_show_whats_new_on_startup()
+
+    assert "constructed" not in called
+    assert app.settings.value("GoonerApp/last_seen_version") == "0.2.0"
+
+
+def test_show_whats_new_dialog_shows_full_changelog(app, monkeypatch):
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, entries, parent=None):
+            captured["entries"] = entries
+
+        def exec(self):
+            captured["exec_called"] = True
+
+    monkeypatch.setattr("src.GoonerApp.WhatsNewDialog", FakeDialog)
+
+    app.show_whats_new_dialog()
+
+    from src.changelog import CHANGELOG
+    assert captured["entries"] == CHANGELOG
+    assert captured.get("exec_called") is True
+
+
+def test_help_menu_has_whats_new_action(app, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, entries, parent=None):
+            captured["shown"] = True
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.WhatsNewDialog", FakeDialog)
+
+    menu_bar = app.menuBar()
+    help_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Help")
+    whats_new_action = next(a for a in help_menu.actions() if a.text() == "What's New")
+    whats_new_action.trigger()
+
+    assert captured.get("shown") is True

@@ -21,14 +21,15 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src import theme
+from src import changelog, theme
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
 from src.ClimaxHandler import ClimaxHandler
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
-from src.utils import get_project_root
+from src.utils import get_current_version, get_project_root
+from src.WhatsNewDialog import WhatsNewDialog
 
 
 class GoonerApp(QMainWindow):
@@ -309,6 +310,25 @@ class GoonerApp(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         settings_menu.addAction(exit_action)
+
+        help_menu = menu_bar.addMenu("Help")
+
+        whats_new_action = QAction("What's New", self)
+        whats_new_action.triggered.connect(self.show_whats_new_dialog)
+        help_menu.addAction(whats_new_action)
+
+    def maybe_show_whats_new_on_startup(self):
+        current_version = get_current_version()
+        last_seen_version = str(self.settings.value("GoonerApp/last_seen_version", ""))
+        entries = changelog.entries_since(last_seen_version, current_version)
+        if entries:
+            dialog = WhatsNewDialog(entries, parent=self)
+            dialog.exec()
+        self.settings.setValue("GoonerApp/last_seen_version", current_version)
+
+    def show_whats_new_dialog(self):
+        dialog = WhatsNewDialog(changelog.CHANGELOG, parent=self)
+        dialog.exec()
 
     def btn_next_action(self):
         self.show_next()

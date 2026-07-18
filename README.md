@@ -49,13 +49,14 @@ You can package the entire application, including all sounds and language files,
 Ensure that your virtual environment is active and all dependencies from `requirements.txt` are installed. Then either run `python scripts/build.py`, or execute the following command directly in the main directory of the project:
 
 ```bash
-pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --icon "res/icons/favicon.ico" --name "GoonerApp" main.py
+pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --add-data "VERSION;." --icon "res/icons/favicon.ico" --name "GoonerApp" main.py
 ```
 
 ### What does this command do?
 * `--onefile`: Packages everything into a single executable `.exe` file.
 * `--windowed`: Prevents an unsightly console window from opening in the background when starting the app.
 * `--add-data "res;res"`: Embeds the entire resource folder (sounds and callouts) directly into the `.exe`.
+* `--add-data "VERSION;."`: Embeds the version file, used by the in-app "What's New" popup.
 * `--icon "res/icons/favicon.ico"`: Sets the `.exe`'s icon.
 * `--name "GoonerApp"`: Renames the final output file.
 
