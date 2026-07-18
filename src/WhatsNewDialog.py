@@ -30,7 +30,7 @@ class WhatsNewDialog(QDialog):
         content_layout = QVBoxLayout(content)
         content_layout.setSpacing(14)
 
-        for version, text in entries.items():
+        for version, text in reversed(entries.items()):
             card = QFrame()
             card.setFrameShape(QFrame.Shape.NoFrame)
             card.setStyleSheet(
