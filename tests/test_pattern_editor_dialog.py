@@ -2,7 +2,7 @@ import pytest
 from PyQt6.QtCore import QSettings
 
 from src.BeatHandler import BeatHandler
-from src.PatternEditorDialog import DEFAULT_STEPS, MAX_STEPS, PatternEditorDialog
+from src.PatternEditorDialog import DEFAULT_STEPS, MAX_STEPS, PREVIEW_BASE_STEP_MS, PatternEditorDialog
 
 
 @pytest.fixture
@@ -148,5 +148,25 @@ def test_preview_tick_plays_sound_only_for_audible_steps(dialog, beat_handler, m
     dialog._preview_position = 0
     dialog._preview_tick()  # step 0 is audible
     dialog._preview_tick()  # step 1 is muted
+    dialog._stop_preview()
 
     assert played == [True]
+
+
+def test_preview_tick_schedules_interval_inversely_proportional_to_weight(dialog):
+    # Weight is an inverse-duration multiplier: a "4" is a quarter as long as a "1".
+    # The preview must reflect that instead of ticking at a flat interval.
+    dialog._set_steps([1, 4])
+
+    dialog._preview_position = 0
+    dialog._preview_tick()  # schedules the interval for the weight-1 (longest) step
+    interval_for_weight_1 = dialog._preview_timer.interval()
+
+    dialog._preview_position = 1
+    dialog._preview_tick()  # schedules the interval for the weight-4 (shortest) step
+    interval_for_weight_4 = dialog._preview_timer.interval()
+    dialog._stop_preview()
+
+    assert interval_for_weight_1 == PREVIEW_BASE_STEP_MS
+    assert interval_for_weight_4 == PREVIEW_BASE_STEP_MS // 4
+    assert interval_for_weight_4 < interval_for_weight_1

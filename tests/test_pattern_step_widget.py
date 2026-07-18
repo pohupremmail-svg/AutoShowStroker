@@ -70,18 +70,26 @@ def test_small_movement_is_still_treated_as_click(qtbot):
     assert widget.get_value() == -1
 
 
-def test_drag_near_top_sets_max_weight_and_activates_muted_step(qtbot):
-    widget = PatternStepWidget(-1)
+def test_drag_near_top_sets_min_weight_ie_longest_step_and_activates_muted_step(qtbot):
+    # Magnitude is an inverse-duration multiplier (BeatHandler divides the base step
+    # time by it), so the *longest* step is weight 1, drawn as the tallest bar (top).
+    widget = PatternStepWidget(-3)
     qtbot.addWidget(widget)
     _drag(widget, start_y=115, end_y=2)
+    assert widget.get_value() == MIN_WEIGHT
+
+
+def test_drag_near_bottom_sets_max_weight_ie_shortest_step(qtbot):
+    widget = PatternStepWidget(1)
+    qtbot.addWidget(widget)
+    _drag(widget, start_y=2, end_y=118)
     assert widget.get_value() == MAX_WEIGHT
 
 
-def test_drag_near_bottom_sets_min_weight(qtbot):
-    widget = PatternStepWidget(3)
+def test_tooltip_explains_duration_semantics(qtbot):
+    widget = PatternStepWidget(1)
     qtbot.addWidget(widget)
-    _drag(widget, start_y=2, end_y=118)
-    assert widget.get_value() == MIN_WEIGHT
+    assert "duration" in widget.toolTip().lower()
 
 
 def test_set_highlighted_updates_state(qtbot):

@@ -16,7 +16,9 @@ from src.PatternStepWidget import PatternStepWidget
 
 MAX_STEPS = 16
 DEFAULT_STEPS = [1, 1, 1, 1]
-PREVIEW_INTERVAL_MS = 300
+# Preview duration for a weight-1 (longest) step; shorter steps get base/weight,
+# matching BeatHandler's own inverse-duration encoding (see PatternStepWidget).
+PREVIEW_BASE_STEP_MS = 400
 
 
 class PatternEditorDialog(QDialog):
@@ -37,6 +39,7 @@ class PatternEditorDialog(QDialog):
         self._step_widgets = []
         self._preview_position = 0
         self._preview_timer = QTimer(self)
+        self._preview_timer.setSingleShot(True)
         self._preview_timer.timeout.connect(self._preview_tick)
 
         root = QHBoxLayout(self)
@@ -204,7 +207,6 @@ class PatternEditorDialog(QDialog):
             return
         self._preview_position = 0
         self.preview_button.setText("Stop")
-        self._preview_timer.start(PREVIEW_INTERVAL_MS)
         self._preview_tick()
 
     def _stop_preview(self):
@@ -223,7 +225,12 @@ class PatternEditorDialog(QDialog):
         widget.set_highlighted(True)
         if widget.get_value() > 0:
             self.beat_handler.play_beat_sound()
+
+        # Same inverse-duration relationship as BeatHandler: divide the base step
+        # time by this step's weight, so a "4" plays a quarter as long as a "1".
+        step_ms = int(PREVIEW_BASE_STEP_MS / abs(widget.get_value()))
         self._preview_position = (self._preview_position + 1) % len(self._step_widgets)
+        self._preview_timer.start(step_ms)
 
     def closeEvent(self, event):
         self._stop_preview()
