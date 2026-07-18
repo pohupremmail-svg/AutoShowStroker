@@ -4,11 +4,12 @@ import time
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QAction, QIcon, QMovie, QPixmap
+from PyQt6.QtGui import QAction, QColor, QIcon, QMovie, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
     QFileDialog,
+    QGraphicsDropShadowEffect,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -20,6 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src import theme
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
 from src.ClimaxHandler import ClimaxHandler
@@ -74,7 +76,9 @@ class GoonerApp(QMainWindow):
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.image_label.setMinimumSize(1, 1)
-        self.image_label.setStyleSheet("background-color: #222; color: #FFF; font-size: 20px;")
+        self.image_label.setStyleSheet(
+            f"background-color: {theme.SURFACE_DARK}; color: {theme.TEXT}; font-size: 20px; border-radius: 12px;"
+        )
         self.media_stack.addWidget(self.image_label)
 
         self.video_widget = QVideoWidget()
@@ -90,12 +94,12 @@ class GoonerApp(QMainWindow):
         self.callout_label.setWordWrap(True)
         self.callout_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter)
 
-        self.callout_label.setStyleSheet("""
-                    color: #FF69B4;
+        self.callout_label.setStyleSheet(f"""
+                    color: {theme.ACCENT};
                     font-size: 24px;
-                    padding: 5px;
-                    background-color: rgba(0, 0, 0, 0.8);
-                    border-radius: 5px;
+                    padding: 8px;
+                    background-color: rgba(45, 29, 58, 0.9);
+                    border-radius: 10px;
                 """)
         self.callout_label.hide()
 
@@ -127,7 +131,13 @@ class GoonerApp(QMainWindow):
         self.btn_prev.setToolTip("Left Arrow Key")
 
         self.btn_load = QPushButton("Set Gooning Folder and Start.")
+        self.btn_load.setObjectName("primary")
         self.btn_load.clicked.connect(self.open_folder)
+        btn_load_glow = QGraphicsDropShadowEffect()
+        btn_load_glow.setColor(QColor(theme.ACCENT))
+        btn_load_glow.setBlurRadius(24)
+        btn_load_glow.setOffset(0, 0)
+        self.btn_load.setGraphicsEffect(btn_load_glow)
 
         self.btn_next = QPushButton("Skip >>")
         self.btn_next.clicked.connect(self.btn_next_action)
@@ -162,6 +172,11 @@ class GoonerApp(QMainWindow):
         self.climax_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.climax_status_label.setStyleSheet(self._climax_label_style("transparent"))
         self.climax_status_label.hide()
+        climax_glow = QGraphicsDropShadowEffect()
+        climax_glow.setColor(QColor(theme.ACCENT))
+        climax_glow.setBlurRadius(30)
+        climax_glow.setOffset(0, 0)
+        self.climax_status_label.setGraphicsEffect(climax_glow)
 
         self.climax_blink_timer = QTimer()
         self.climax_blink_timer.timeout.connect(self._toggle_climax_blink)
@@ -431,13 +446,16 @@ class GoonerApp(QMainWindow):
             QTimer.singleShot(5000, self.stop)
 
     CLIMAX_STATUS_COLORS = {
-        "cum": ("#FF1493", "#FF69B4"),
-        "ruined": ("#FF8C00", "#FFA500"),
-        "denied": ("#B22222", "#DC143C"),
+        "cum": (theme.ACCENT, theme.ACCENT_HOVER),
+        "ruined": (theme.RUINED, theme.RUINED_DIM),
+        "denied": (theme.DENIED, theme.DENIED_DIM),
     }
 
     def _climax_label_style(self, background):
-        return f"font-size: 28px; font-weight: bold; padding: 10px; color: white; background-color: {background};"
+        return (
+            f"font-size: 28px; font-weight: bold; padding: 10px; color: white; "
+            f"background-color: {background}; border-radius: 12px;"
+        )
 
     def _update_climax_status_label(self, status):
         if status not in self.CLIMAX_STATUS_COLORS:

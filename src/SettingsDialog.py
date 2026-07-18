@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from src import theme
+
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
@@ -106,7 +108,7 @@ class SettingsDialog(QDialog):
 
     def add_section_header(self, title):
         header = QLabel(f"--- <b>{title}</b> ---")
-        header.setStyleSheet("font-size: 14px; margin-top: 10px;")
+        header.setStyleSheet(f"font-size: 14px; margin-top: 10px; color: {theme.ACCENT}; font-weight: bold;")
         self.layout.addWidget(header)
 
     def add_setting(self, label_text, var_name, target_object, var_type, min_val, max_val, step):

@@ -1,6 +1,8 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QAbstractItemView, QDialog, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout
 
+from src import theme
+
 
 class StatisticsDialog(QDialog):
     def __init__(self, stats_data: dict, parent=None):
@@ -12,7 +14,9 @@ class StatisticsDialog(QDialog):
 
         title_text = self._title_for_outcome(stats_data.get("climax_outcome"))
         self.title_label = QLabel(title_text)
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #FF69B4;")
+        self.title_label.setStyleSheet(
+            f"font-size: 24px; font-weight: bold; margin-bottom: 10px; color: {theme.ACCENT};"
+        )
 
         self.stats_table = QTableWidget()
         self.stats_table.setColumnCount(2)
@@ -23,7 +27,9 @@ class StatisticsDialog(QDialog):
 
         self.conclusion_label = QLabel()
         self.conclusion_label.setWordWrap(True)
-        self.conclusion_label.setStyleSheet("font-size: 14px; margin-bottom: 15px; color: #E0E0E0; font-style: italic;")
+        self.conclusion_label.setStyleSheet(
+            f"font-size: 14px; margin-bottom: 15px; color: {theme.TEXT}; font-style: italic;"
+        )
 
         main_layout.addWidget(self.title_label)
         main_layout.addWidget(self.conclusion_label)
