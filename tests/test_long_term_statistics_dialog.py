@@ -75,6 +75,20 @@ def test_changing_metric_selector_replots_chart(dialog):
     assert list(y) == [10, 30]
 
 
+def test_default_chart_y_axis_shows_a_unit(dialog):
+    axis = dialog.plot_widget.getAxis("left")
+    assert axis.labelUnits == ScoreTracker.PR_METRIC_UNITS["total_dur_sec"]
+    assert axis.labelUnits  # non-empty
+
+
+def test_changing_metric_selector_updates_y_axis_unit(dialog):
+    index = dialog.metric_selector.findData("fakeout_count")
+    dialog.metric_selector.setCurrentIndex(index)
+
+    axis = dialog.plot_widget.getAxis("left")
+    assert axis.labelUnits == ScoreTracker.PR_METRIC_UNITS["fakeout_count"]
+
+
 def test_empty_history_plots_without_crashing(qtbot):
     d = LongTermStatisticsDialog([], {})
     qtbot.addWidget(d)

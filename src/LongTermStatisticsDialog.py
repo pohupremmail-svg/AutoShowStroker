@@ -78,4 +78,6 @@ class LongTermStatisticsDialog(QDialog):
         self.plot_widget.clear()
         self.plot_widget.plot(x, values, pen=pg.mkPen(theme.ACCENT, width=2), symbol="o", symbolBrush=theme.ACCENT)
         self.plot_widget.setLabel("bottom", "Session #")
-        self.plot_widget.setLabel("left", ScoreTracker.PR_METRIC_LABELS[metric])
+        self.plot_widget.setLabel(
+            "left", ScoreTracker.PR_METRIC_LABELS[metric], units=ScoreTracker.PR_METRIC_UNITS[metric]
+        )

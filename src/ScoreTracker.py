@@ -16,6 +16,12 @@ class ScoreTracker:
         "average_beat_speed_active": "Active Beat Speed",
         "fakeout_count": "Fakeouts Survived",
     }
+    PR_METRIC_UNITS = {
+        "total_dur_sec": "s",
+        "total_num_beat": "beats",
+        "average_beat_speed_active": "beats/sec",
+        "fakeout_count": "fakeouts",
+    }
     # Bounds the size of the JSON blob persisted in QSettings (the Windows registry has no
     # practical need to grow this without limit).
     MAX_HISTORY_ENTRIES = 200
