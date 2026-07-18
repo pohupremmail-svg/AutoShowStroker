@@ -1,10 +1,19 @@
 import random
 import time
+import sys
+import os
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, QMutex, pyqtSignal, QObject
 from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtWidgets import QLabel
+
+
+def get_resource_path(relative_path):
+    """ Liefert den absoluten Pfad zur Ressource, passend für Entwicklung und PyInstaller-EXE """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.abspath(relative_path)
 
 
 class BeatHandler(QObject):
@@ -38,7 +47,7 @@ class BeatHandler(QObject):
     beat_change_event = pyqtSignal(float, str)
     beat_event = pyqtSignal()
 
-    def __init__(self, beat_file=Path("./res/mixkit-cool-interface-click-tone-2568.wav"), settings=None):
+    def __init__(self, beat_file=None, settings=None):
         super().__init__()
         self.beat_changed_counter = 5
         self.just_changed_beat = False
@@ -95,6 +104,8 @@ class BeatHandler(QObject):
         self.sound_effect = None
         self.beat_loudness = 1.0
 
+        if beat_file is None:
+            beat_file = Path(get_resource_path("res/mixkit-cool-interface-click-tone-2568.wav"))
         self.init_beat_sound(str(beat_file.absolute()))
 
         self.current_beat_pattern = None

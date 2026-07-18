@@ -1,8 +1,17 @@
 import json
 import random
+import sys
+import os
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal, QTimer, QObject
+
+
+def get_resource_path(relative_path):
+    """ Liefert den absoluten Pfad zur Ressource, passend für Entwicklung und PyInstaller-EXE """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.abspath(relative_path)
 
 
 class CalloutHandler(QObject):
@@ -16,7 +25,7 @@ class CalloutHandler(QObject):
         self.tease_active_timer.timeout.connect(self._tease_timer_handler)
         self.tease_time = 7000
         self.lang = "en"
-        self.callout_dir = Path("./res/callouts")
+        self.callout_dir = Path(get_resource_path("res/callouts"))
 
         self.is_teasing = False
 
