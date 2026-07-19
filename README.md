@@ -10,11 +10,33 @@ A specialized, interactive PyQt6 multimedia application designed to transform yo
     * Automatically varying beat frequencies and rhythm patterns (e.g., *Standard Beat*, *Quick Swing*, *Simple Bounce*, *Double Tap*).
     * Visual feedback through rhythmic color changes ("UP" / "DOWN").
     * Audio feedback with a precise sound effect played on every beat.
+    * Optional difficulty ramping that gradually intensifies beat frequency and duration as the session goes on.
+* **Custom Beat Patterns:** Build your own rhythm patterns in the built-in Pattern Editor and mix them in alongside the presets.
 * **Random Pause Phases:** The Strokemeter unexpectedly transitions into a controlled pause featuring a countdown display in the green-colored footer.
+* **Climax System:** Configurable climax announcements with real, ruined, and denied orgasm outcomes, plus optional fake climax cues to keep you guessing — chances for every outcome are independently tunable.
 * **Multilingual Callouts (Teases):** Random text instructions tailored to the current event (e.g., during tempo changes, pauses, or media transitions). Supports German and English (expandable via JSON files).
 * **Detailed Session Statistics:** At the end of each session, you receive a detailed evaluation (duration, number of beats, favorite rhythm, pause statistics), with a highlighted card for every personal record you just broke.
 * **Long-term Statistics:** Track how your stamina develops over time. A dedicated "Statistics" menu opens a history view with your all-time bests and a trend chart across every session you've ever played.
 * **Flexible Control:** Keyboard shortcuts for rapid navigation and adjustments during the session.
+
+## 🎮 How To Use
+
+1. **Installation:** Download the latest `GoonerApp.exe` from the [Releases page](https://github.com/pohupremmail-svg/AutoShowStroker/releases/latest) — no Python or installation required, just run the `.exe`.
+   * The `.exe` isn't code-signed, so Windows SmartScreen or your antivirus may flag it as unrecognized. If you want to double-check it yourself before running it, scan the downloaded file with [VirusTotal](https://www.virustotal.com/).
+2. **Load Folder:** Click "Add Gooning Folder" and select the directory containing your images and videos. The slideshow will start automatically.
+3. **Navigation:**
+    * **Next Media:** `Right Arrow` key or click "Skip >>".
+    * **Previous Media:** `Left Arrow` key or click "<< Previous".
+4. **Settings:** Press `Ctrl + S` or use the menu in the top left corner to open the tabbed settings dialog:
+    * **Playback:** slideshow timing for images/GIFs, minimum video duration, and beat/video volume.
+    * **Beat & Rhythm:** beat frequency and duration ranges, pause duration and chance, which rhythm patterns are active (plus a Pattern Editor for creating your own), and optional difficulty ramping.
+    * **Climax:** climax chance, and independent toggles/chances for ruined, denied, and fake climax outcomes.
+    * **Callouts:** enable/disable, callout language, and how often callouts trigger.
+5. **Adjust Layout:** The boundary between the media area and the Strokemeter can be adjusted via drag-and-drop to customize the ratio to your liking.
+
+## 💬 Community
+
+Join the Discord: https://discord.gg/qqkcxvq37Z
 
 ## 🚀 Installation & Execution (Developers)
 
@@ -62,15 +84,6 @@ pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --add-data "VE
 * `--name "GoonerApp"`: Renames the final output file.
 
 After a successful build, you will find the finished file **`GoonerApp.exe`** in the newly created **`dist/`** directory. You can now move and distribute this file as you wish!
-
-## 🎮 Operation & Controls
-
-1. **Load Folder:** Click "Add Gooning Folder" and select the directory containing your images and videos. The slideshow will start automatically.
-2. **Navigation:**
-    * **Next Media:** `Right Arrow` key or click "Skip >>".
-    * **Previous Media:** `Left Arrow` key or click "<< Previous".
-3. **Settings:** Press `Ctrl + S` or use the menu in the top left corner to adjust frequencies, beat patterns, pause durations, and the language of the callouts.
-4. **Adjust Layout:** The boundary between the media area and the Strokemeter can be adjusted via drag-and-drop to customize the ratio to your liking.
 
 ## 📂 Project Structure
 
