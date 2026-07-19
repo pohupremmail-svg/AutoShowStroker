@@ -1,4 +1,3 @@
-import os
 import random
 import time
 from pathlib import Path
@@ -8,7 +7,7 @@ from PyQt6.QtGui import QAction, QColor, QIcon, QMovie, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
-    QFileDialog,
+    QDialog,
     QGraphicsDropShadowEffect,
     QGridLayout,
     QHBoxLayout,
@@ -21,11 +20,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src import changelog, theme
+from src import changelog, media_kinds, theme
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
 from src.ClimaxHandler import ClimaxHandler
 from src.LongTermStatisticsDialog import LongTermStatisticsDialog
+from src.MediaFolderPickerDialog import MediaFolderPickerDialog
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
@@ -362,20 +362,13 @@ class GoonerApp(QMainWindow):
         self.auto_play_timer.start(int(random.uniform(self.min_dur, self.max_dur) * 1000))
 
     def finde_unterstützte_dateien(self, verzeichnis_pfad: str) -> list[Path]:
-        pfad = Path(verzeichnis_pfad)
-        unterstützte_endungen = ['.mp4', '.avi', '.mov', '.mkv', '.gif', '.jpeg', '.jpg', '.png', '.bmp']
-        gefundene_dateien = []
-
-        for datei in pfad.rglob('*'):
-            if datei.is_file() and datei.suffix.lower() in unterstützte_endungen:
-                gefundene_dateien.append(datei)
-        return gefundene_dateien
+        return media_kinds.find_supported_files(verzeichnis_pfad)
 
     def open_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Medien-Ordner wählen")
-        if folder:
+        dialog = MediaFolderPickerDialog(parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self._update_climax_status_label("neutral")
-            files = self.finde_unterstützte_dateien(folder)
+            files = dialog.selected_files
             if files:
                 random.shuffle(files)
                 self.playlist = files
@@ -404,7 +397,7 @@ class GoonerApp(QMainWindow):
         self.load_media(file_path)
 
     def load_media(self, file_path):
-        ext = os.path.splitext(file_path)[1].lower()
+        kind = media_kinds.media_kind(file_path)
 
         self.media_player.stop()
         if self.current_movie:
@@ -412,7 +405,7 @@ class GoonerApp(QMainWindow):
             self.image_label.setMovie(None)
             self.current_movie = None
 
-        if ext in ['.mp4', '.avi', '.mov', '.mkv']:
+        if kind == "video":
             self.auto_play_timer.stop()
 
             self.media_stack.setCurrentWidget(self.video_widget)
@@ -421,7 +414,7 @@ class GoonerApp(QMainWindow):
             self.video_start_time = time.time()
             self.audio_output.setVolume(self.vid_loudness)
 
-        elif ext == '.gif':
+        elif kind == "gif":
             self.media_stack.setCurrentWidget(self.image_label)
 
             movie = QMovie(file_path)
@@ -439,7 +432,7 @@ class GoonerApp(QMainWindow):
             self.current_movie = movie
             self.recalc_autoplay_timer()
 
-        elif ext in ['.png', '.jpg', '.jpeg', '.bmp']:
+        elif kind == "image":
             self.media_stack.setCurrentWidget(self.image_label)
             pixmap = QPixmap(file_path)
             scaled_pixmap = pixmap.scaled(self.image_label.size(),

@@ -59,6 +59,19 @@ CHANGELOG = {
         "</ul>"
         "Check the Statistics menu after your next session and watch the line go up."
     ),
+    "0.5.0": (
+        "GoonerApp finally lets you window-shop before you commit."
+        "<ul>"
+        "<li>A brand-new folder picker replaces the plain Windows dialog - stack up as many "
+        "folders as you want in one go, each weighted equally in the preview</li>"
+        "<li>A live thumbnail grid teases a random sample before you hit Start, so you're "
+        "never loading in blind again</li>"
+        "<li>Gifs already play right in the grid, and videos can too - flip on \"Animate "
+        "video clips\" for a looping 5-second peek at each one</li>"
+        "<li>Your last-used folders are remembered, ready the next time you open the picker</li>"
+        "</ul>"
+        "Open the folder picker and see what's waiting for you before you dive in."
+    ),
 }
 
 

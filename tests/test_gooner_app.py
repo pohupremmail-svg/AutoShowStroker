@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtMultimedia import QMediaPlayer
-from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtWidgets import QDialog
 
 from src.GoonerApp import GoonerApp
 
@@ -71,24 +71,40 @@ def test_finde_unterstuetzte_dateien_searches_recursively(app, tmp_path):
 # --- open_folder ---
 
 
+def _fake_picker_dialog(exec_result, selected_files=None):
+    class FakeDialog:
+        def __init__(self, parent=None):
+            self.selected_files = selected_files or []
+
+        def exec(self):
+            return exec_result
+
+    return FakeDialog
+
+
 def test_open_folder_cancelled_leaves_playlist_untouched(app, monkeypatch):
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: "")
+    monkeypatch.setattr(
+        "src.GoonerApp.MediaFolderPickerDialog", _fake_picker_dialog(QDialog.DialogCode.Rejected)
+    )
     app.open_folder()
     assert app.playlist == []
     assert app.is_running is False
 
 
-def test_open_folder_no_supported_files_shows_message_and_stays_stopped(app, monkeypatch, tmp_path):
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(tmp_path))
+def test_open_folder_no_supported_files_shows_message_and_stays_stopped(app, monkeypatch):
+    monkeypatch.setattr(
+        "src.GoonerApp.MediaFolderPickerDialog", _fake_picker_dialog(QDialog.DialogCode.Accepted, [])
+    )
     app.open_folder()
     assert app.image_label.text() == "Keine Dateien gefunden."
     assert app.is_running is False
 
 
 def test_open_folder_with_files_starts_session(app, monkeypatch, tmp_path):
-    (tmp_path / "a.png").write_bytes(b"")
-    (tmp_path / "b.png").write_bytes(b"")
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(tmp_path))
+    files = [tmp_path / "a.png", tmp_path / "b.png"]
+    monkeypatch.setattr(
+        "src.GoonerApp.MediaFolderPickerDialog", _fake_picker_dialog(QDialog.DialogCode.Accepted, files)
+    )
 
     app.open_folder()
 
@@ -100,15 +116,15 @@ def test_open_folder_with_files_starts_session(app, monkeypatch, tmp_path):
 def test_open_folder_with_files_hides_climax_banner(app, monkeypatch, tmp_path):
     old = tmp_path / "old.png"
     old.write_bytes(b"")
-    other = tmp_path / "other"
-    other.mkdir()
-    (other / "a.png").write_bytes(b"")
     app.playlist = [old]
     app.start()
     app._update_climax_status_label("ruined")
     assert app.climax_blink_timer.isActive()
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(other))
+    monkeypatch.setattr(
+        "src.GoonerApp.MediaFolderPickerDialog",
+        _fake_picker_dialog(QDialog.DialogCode.Accepted, [tmp_path / "a.png"]),
+    )
     app.open_folder()
 
     assert app.climax_status_label.isHidden()
@@ -119,13 +135,13 @@ def test_open_folder_with_files_hides_climax_banner(app, monkeypatch, tmp_path):
 def test_open_folder_no_supported_files_hides_climax_banner(app, monkeypatch, tmp_path):
     old = tmp_path / "old.png"
     old.write_bytes(b"")
-    empty = tmp_path / "empty"
-    empty.mkdir()
     app.playlist = [old]
     app.start()
     app._update_climax_status_label("denied")
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(empty))
+    monkeypatch.setattr(
+        "src.GoonerApp.MediaFolderPickerDialog", _fake_picker_dialog(QDialog.DialogCode.Accepted, [])
+    )
     app.open_folder()
 
     assert app.climax_status_label.isHidden()
