@@ -72,6 +72,20 @@ CHANGELOG = {
         "</ul>"
         "Open the folder picker and see what's waiting for you before you dive in."
     ),
+    "0.6.0": (
+        "GoonerApp wants to stay close, and finally tells you how it all works."
+        "<ul>"
+        "<li>A new Socials menu with a one-click Join Discord, so the community is never "
+        "more than a click away</li>"
+        "<li>A brand-new Guide under Help - a plain-language breakdown of what the beat "
+        "pattern numbers actually mean, straight from the source</li>"
+        "<li>The Guide also walks you through adding a new callout language, no Python "
+        "required</li>"
+        "<li>Built to grow - more guide topics will slot in right alongside these as the app "
+        "gets bigger</li>"
+        "</ul>"
+        "Pop open Help &gt; Guide and finally learn what makes this thing tick."
+    ),
 }
 
 
