@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 
 from PyQt6.QtCore import QSettings, Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QAction, QColor, QIcon, QMovie, QPixmap
+from PyQt6.QtGui import QAction, QColor, QDesktopServices, QIcon, QMovie, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import (
@@ -24,6 +24,7 @@ from src import changelog, media_kinds, theme
 from src.BeatHandler import BeatHandler
 from src.CalloutHandler import CalloutHandler
 from src.ClimaxHandler import ClimaxHandler
+from src.HelpDialog import HelpDialog
 from src.LongTermStatisticsDialog import LongTermStatisticsDialog
 from src.MediaFolderPickerDialog import MediaFolderPickerDialog
 from src.ScoreTracker import ScoreTracker
@@ -34,6 +35,8 @@ from src.WhatsNewDialog import WhatsNewDialog
 
 
 class GoonerApp(QMainWindow):
+    DISCORD_INVITE_URL = "https://discord.gg/qqkcxvq37Z"
+
     session_started_event = pyqtSignal()
     session_ended_event = pyqtSignal()
     media_repeated_event = pyqtSignal()
@@ -319,11 +322,21 @@ class GoonerApp(QMainWindow):
         whats_new_action.triggered.connect(self.show_whats_new_dialog)
         help_menu.addAction(whats_new_action)
 
+        guide_action = QAction("Guide", self)
+        guide_action.triggered.connect(self.show_help_dialog)
+        help_menu.addAction(guide_action)
+
         stats_menu = menu_bar.addMenu("Statistics")
 
         long_term_stats_action = QAction("Long-term Statistics", self)
         long_term_stats_action.triggered.connect(self.show_long_term_statistics)
         stats_menu.addAction(long_term_stats_action)
+
+        socials_menu = menu_bar.addMenu("Socials")
+
+        discord_action = QAction("Join Discord", self)
+        discord_action.triggered.connect(self.open_discord_invite)
+        socials_menu.addAction(discord_action)
 
     def maybe_show_whats_new_on_startup(self):
         current_version = get_current_version()
@@ -337,6 +350,13 @@ class GoonerApp(QMainWindow):
     def show_whats_new_dialog(self):
         dialog = WhatsNewDialog(changelog.CHANGELOG, parent=self)
         dialog.exec()
+
+    def show_help_dialog(self):
+        dialog = HelpDialog(parent=self)
+        dialog.exec()
+
+    def open_discord_invite(self):
+        QDesktopServices.openUrl(QUrl(self.DISCORD_INVITE_URL))
 
     def btn_next_action(self):
         self.show_next()

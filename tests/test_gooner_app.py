@@ -644,3 +644,41 @@ def test_help_menu_has_whats_new_action(app, monkeypatch):
     whats_new_action.trigger()
 
     assert captured.get("shown") is True
+
+
+def test_help_menu_has_guide_action(app, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, parent=None):
+            captured["shown"] = True
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.HelpDialog", FakeDialog)
+
+    menu_bar = app.menuBar()
+    help_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Help")
+    guide_action = next(a for a in help_menu.actions() if a.text() == "Guide")
+    guide_action.trigger()
+
+    assert captured.get("shown") is True
+
+
+def test_socials_menu_has_discord_action(app, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    captured = {}
+    monkeypatch.setattr(
+        "src.GoonerApp.QDesktopServices.openUrl", lambda url: captured.setdefault("url", url.toString())
+    )
+
+    menu_bar = app.menuBar()
+    socials_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Socials")
+    discord_action = next(a for a in socials_menu.actions() if a.text() == "Join Discord")
+    discord_action.trigger()
+
+    assert captured.get("url") == GoonerApp.DISCORD_INVITE_URL
