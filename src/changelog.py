@@ -72,7 +72,7 @@ CHANGELOG = {
         "</ul>"
         "Open the folder picker and see what's waiting for you before you dive in."
     ),
-    "0.6.0": (
+    "0.5.1": (
         "GoonerApp wants to stay close, and finally tells you how it all works."
         "<ul>"
         "<li>A new Socials menu with a one-click Join Discord, so the community is never "
