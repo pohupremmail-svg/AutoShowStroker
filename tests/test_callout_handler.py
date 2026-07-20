@@ -2,6 +2,7 @@ import json
 import random
 
 import pytest
+from PyQt6.QtCore import QSettings
 
 from src import CalloutHandler as callout_module
 from src.CalloutHandler import TRIGGER_KEYS, CalloutHandler
@@ -182,3 +183,119 @@ def test_invalid_json_file_is_skipped_but_language_stays_listed(qapp, tmp_path, 
     handler.active_callout = True
     handler.talking_chance = 1.0
     handler.select_and_output_sentence("session_started")
+
+
+# --- custom phrase files ---
+
+
+@pytest.fixture
+def handler_with_settings(qapp, callout_dir, monkeypatch, tmp_path):
+    monkeypatch.setattr(callout_module, "get_resource_path", lambda _relative_path: str(callout_dir))
+    settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
+    return CalloutHandler(settings=settings)
+
+
+def _write_custom_file(tmp_path, name, data):
+    path = tmp_path / name
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return str(path)
+
+
+def test_load_custom_file_merges_phrases_after_builtins(handler, tmp_path):
+    custom_path = _write_custom_file(tmp_path, "custom_en.json", {"session_started": ["custom phrase"]})
+
+    handler.load_custom_file(custom_path, "en")
+
+    assert handler.callout_data["en"]["session_started"] == ["en session_started phrase", "custom phrase"]
+
+
+def test_load_custom_file_raises_for_unknown_language(handler, tmp_path):
+    custom_path = _write_custom_file(tmp_path, "custom.json", {"session_started": ["x"]})
+    with pytest.raises(ValueError):
+        handler.load_custom_file(custom_path, "fr")
+
+
+def test_load_custom_file_raises_if_already_loaded(handler, tmp_path):
+    custom_path = _write_custom_file(tmp_path, "custom.json", {"session_started": ["x"]})
+    handler.load_custom_file(custom_path, "en")
+    with pytest.raises(ValueError):
+        handler.load_custom_file(custom_path, "en")
+
+
+def test_load_custom_file_raises_for_missing_file(handler, tmp_path):
+    with pytest.raises(ValueError):
+        handler.load_custom_file(str(tmp_path / "does_not_exist.json"), "en")
+
+
+def test_load_custom_file_raises_for_invalid_json(handler, tmp_path):
+    path = tmp_path / "bad.json"
+    path.write_text("{not valid json", encoding="utf-8")
+    with pytest.raises(ValueError):
+        handler.load_custom_file(str(path), "en")
+
+
+def test_load_custom_file_raises_for_non_object_json(handler, tmp_path):
+    path = tmp_path / "list.json"
+    path.write_text("[1, 2, 3]", encoding="utf-8")
+    with pytest.raises(ValueError):
+        handler.load_custom_file(str(path), "en")
+
+
+def test_load_custom_file_ignores_unknown_trigger_keys_and_bad_values(handler, tmp_path):
+    custom_path = _write_custom_file(tmp_path, "custom.json", {
+        "session_started": ["good phrase"],
+        "not_a_real_key": ["ignored"],
+        "pause_start": "not a list",
+        "pause_end": [1, 2, 3],
+    })
+
+    handler.load_custom_file(custom_path, "en")
+
+    assert handler.callout_data["en"]["session_started"] == ["en session_started phrase", "good phrase"]
+    assert "not_a_real_key" not in handler.callout_data["en"]
+    assert handler.callout_data["en"]["pause_start"] == ["en pause_start phrase"]
+    assert handler.callout_data["en"]["pause_end"] == ["en pause_end phrase"]
+
+
+def test_unload_custom_file_removes_entry_and_stops_contributing(handler, tmp_path):
+    custom_en_1 = _write_custom_file(tmp_path, "custom_en_1.json", {"session_started": ["phrase one"]})
+    custom_en_2 = _write_custom_file(tmp_path, "custom_en_2.json", {"session_started": ["phrase two"]})
+    handler.load_custom_file(custom_en_1, "en")
+    handler.load_custom_file(custom_en_2, "en")
+
+    handler.unload_custom_file(custom_en_1)
+
+    assert handler.callout_data["en"]["session_started"] == ["en session_started phrase", "phrase two"]
+    assert [e["path"] for e in handler.custom_phrase_files] == [custom_en_2]
+
+
+def test_unload_nonexistent_file_is_a_noop(handler):
+    handler.unload_custom_file("/does/not/exist.json")
+
+
+def test_settings_less_handler_supports_load_and_unload(handler, tmp_path):
+    custom_path = _write_custom_file(tmp_path, "custom.json", {"session_started": ["x"]})
+    handler.load_custom_file(custom_path, "en")  # would raise AttributeError pre-fix
+    handler.unload_custom_file(custom_path)
+
+
+def test_merged_custom_phrase_is_selectable(handler, tmp_path, monkeypatch, qtbot):
+    custom_path = _write_custom_file(tmp_path, "custom.json", {"session_started": ["custom phrase!"]})
+    handler.load_custom_file(custom_path, "en")
+    handler.active_callout = True
+    handler.talking_chance = 1.0
+    monkeypatch.setattr(random, "choice", lambda seq: seq[-1])
+
+    with qtbot.waitSignal(handler.new_tease_event, timeout=1000) as blocker:
+        handler.select_and_output_sentence("session_started")
+
+    assert blocker.args == ["custom phrase!"]
+
+
+def test_load_custom_file_persists_and_reloads_across_instances(handler_with_settings, tmp_path):
+    custom_path = _write_custom_file(tmp_path, "custom.json", {"session_started": ["persisted phrase"]})
+    handler_with_settings.load_custom_file(custom_path, "en")
+
+    second = CalloutHandler(settings=handler_with_settings.settings)
+
+    assert second.callout_data["en"]["session_started"] == ["en session_started phrase", "persisted phrase"]

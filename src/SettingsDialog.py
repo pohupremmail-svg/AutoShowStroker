@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src import theme
+from src.CustomPhraseFilesDialog import CustomPhraseFilesDialog
 from src.PatternEditorDialog import PatternEditorDialog
 
 
@@ -352,3 +353,10 @@ class SettingsDialog(QDialog):
         self.add_setting(
             "Chance for callouts to happen during events", "talking_chance", self.callout_handler, float, 0, 1, 0.01
         )
+
+        self.manage_phrase_files_button = QPushButton("Manage Custom Phrase Files...")
+        self.manage_phrase_files_button.clicked.connect(self._open_phrase_files_dialog)
+        self._current_layout.addWidget(self.manage_phrase_files_button)
+
+    def _open_phrase_files_dialog(self):
+        CustomPhraseFilesDialog(self.callout_handler, parent=self).exec()

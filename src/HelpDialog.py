@@ -71,6 +71,11 @@ HELP_TOPICS = [
         "in Settings &gt; Callouts &gt; Language - no restart or extra setup needed.</p>"
         "<p>Adding new phrases to a language that already exists works the same way: open "
         "its file and append a string to the relevant array.</p>"
+        "<h3>Or skip editing the app entirely</h3>"
+        "<p>Settings &gt; Callouts &gt; Manage Custom Phrase Files lets you point GoonerApp at "
+        "a JSON file anywhere on your own machine (same format as above) - pick which "
+        "language it's for and add it, no need to touch anything inside the app itself. "
+        "Add or remove files any time, changes apply immediately.</p>"
         "<p>For the full Trigger Key reference and validation steps, see "
         "<code>CONTRIBUTING.md</code> in the project repository.</p>",
     ),
