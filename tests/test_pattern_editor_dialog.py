@@ -6,10 +6,9 @@ from src.PatternEditorDialog import DEFAULT_STEPS, MAX_STEPS, PREVIEW_BASE_STEP_
 
 
 @pytest.fixture
-def beat_handler(qtbot, tmp_path):
+def beat_handler(tmp_path):
     settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)
     h = BeatHandler(settings=settings)
-    qtbot.addWidget(h.beat_meter)
     yield h
     h.stop()
 

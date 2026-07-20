@@ -86,37 +86,21 @@ CHANGELOG = {
         "</ul>"
         "Pop open Help &gt; Guide and finally learn what makes this thing tick."
     ),
-    "0.5.2": (
-        "GoonerApp finally spells out every trick up its sleeve."
+    "0.6.0": (
+        "GoonerApp levels up on three fronts at once - discoverability, control, and trust."
         "<ul>"
-        "<li>A new Keyboard Shortcuts tab in the Guide lists every shortcut in the app - "
-        "navigation, fullscreen, and beyond</li>"
-        "<li>The README's Navigation section got the same treatment, so it's there before "
-        "you even open the app</li>"
-        "</ul>"
-        "Pop open Help &gt; Guide and stop fumbling for the right key mid-session."
-    ),
-    "0.5.3": (
-        "GoonerApp gives you an escape hatch, one keystroke away."
-        "<ul>"
+        "<li>Every keyboard shortcut is finally documented - a new Keyboard Shortcuts tab in "
+        "the Guide, plus the README, list them all in one place</li>"
+        "<li>Two shortcuts that were missing outright: Ctrl+O opens/changes your folder, and "
+        "F1 pops the Guide open instantly</li>"
         "<li>A new Mute button (or just hit M) silences the beat sound and video audio "
         "together, instantly</li>"
         "<li>Panic Mode - tap Space and the window minimizes and goes silent in one move, no "
-        "questions asked</li>"
-        "<li>Neither one stops your session - everything's exactly where you left it once "
-        "you're back</li>"
+        "questions asked, no session lost</li>"
+        "<li>A new Privacy tab in the Guide (and right at the top of the README) spells it "
+        "out plainly: everything runs 100% locally, nothing ever phones home</li>"
         "</ul>"
-        "Keep Space in the back of your mind. You'll know when you need it."
-    ),
-    "0.5.4": (
-        "GoonerApp finally says the quiet part out loud."
-        "<ul>"
-        "<li>A new Privacy tab in the Guide, spelling out plainly: everything runs 100% "
-        "locally, nothing ever phones home</li>"
-        "<li>The same promise now sits right at the top of the README, not buried in a "
-        "feature list</li>"
-        "</ul>"
-        "Your folder, your history, your business. Nobody else's."
+        "Pop open Help &gt; Guide - it's got a lot more to say for itself now."
     ),
 }
 
