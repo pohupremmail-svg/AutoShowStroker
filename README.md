@@ -2,6 +2,8 @@
 
 A specialized, interactive PyQt6 multimedia application designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter") and motivational text instructions (callouts).
 
+**100% local and private.** Your media, session history, and settings never leave your machine — no account, no login, no telemetry, no cloud calls of any kind.
+
 ## ✨ Features
 
 * **Playlist Functionality:** Select any local folder. The application recursively searches for all supported media formats (`.mp4`, `.gif`, `.jpeg`, `.jpg`, `.png`).
