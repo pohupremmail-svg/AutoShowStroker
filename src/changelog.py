@@ -112,6 +112,21 @@ CHANGELOG = {
         "</ul>"
         "Watch it once, then decide if you want the intro every time."
     ),
+    "0.6.2": (
+        "GoonerApp now taunts you the moment a record is actually within reach."
+        "<ul>"
+        "<li>A glowing badge flashes up in the corner once you're closing in on a personal "
+        "best - total beats, duration, active speed, or fakeouts survived, whichever you're "
+        "nearest to breaking</li>"
+        "<li>Cross the line and it flips straight to \"New Record!\" without waiting for the "
+        "recap screen</li>"
+        "<li>Stays out of your way otherwise - no badge, no clutter, until you're actually "
+        "close</li>"
+        "<li>A new \"Show live personal-record chase\" toggle in Settings &gt; Playback turns "
+        "it off if you'd rather be surprised at the end</li>"
+        "</ul>"
+        "Keep playing - it'll let you know when it's time to get excited."
+    ),
 }
 
 

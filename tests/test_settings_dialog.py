@@ -136,6 +136,23 @@ def test_accept_settings_updates_show_startup_splash(app, dialog):
     assert app.settings.value("GoonerApp/show_startup_splash", type=bool) == expected
 
 
+def test_record_chase_checkbox_initialized_from_app(app, dialog):
+    assert dialog.show_record_chase_checkbox.isChecked() == app.show_record_chase
+
+
+def test_accept_settings_updates_show_record_chase(app, dialog, monkeypatch):
+    called = {}
+    monkeypatch.setattr(app, "_update_record_chase", lambda: called.setdefault("called", True))
+    dialog.show_record_chase_checkbox.setChecked(not app.show_record_chase)
+    expected = dialog.show_record_chase_checkbox.isChecked()
+
+    dialog.accept_settings()
+
+    assert app.show_record_chase == expected
+    assert app.settings.value("GoonerApp/show_record_chase", type=bool) == expected
+    assert called.get("called") is True
+
+
 def test_ramping_fields_initialized_from_beat_handler(app, dialog):
     assert dialog.ramping_active_checkbox.isChecked() == app.beat_handler.ramping_active
     assert dialog.settings_fields["min_ramp_duration"]["object"] is app.beat_handler
@@ -206,6 +223,7 @@ def test_playback_reset_button_resets_fields(app, dialog):
     dialog.settings_fields["beat_loudness"]["widget"].setValue(0.0)
     dialog.settings_fields["vid_loudness"]["widget"].setValue(0.0)
     dialog.show_startup_splash_checkbox.setChecked(not app.DEFAULTS["show_startup_splash"])
+    dialog.show_record_chase_checkbox.setChecked(not app.DEFAULTS["show_record_chase"])
 
     dialog.playback_reset_button.click()
 
@@ -219,6 +237,7 @@ def test_playback_reset_button_resets_fields(app, dialog):
     )
     assert dialog.settings_fields["vid_loudness"]["widget"].value() == pytest.approx(app.DEFAULTS["vid_loudness"])
     assert dialog.show_startup_splash_checkbox.isChecked() == app.DEFAULTS["show_startup_splash"]
+    assert dialog.show_record_chase_checkbox.isChecked() == app.DEFAULTS["show_record_chase"]
 
 
 def test_beat_reset_button_resets_fields(app, dialog):

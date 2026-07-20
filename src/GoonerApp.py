@@ -51,6 +51,7 @@ class GoonerApp(QMainWindow):
         "video_min_dur": 1.5,
         "vid_loudness": 1.0,
         "show_startup_splash": True,
+        "show_record_chase": True,
     }
 
     def __init__(self, settings: QSettings | None = None):
@@ -119,6 +120,22 @@ class GoonerApp(QMainWindow):
                 """)
         self.callout_label.hide()
 
+        self.record_chase_label = QLabel("")
+        self.record_chase_label.setStyleSheet(f"""
+                    color: {theme.ACCENT};
+                    font-size: 13px;
+                    font-weight: bold;
+                    padding: 6px 10px;
+                    background-color: rgba(45, 29, 58, 0.85);
+                    border-radius: 8px;
+                """)
+        record_chase_glow = QGraphicsDropShadowEffect()
+        record_chase_glow.setColor(QColor(theme.ACCENT))
+        record_chase_glow.setBlurRadius(18)
+        record_chase_glow.setOffset(0, 0)
+        self.record_chase_label.setGraphicsEffect(record_chase_glow)
+        self.record_chase_label.hide()
+
         self.overlay_widget = QWidget()
         self.overlay_layout = QGridLayout(self.overlay_widget)
         self.overlay_layout.setContentsMargins(0, 0, 0, 0)
@@ -130,6 +147,12 @@ class GoonerApp(QMainWindow):
             self.callout_label,
             0, 0,
             Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignCenter
+        )
+
+        self.overlay_layout.addWidget(
+            self.record_chase_label,
+            0, 0,
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight
         )
 
         media_layout.addWidget(self.overlay_widget, stretch=4)
@@ -196,6 +219,9 @@ class GoonerApp(QMainWindow):
         self.show_startup_splash = bool(
             self.settings.value("GoonerApp/show_startup_splash", self.DEFAULTS["show_startup_splash"], type=bool)
         )
+        self.show_record_chase = bool(
+            self.settings.value("GoonerApp/show_record_chase", self.DEFAULTS["show_record_chase"], type=bool)
+        )
 
         media_layout.addWidget(self.controls_container)
         self.main_splitter.addWidget(media_container)
@@ -257,6 +283,7 @@ class GoonerApp(QMainWindow):
         self.callout_handler = CalloutHandler(self.settings)
 
         self.score_tracker = ScoreTracker(settings=self.settings)
+        self._session_start_bests = {}
 
         self.climax_handler = ClimaxHandler(self.beat_handler, self.callout_handler, settings=self.settings)
 
@@ -325,6 +352,7 @@ class GoonerApp(QMainWindow):
                                                      self.callout_handler.pause_ended)
 
         self.beat_handler.register_beat_event(self.score_tracker.beat)
+        self.beat_handler.register_beat_event(self._update_record_chase)
 
         self.beat_handler.register_beat_change_event(self.score_tracker.beat_changed)
         self.beat_handler.register_beat_change_event(self.callout_handler.beat_change_general)
@@ -338,8 +366,10 @@ class GoonerApp(QMainWindow):
         self.register_start_event(self.score_tracker.session_started)
         self.register_start_event(self.callout_handler.session_started)
         self.register_start_event(self.climax_handler.session_started)
+        self.register_start_event(self._start_record_chase)
 
         self.register_end_event(self.score_tracker.session_ended)
+        self.register_end_event(self._end_record_chase)
 
         self.register_media_skip_event(self.score_tracker.media_skipped)
         self.register_media_skip_event(self.callout_handler.media_skipped)
@@ -603,6 +633,32 @@ class GoonerApp(QMainWindow):
         self.beat_meter.setText(text)
         background, color = self.BEAT_METER_COLORS[kind]
         self.beat_meter.setStyleSheet(self._beat_meter_style(background, color))
+
+    def _start_record_chase(self):
+        self._session_start_bests = self.score_tracker.get_all_time_bests()
+        self._update_record_chase()
+
+    def _end_record_chase(self):
+        self.record_chase_label.hide()
+
+    def _update_record_chase(self):
+        if not self.show_record_chase:
+            self.record_chase_label.hide()
+            return
+        status = self.score_tracker.record_chase_status(self._session_start_bests)
+        if status is None:
+            self.record_chase_label.hide()
+            return
+        metric, current, best = status
+        label = ScoreTracker.PR_METRIC_LABELS[metric]
+        current_text = ScoreTracker.format_metric_value(metric, current)
+        if current >= best:
+            text = f"\U0001f3c6 New {label} Record! {current_text}"
+        else:
+            best_text = ScoreTracker.format_metric_value(metric, best)
+            text = f"\U0001f3c6 Closing in on your {label} record: {current_text} / {best_text}"
+        self.record_chase_label.setText(text)
+        self.record_chase_label.show()
 
     def register_start_event(self, handler):
         self.session_started_event.connect(handler)

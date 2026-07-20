@@ -25,6 +25,14 @@ class ScoreTracker:
     # Bounds the size of the JSON blob persisted in QSettings (the Windows registry has no
     # practical need to grow this without limit).
     MAX_HISTORY_ENTRIES = 200
+    # Live record-chase only reveals itself once a metric is at least this close (current/best)
+    # to its personal best - an anticipation/payoff moment, not a permanent stats HUD.
+    CHASE_REVEAL_THRESHOLD = 0.8
+    # average_beat_speed_active is excluded from the live chase (unlike PR_METRICS as a whole,
+    # which still tracks it for the end-of-session recap): early in a session its small
+    # active_time denominator makes instantaneous speed spike well above the eventual session
+    # average, so a live ratio for it is not a meaningful "closing in" signal.
+    LIVE_CHASE_METRICS = tuple(m for m in PR_METRICS if m != "average_beat_speed_active")
 
     @staticmethod
     def format_metric_value(metric: str, value) -> str:
@@ -150,6 +158,36 @@ class ScoreTracker:
                 fav_patttern = pattern
 
         return fav_patttern
+
+    def live_metrics(self) -> dict:
+        if self.session_start_time is None:
+            return {}
+        elapsed = time.time() - self.session_start_time
+        active_time = elapsed - self.total_duration_of_pauses
+        return {
+            "total_dur_sec": elapsed,
+            "total_num_beat": self.beat_count,
+            "average_beat_speed_active": (self.beat_count / active_time) if active_time > 0 else 0,
+            "fakeout_count": self.fakeout_count,
+        }
+
+    def record_chase_status(self, best_values: dict):
+        live = self.live_metrics()
+        if not live:
+            return None
+        best_match = None
+        for metric in self.LIVE_CHASE_METRICS:
+            best = best_values.get(metric)
+            if not best or best <= 0:
+                continue
+            current = live[metric]
+            progress = current / best
+            if best_match is None or progress > best_match[3]:
+                best_match = (metric, current, best, progress)
+        if best_match is None or best_match[3] < self.CHASE_REVEAL_THRESHOLD:
+            return None
+        metric, current, best, _ = best_match
+        return metric, current, best
 
     def get_history(self) -> list:
         return list(self.history)
