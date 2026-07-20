@@ -399,6 +399,13 @@ def test_stop_freezes_climax_banner_without_hiding_it(app, tmp_path):
 
 
 def test_stop_when_no_climax_outcome_active_is_still_safe(app, tmp_path):
+    # climax_active/fake_climax_active must be off, not just left at their random-chance
+    # defaults - on_beat_change() rolls for a fake climax on every beat_change_event,
+    # including the one start() fires immediately, so leaving these on made this test flaky
+    # (~5% of runs): a climax_status_label the test never expected made it through to stop().
+    app.climax_handler.climax_active = False
+    app.climax_handler.fake_climax_active = False
+
     img = tmp_path / "a.png"
     img.write_bytes(b"")
     app.playlist = [img]
