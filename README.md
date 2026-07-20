@@ -23,13 +23,13 @@ A specialized, interactive PyQt6 multimedia application designed to transform yo
 
 1. **Installation:** Download the latest `GoonerApp.exe` from the [Releases page](https://github.com/pohupremmail-svg/AutoShowStroker/releases/latest) — no Python or installation required, just run the `.exe`.
    * The `.exe` isn't code-signed, so Windows SmartScreen or your antivirus may flag it as unrecognized. If you want to double-check it yourself before running it, scan the downloaded file with [VirusTotal](https://www.virustotal.com/).
-2. **Load Folder:** Click "Add Gooning Folder" and select the directory containing your images and videos. The slideshow will start automatically.
+2. **Load Folder:** Click "Add Gooning Folder" (or press `Ctrl + O`) and select the directory containing your images and videos. The slideshow will start automatically.
 3. **Navigation:**
     * **Next Media:** `Right Arrow` key or click "Skip >>".
     * **Previous Media:** `Left Arrow` key or click "<< Previous".
     * **Stop Session:** `Ctrl + Space` or click "Stop".
     * **Fullscreen:** `F` or `F11` to toggle, `Escape` to leave.
-    * The full shortcut list is also available in-app under **Help > Guide**.
+    * **Guide:** `F1` or **Help > Guide** — also has the full shortcut list.
 4. **Settings:** Press `Ctrl + S` or use the menu in the top left corner to open the tabbed settings dialog:
     * **Playback:** slideshow timing for images/GIFs, minimum video duration, and beat/video volume.
     * **Beat & Rhythm:** beat frequency and duration ranges, pause duration and chance, which rhythm patterns are active (plus a Pattern Editor for creating your own), and optional difficulty ramping.

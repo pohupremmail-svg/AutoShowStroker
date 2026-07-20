@@ -668,6 +668,23 @@ def test_help_menu_has_guide_action(app, monkeypatch):
     assert captured.get("shown") is True
 
 
+def test_guide_action_has_f1_shortcut(app):
+    from PyQt6.QtGui import QKeySequence
+    from PyQt6.QtWidgets import QMenu
+
+    menu_bar = app.menuBar()
+    help_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Help")
+    guide_action = next(a for a in help_menu.actions() if a.text() == "Guide")
+
+    assert guide_action.shortcut() == QKeySequence("F1")
+
+
+def test_btn_load_has_ctrl_o_shortcut(app):
+    from PyQt6.QtGui import QKeySequence
+
+    assert app.btn_load.shortcut() == QKeySequence("Ctrl+O")
+
+
 def test_socials_menu_has_discord_action(app, monkeypatch):
     from PyQt6.QtWidgets import QMenu
 

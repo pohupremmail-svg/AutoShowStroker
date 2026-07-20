@@ -78,6 +78,7 @@ HELP_TOPICS = [
         "Keyboard Shortcuts",
         "<h3>Playback</h3>"
         "<ul>"
+        "<li><b>Ctrl+O</b> - Set/Change Gooning Folder</li>"
         "<li><b>Right Arrow</b> - Next media (same as Skip &gt;&gt;)</li>"
         "<li><b>Left Arrow</b> - Previous media (same as &lt;&lt; Previous)</li>"
         "<li><b>Ctrl+Space</b> - Stop the session</li>"
@@ -90,6 +91,7 @@ HELP_TOPICS = [
         "<h3>App</h3>"
         "<ul>"
         "<li><b>Ctrl+S</b> - Open Settings</li>"
+        "<li><b>F1</b> - Open this Guide</li>"
         "<li><b>Ctrl+Q</b> - Quit</li>"
         "</ul>",
     ),
