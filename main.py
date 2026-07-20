@@ -12,13 +12,16 @@ if __name__ == "__main__":
     app.setPalette(theme.build_palette())
     app.setStyleSheet(theme.GLOBAL_QSS)
     window = GoonerApp()
-    window.showMaximized()
+
+    def _reveal_main_window():
+        window.showMaximized()
+        window.maybe_show_whats_new_on_startup()
 
     if window.show_startup_splash:
-        splash = SplashScreen(parent=window)
-        splash.finished.connect(window.maybe_show_whats_new_on_startup)
+        splash = SplashScreen()
+        splash.finished.connect(_reveal_main_window)
         splash.show()
     else:
-        window.maybe_show_whats_new_on_startup()
+        _reveal_main_window()
 
     sys.exit(app.exec())

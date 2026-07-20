@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QPixmap
+from PyQt6.QtGui import QColor, QGuiApplication, QPixmap
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QWidget
 
 from src import theme
@@ -54,12 +54,12 @@ class SplashScreen(QWidget):
         name_label.setGraphicsEffect(name_glow)
         layout.addWidget(name_label)
 
-        if parent is not None:
-            parent_geo = parent.frameGeometry()
-            self.move(
-                parent_geo.center().x() - self.width() // 2,
-                parent_geo.center().y() - self.height() // 2,
-            )
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        screen_geo = screen.availableGeometry()
+        self.move(
+            screen_geo.center().x() - self.width() // 2,
+            screen_geo.center().y() - self.height() // 2,
+        )
 
         self._fade_in = QPropertyAnimation(self, b"windowOpacity")
         self._fade_in.setDuration(fade_in_ms)

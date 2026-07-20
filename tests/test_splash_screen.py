@@ -1,3 +1,4 @@
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtWidgets import QLabel
 
 from src.SplashScreen import SplashScreen
@@ -21,6 +22,15 @@ def test_logo_pixmap_loads(qtbot):
         if w.pixmap() is not None and not w.pixmap().isNull()
     ]
     assert len(logo_labels) == 1
+
+
+def test_centers_itself_on_the_screen(qtbot):
+    splash = make_splash(qtbot)
+    screen_center = QGuiApplication.primaryScreen().availableGeometry().center()
+    splash_center = splash.frameGeometry().center()
+
+    assert abs(splash_center.x() - screen_center.x()) <= 1
+    assert abs(splash_center.y() - screen_center.y()) <= 1
 
 
 def test_fade_sequence_finishes_and_closes(qtbot):
