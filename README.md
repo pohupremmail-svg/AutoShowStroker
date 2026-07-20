@@ -27,6 +27,9 @@ A specialized, interactive PyQt6 multimedia application designed to transform yo
 3. **Navigation:**
     * **Next Media:** `Right Arrow` key or click "Skip >>".
     * **Previous Media:** `Left Arrow` key or click "<< Previous".
+    * **Stop Session:** `Ctrl + Space` or click "Stop".
+    * **Fullscreen:** `F` or `F11` to toggle, `Escape` to leave.
+    * The full shortcut list is also available in-app under **Help > Guide**.
 4. **Settings:** Press `Ctrl + S` or use the menu in the top left corner to open the tabbed settings dialog:
     * **Playback:** slideshow timing for images/GIFs, minimum video duration, and beat/video volume.
     * **Beat & Rhythm:** beat frequency and duration ranges, pause duration and chance, which rhythm patterns are active (plus a Pattern Editor for creating your own), and optional difficulty ramping.
