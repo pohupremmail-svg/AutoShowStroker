@@ -147,6 +147,8 @@ class GoonerApp(QMainWindow):
         self.btn_load = QPushButton("Set Gooning Folder and Start.")
         self.btn_load.setObjectName("primary")
         self.btn_load.clicked.connect(self.open_folder)
+        self.btn_load.setShortcut("Ctrl+O")
+        self.btn_load.setToolTip("Ctrl+O")
         btn_load_glow = QGraphicsDropShadowEffect()
         btn_load_glow.setColor(QColor(theme.ACCENT))
         btn_load_glow.setBlurRadius(50)
@@ -323,6 +325,7 @@ class GoonerApp(QMainWindow):
         help_menu.addAction(whats_new_action)
 
         guide_action = QAction("Guide", self)
+        guide_action.setShortcut("F1")
         guide_action.triggered.connect(self.show_help_dialog)
         help_menu.addAction(guide_action)
 

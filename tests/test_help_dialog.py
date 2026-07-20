@@ -33,6 +33,22 @@ def test_languages_tab_explains_adding_a_language(dialog):
     assert "Trigger Key" in text
 
 
+def test_shortcuts_tab_lists_every_shortcut(dialog):
+    titles = [dialog.tabs.tabText(i) for i in range(dialog.tabs.count())]
+    assert "Keyboard Shortcuts" in titles
+    shortcuts_tab = dialog.tabs.widget(titles.index("Keyboard Shortcuts"))
+    text = " ".join(w.text() for w in shortcuts_tab.findChildren(QLabel))
+    assert "Ctrl+O" in text
+    assert "Right Arrow" in text
+    assert "Left Arrow" in text
+    assert "Ctrl+Space" in text
+    assert "F11" in text
+    assert "Escape" in text
+    assert "Ctrl+S" in text
+    assert "F1" in text
+    assert "Ctrl+Q" in text
+
+
 def test_close_button_accepts_dialog(dialog):
     assert dialog.button.text() == "Close"
     dialog.button.click()
