@@ -28,6 +28,11 @@ class ScoreTracker:
     # Live record-chase only reveals itself once a metric is at least this close (current/best)
     # to its personal best - an anticipation/payoff moment, not a permanent stats HUD.
     CHASE_REVEAL_THRESHOLD = 0.8
+    # average_beat_speed_active is excluded from the live chase (unlike PR_METRICS as a whole,
+    # which still tracks it for the end-of-session recap): early in a session its small
+    # active_time denominator makes instantaneous speed spike well above the eventual session
+    # average, so a live ratio for it is not a meaningful "closing in" signal.
+    LIVE_CHASE_METRICS = tuple(m for m in PR_METRICS if m != "average_beat_speed_active")
 
     @staticmethod
     def format_metric_value(metric: str, value) -> str:
@@ -171,7 +176,7 @@ class ScoreTracker:
         if not live:
             return None
         best_match = None
-        for metric in self.PR_METRICS:
+        for metric in self.LIVE_CHASE_METRICS:
             best = best_values.get(metric)
             if not best or best <= 0:
                 continue

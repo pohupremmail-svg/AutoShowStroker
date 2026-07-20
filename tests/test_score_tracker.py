@@ -416,3 +416,17 @@ def test_record_chase_status_ignores_zero_or_missing_bests(monkeypatch):
 
     best_values = {"total_num_beat": 0, "fakeout_count": None}
     assert tracker.record_chase_status(best_values) is None
+
+
+def test_record_chase_status_ignores_average_beat_speed_active(monkeypatch):
+    # Instantaneous speed right at session start can spike above the eventual session
+    # average (small active_time denominator), so it's excluded from the live chase even
+    # when its ratio would otherwise dominate every other metric.
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 10  # 10 beats in 1s = 10 beats/sec, wildly over a 0.5 beats/sec best
+    monkeypatch.setattr(time, "time", lambda: 1.0)
+
+    best_values = {"average_beat_speed_active": 0.5, "total_num_beat": 1000}
+    assert tracker.record_chase_status(best_values) is None
