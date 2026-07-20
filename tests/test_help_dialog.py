@@ -51,6 +51,17 @@ def test_shortcuts_tab_lists_every_shortcut(dialog):
     assert "Ctrl+Q" in text
 
 
+def test_privacy_tab_states_everything_stays_local(dialog):
+    titles = [dialog.tabs.tabText(i) for i in range(dialog.tabs.count())]
+    assert "Privacy" in titles
+    privacy_tab = dialog.tabs.widget(titles.index("Privacy"))
+    text = " ".join(w.text() for w in privacy_tab.findChildren(QLabel))
+    assert "100%" in text
+    assert "locally" in text
+    assert "no telemetry" in text
+    assert "no account" in text
+
+
 def test_close_button_accepts_dialog(dialog):
     assert dialog.button.text() == "Close"
     dialog.button.click()
