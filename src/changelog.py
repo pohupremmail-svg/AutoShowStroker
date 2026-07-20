@@ -96,6 +96,18 @@ CHANGELOG = {
         "</ul>"
         "Pop open Help &gt; Guide and stop fumbling for the right key mid-session."
     ),
+    "0.5.3": (
+        "GoonerApp gives you an escape hatch, one keystroke away."
+        "<ul>"
+        "<li>A new Mute button (or just hit M) silences the beat sound and video audio "
+        "together, instantly</li>"
+        "<li>Panic Mode - tap Space and the window minimizes and goes silent in one move, no "
+        "questions asked</li>"
+        "<li>Neither one stops your session - everything's exactly where you left it once "
+        "you're back</li>"
+        "</ul>"
+        "Keep Space in the back of your mind. You'll know when you need it."
+    ),
 }
 
 
