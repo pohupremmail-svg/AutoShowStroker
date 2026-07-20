@@ -4,7 +4,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest  # noqa: E402
 from PyQt6.QtCore import QSettings  # noqa: E402
-from PyQt6.QtWidgets import QDialog  # noqa: E402
+from PyQt6.QtWidgets import QDialog, QMessageBox  # noqa: E402
 
 from src.BeatHandler import BeatHandler  # noqa: E402
 from src.GoonerApp import GoonerApp  # noqa: E402
@@ -43,6 +43,8 @@ def _no_real_audio(monkeypatch):
 def _no_modal_dialogs(monkeypatch):
     """QDialog.exec() blocks on a real modal event loop - never let a test hit it."""
     monkeypatch.setattr(QDialog, "exec", lambda self: None)
+    # QMessageBox overrides exec() itself rather than inheriting QDialog's - patch it too.
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: None)
 
 
 @pytest.fixture
