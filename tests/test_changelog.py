@@ -1,4 +1,5 @@
-from src.changelog import entries_since, parse_version
+from src.changelog import CHANGELOG, entries_since, parse_version
+from src.utils import get_current_version
 
 
 def test_parse_version_splits_into_ints():
@@ -38,3 +39,16 @@ def test_entries_since_preserves_changelog_order():
     changelog = {"0.1.0": "first", "0.2.0": "second", "0.3.0": "third"}
     result = entries_since("", "0.3.0", changelog=changelog)
     assert list(result.keys()) == ["0.1.0", "0.2.0", "0.3.0"]
+
+
+def test_version_file_has_a_matching_changelog_entry():
+    # Catches exactly the mistake that happened live in this project once already: a PR
+    # bumped VERSION without adding the matching CHANGELOG entry (see CLAUDE.md's
+    # Versioning & Releases section). 0.0.0 is the one exempt placeholder, for a fresh
+    # checkout with no releases cut yet.
+    version = get_current_version()
+    if version == "0.0.0":
+        return
+    assert version in CHANGELOG, (
+        f"VERSION is {version!r} but src/changelog.py has no matching CHANGELOG entry for it"
+    )
