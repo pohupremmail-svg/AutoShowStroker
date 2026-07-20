@@ -23,7 +23,7 @@ class SplashScreen(QWidget):
         self._hold_ms = hold_ms
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAutoFillBackground(True)
         self.setStyleSheet(f"background-color: {theme.BACKGROUND};")
         self.setFixedSize(LOGO_SIZE + 80, LOGO_SIZE + 140)
         self.setWindowOpacity(0.0)
