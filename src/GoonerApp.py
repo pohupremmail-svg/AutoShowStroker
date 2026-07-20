@@ -170,7 +170,6 @@ class GoonerApp(QMainWindow):
         self.btn_mute = QPushButton("Mute")
         self.btn_mute.setCheckable(True)
         self.btn_mute.clicked.connect(self.set_muted)
-        self.btn_mute.setShortcut("M")
         self.btn_mute.setToolTip("M")
 
         # Space triggers Panic (see keyPressEvent) - QPushButton intercepts Space/Enter for
@@ -258,6 +257,8 @@ class GoonerApp(QMainWindow):
             self._leave_fullscreen()
         elif event.key() == Qt.Key.Key_Space:
             self.panic()
+        elif event.key() == Qt.Key.Key_M:
+            self.toggle_mute()
         else:
             super().keyPressEvent(event)
 
@@ -294,6 +295,9 @@ class GoonerApp(QMainWindow):
         self.beat_handler.set_muted(muted)
         self.btn_mute.setChecked(muted)
         self.btn_mute.setText("Unmute" if muted else "Mute")
+
+    def toggle_mute(self):
+        self.set_muted(not self.is_muted)
 
     def display_new_tease(self, tease: str):
         self.callout_label.setText(tease)

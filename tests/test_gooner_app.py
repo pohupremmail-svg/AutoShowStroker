@@ -72,6 +72,27 @@ def test_mute_button_click_toggles_mute(app):
     assert app.is_muted is False
 
 
+def test_m_key_toggles_mute(app, monkeypatch, qtbot):
+    from PyQt6.QtCore import Qt
+
+    called = {"count": 0}
+    monkeypatch.setattr(app, "toggle_mute", lambda: called.__setitem__("count", called["count"] + 1))
+
+    qtbot.keyClick(app, Qt.Key.Key_M)
+
+    assert called["count"] == 1
+
+
+def test_toggle_mute_flips_state(app):
+    assert app.is_muted is False
+
+    app.toggle_mute()
+    assert app.is_muted is True
+
+    app.toggle_mute()
+    assert app.is_muted is False
+
+
 def test_panic_mutes_and_minimizes(app, monkeypatch):
     minimized = {}
     monkeypatch.setattr(app, "showMinimized", lambda: minimized.setdefault("called", True))
