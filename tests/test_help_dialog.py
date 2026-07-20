@@ -31,6 +31,7 @@ def test_languages_tab_explains_adding_a_language(dialog):
     text = " ".join(w.text() for w in languages_tab.findChildren(QLabel))
     assert "res/callouts/" in text
     assert "Trigger Key" in text
+    assert "Manage Custom Phrase Files" in text
 
 
 def test_shortcuts_tab_lists_every_shortcut(dialog):
