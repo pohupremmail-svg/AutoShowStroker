@@ -64,6 +64,23 @@ def test_callout_selection_reflects_current_state(app, dialog):
     assert dialog.callout_active_checkbox.isChecked() == app.callout_handler.active_callout
 
 
+def test_manage_phrase_files_button_opens_dialog(app, dialog, monkeypatch):
+    opened = {}
+
+    class FakeCustomPhraseFilesDialog:
+        def __init__(self, callout_handler, parent=None):
+            opened["callout_handler"] = callout_handler
+
+        def exec(self):
+            return None
+
+    monkeypatch.setattr("src.SettingsDialog.CustomPhraseFilesDialog", FakeCustomPhraseFilesDialog)
+
+    dialog.manage_phrase_files_button.click()
+
+    assert opened["callout_handler"] is app.callout_handler
+
+
 def test_accept_settings_applies_spinbox_values_to_target(app, dialog):
     dialog.settings_fields["min_dur"]["widget"].setValue(1.23)
     dialog.accept_settings()
