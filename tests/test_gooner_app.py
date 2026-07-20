@@ -582,6 +582,86 @@ def test_beat_handler_meter_updates_reach_the_gooner_app_owned_label(app):
     assert app.beat_meter.text() in ("UP", "DOWN")
 
 
+# --- live record-chase ---
+
+
+def test_record_chase_label_hidden_by_default(app):
+    assert app.record_chase_label.isHidden()
+
+
+def test_show_record_chase_defaults_to_true(app):
+    assert app.show_record_chase is True
+
+
+def test_starting_session_does_not_show_record_chase_below_threshold(app, tmp_path):
+    app.score_tracker.history = [{"total_num_beat": 100}]
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+
+    app.start()
+
+    assert app.record_chase_label.isHidden()
+
+
+def test_record_chase_label_shows_once_threshold_crossed(app, tmp_path):
+    app.score_tracker.history = [{"total_num_beat": 100}]
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+
+    app.score_tracker.beat_count = 90
+    app._update_record_chase()
+
+    assert not app.record_chase_label.isHidden()
+    assert "Total Beats" in app.record_chase_label.text()
+    assert "90" in app.record_chase_label.text()
+
+
+def test_beat_event_wired_to_record_chase_update(app, tmp_path):
+    app.score_tracker.history = [{"total_num_beat": 1}]
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+
+    app.beat_handler.beat_event.emit()
+
+    assert app.score_tracker.beat_count == 1
+    assert not app.record_chase_label.isHidden()
+    assert "New Total Beats Record!" in app.record_chase_label.text()
+
+
+def test_record_chase_label_hidden_when_setting_disabled(app, tmp_path):
+    app.score_tracker.history = [{"total_num_beat": 100}]
+    app.show_record_chase = False
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+
+    app.score_tracker.beat_count = 90
+    app._update_record_chase()
+
+    assert app.record_chase_label.isHidden()
+
+
+def test_stopping_session_hides_record_chase_label(app, tmp_path):
+    app.score_tracker.history = [{"total_num_beat": 100}]
+    img = tmp_path / "a.png"
+    img.write_bytes(b"")
+    app.playlist = [img]
+    app.start()
+    app.score_tracker.beat_count = 90
+    app._update_record_chase()
+    assert not app.record_chase_label.isHidden()
+
+    app.stop()
+
+    assert app.record_chase_label.isHidden()
+
+
 def test_climax_handler_status_event_wired_to_label(app):
     app.climax_handler.status_changed_event.emit("ruined")
     assert app.climax_status_label.text() == "RUINED"
