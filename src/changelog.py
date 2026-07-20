@@ -140,6 +140,18 @@ CHANGELOG = {
         "</ul>"
         "Pop open Help when you're curious - it'll only ever speak up if you ask."
     ),
+    "0.6.4": (
+        "GoonerApp finally lets your own words into the mix, no code required."
+        "<ul>"
+        "<li>Settings &gt; Callouts &gt; Manage Custom Phrase Files lets you point the app at "
+        "your own phrase file, anywhere on your machine - same simple format the built-in "
+        "ones already use</li>"
+        "<li>Pick the language it's for, add it, and it's live immediately - no restart</li>"
+        "<li>Your phrases join the built-in ones in the mix, never replace them</li>"
+        "<li>Load as many files as you like, and drop any of them just as easily</li>"
+        "</ul>"
+        "Write it once, save it anywhere, and let GoonerApp read it back to you."
+    ),
 }
 
 
