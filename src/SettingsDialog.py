@@ -46,10 +46,14 @@ class SettingsDialog(QDialog):
         self.show_startup_splash_checkbox = QCheckBox("Show startup splash animation")
         self.show_startup_splash_checkbox.setChecked(self.main_app.show_startup_splash)
         self._current_layout.addWidget(self.show_startup_splash_checkbox)
+        self.show_record_chase_checkbox = QCheckBox("Show live personal-record chase")
+        self.show_record_chase_checkbox.setChecked(self.main_app.show_record_chase)
+        self._current_layout.addWidget(self.show_record_chase_checkbox)
         self.playback_reset_button = self.add_reset_button(
             ["min_dur", "max_dur", "video_min_dur", "beat_loudness", "vid_loudness"],
             checkbox_defaults=[
                 (self.show_startup_splash_checkbox, self.main_app.DEFAULTS["show_startup_splash"]),
+                (self.show_record_chase_checkbox, self.main_app.DEFAULTS["show_record_chase"]),
             ],
         )
         self._current_layout.addStretch()
@@ -245,6 +249,10 @@ class SettingsDialog(QDialog):
 
         settings.setValue("GoonerApp/show_startup_splash", self.show_startup_splash_checkbox.isChecked())
         self.main_app.show_startup_splash = self.show_startup_splash_checkbox.isChecked()
+
+        settings.setValue("GoonerApp/show_record_chase", self.show_record_chase_checkbox.isChecked())
+        self.main_app.show_record_chase = self.show_record_chase_checkbox.isChecked()
+        self.main_app._update_record_chase()
 
         new_selected_patterns = []
         for name, checkbox in self.beat_checkboxes.items():
