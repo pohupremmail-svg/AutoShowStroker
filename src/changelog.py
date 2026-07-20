@@ -152,6 +152,20 @@ CHANGELOG = {
         "</ul>"
         "Write it once, save it anywhere, and let GoonerApp read it back to you."
     ),
+    "0.7.0": (
+        "GoonerApp's biggest single day yet, all bundled into one real release."
+        "<ul>"
+        "<li>A glowing splash greets you on launch now - the neon mark easing in before every "
+        "session</li>"
+        "<li>A live record-chase badge flashes up the moment you're closing in on (or "
+        "breaking) a personal best</li>"
+        "<li>Help &gt; Check for Updates - ask GitHub, on your terms, whether a newer version "
+        "exists</li>"
+        "<li>Settings &gt; Callouts &gt; Manage Custom Phrase Files - load your own teasing "
+        "lines from anywhere on your machine, no code required</li>"
+        "</ul>"
+        "Four new tricks in one build - go find all of them."
+    ),
 }
 
 
