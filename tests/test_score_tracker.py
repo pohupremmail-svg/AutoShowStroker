@@ -315,3 +315,104 @@ def test_format_metric_value_formats_speed_with_unit():
 def test_format_metric_value_formats_counts_as_plain_numbers():
     assert ScoreTracker.format_metric_value("total_num_beat", 42) == "42"
     assert ScoreTracker.format_metric_value("fakeout_count", 3) == "3"
+
+
+# --- live record-chase ---
+
+
+def test_live_metrics_empty_before_session_started():
+    tracker = ScoreTracker()
+    assert tracker.live_metrics() == {}
+
+
+def test_live_metrics_reflects_running_session(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat()
+    tracker.beat()
+    tracker.fake_climax_triggered()
+    monkeypatch.setattr(time, "time", lambda: 10.0)
+
+    live = tracker.live_metrics()
+
+    assert live["total_dur_sec"] == pytest.approx(10.0)
+    assert live["total_num_beat"] == 2
+    assert live["fakeout_count"] == 1
+    assert live["average_beat_speed_active"] == pytest.approx(2 / 10.0)
+
+
+def test_live_metrics_excludes_completed_pause_duration(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 4
+    tracker.total_duration_of_pauses = 6.0
+    monkeypatch.setattr(time, "time", lambda: 10.0)
+
+    live = tracker.live_metrics()
+
+    # active_time = 10s elapsed - 6s paused = 4s active
+    assert live["average_beat_speed_active"] == pytest.approx(4 / 4.0)
+
+
+def test_record_chase_status_none_without_session_running():
+    tracker = ScoreTracker()
+    assert tracker.record_chase_status({"total_num_beat": 100}) is None
+
+
+def test_record_chase_status_none_without_any_bests(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    monkeypatch.setattr(time, "time", lambda: 5.0)
+
+    assert tracker.record_chase_status({}) is None
+
+
+def test_record_chase_status_none_below_reveal_threshold(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 50  # 50% of the record - below the 0.8 reveal threshold
+    monkeypatch.setattr(time, "time", lambda: 1.0)
+
+    assert tracker.record_chase_status({"total_num_beat": 100}) is None
+
+
+def test_record_chase_status_selects_highest_progress_metric(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 85  # 85% of its record
+    monkeypatch.setattr(time, "time", lambda: 1.0)
+
+    best_values = {"total_num_beat": 100, "fakeout_count": 100}  # fakeout_count stays at 0%
+    status = tracker.record_chase_status(best_values)
+
+    assert status == ("total_num_beat", 85, 100)
+
+
+def test_record_chase_status_prioritizes_already_broken_metric(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 90  # 90% of its record - closer in absolute terms
+    tracker.fakeout_count = 3  # already exceeds its record of 2
+    monkeypatch.setattr(time, "time", lambda: 1.0)
+
+    best_values = {"total_num_beat": 100, "fakeout_count": 2}
+    status = tracker.record_chase_status(best_values)
+
+    assert status == ("fakeout_count", 3, 2)
+
+
+def test_record_chase_status_ignores_zero_or_missing_bests(monkeypatch):
+    tracker = ScoreTracker()
+    tracker.session_started()
+    tracker.session_start_time = 0.0
+    tracker.beat_count = 90
+    monkeypatch.setattr(time, "time", lambda: 1.0)
+
+    best_values = {"total_num_beat": 0, "fakeout_count": None}
+    assert tracker.record_chase_status(best_values) is None
