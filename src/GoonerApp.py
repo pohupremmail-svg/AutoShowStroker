@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QSplitter,
@@ -31,6 +32,7 @@ from src.MediaFolderPickerDialog import MediaFolderPickerDialog
 from src.ScoreTracker import ScoreTracker
 from src.SettingsDialog import SettingsDialog
 from src.StatisticsDialog import StatisticsDialog
+from src.UpdateChecker import UpdateChecker
 from src.utils import get_current_version, get_project_root
 from src.WhatsNewDialog import WhatsNewDialog
 
@@ -287,6 +289,8 @@ class GoonerApp(QMainWindow):
 
         self.climax_handler = ClimaxHandler(self.beat_handler, self.callout_handler, settings=self.settings)
 
+        self.update_checker = UpdateChecker(get_current_version())
+
         self._setup_signal_handler()
 
     def keyPressEvent(self, event):
@@ -379,6 +383,16 @@ class GoonerApp(QMainWindow):
 
         self.callout_handler.register_new_tease_event(self.display_new_tease, self.hide_last_tease)
 
+        # Wrapped in lambdas (rather than connecting the bound methods directly) so tests can
+        # monkeypatch app._show_*_dialog after construction - PyQt binds a direct connection to
+        # the method object at connect() time, which a later monkeypatch.setattr(app, ...)
+        # can't retroactively intercept, since the signal already holds the original reference.
+        self.update_checker.update_available.connect(
+            lambda tag, url: self._show_update_available_dialog(tag, url)
+        )
+        self.update_checker.up_to_date.connect(lambda: self._show_up_to_date_dialog())
+        self.update_checker.check_failed.connect(lambda message: self._show_update_check_failed_dialog(message))
+
     def create_menu_bar(self):
         menu_bar = self.menuBar()
 
@@ -405,6 +419,11 @@ class GoonerApp(QMainWindow):
         guide_action.setShortcut("F1")
         guide_action.triggered.connect(self.show_help_dialog)
         help_menu.addAction(guide_action)
+
+        help_menu.addSeparator()
+        check_updates_action = QAction("Check for Updates...", self)
+        check_updates_action.triggered.connect(self.check_for_updates)
+        help_menu.addAction(check_updates_action)
 
         stats_menu = menu_bar.addMenu("Statistics")
 
@@ -437,6 +456,52 @@ class GoonerApp(QMainWindow):
 
     def open_discord_invite(self):
         QDesktopServices.openUrl(QUrl(self.DISCORD_INVITE_URL))
+
+    def check_for_updates(self):
+        if self._confirm_update_check():
+            self.update_checker.check_now()
+
+    def _confirm_update_check(self) -> bool:
+        # Built via explicit QMessageBox(...) + exec() rather than the static .question()
+        # convenience method - the static convenience methods are separate C++ entry points
+        # that bypass Python-level QMessageBox.exec entirely, so tests/_no_modal_dialogs
+        # can't neuter them and a real modal loop would open during tests.
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle("Check for Updates?")
+        box.setText(
+            "This will send one request to GitHub.com to check the latest release version. "
+            "Nothing else is sent, and nothing else about your machine or usage leaves it.\n\n"
+            "Continue?"
+        )
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        box.exec()
+        return box.clickedButton() is box.button(QMessageBox.StandardButton.Yes)
+
+    def _show_update_available_dialog(self, latest_tag, release_url):
+        box = QMessageBox(self)
+        box.setWindowTitle("Update Available")
+        box.setText(f"A new version is available: {latest_tag} (you're on v{get_current_version()}).")
+        open_button = box.addButton("Open Releases Page", QMessageBox.ButtonRole.ActionRole)
+        box.addButton("Close", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is open_button:
+            QDesktopServices.openUrl(QUrl(release_url))
+
+    def _show_up_to_date_dialog(self):
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle("Up to Date")
+        box.setText(f"You're on the latest version (v{get_current_version()}).")
+        box.exec()
+
+    def _show_update_check_failed_dialog(self, message):
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("Update Check Failed")
+        box.setText(f"Couldn't check for updates:\n{message}")
+        box.exec()
 
     def btn_next_action(self):
         self.show_next()

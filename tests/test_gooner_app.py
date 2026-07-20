@@ -901,3 +901,66 @@ def test_socials_menu_has_discord_action(app, monkeypatch):
     discord_action.trigger()
 
     assert captured.get("url") == GoonerApp.DISCORD_INVITE_URL
+
+
+# --- check for updates ---
+
+
+def test_help_menu_has_check_for_updates_action(app):
+    from PyQt6.QtWidgets import QMenu
+
+    menu_bar = app.menuBar()
+    help_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Help")
+    action = next(a for a in help_menu.actions() if a.text() == "Check for Updates...")
+
+    assert action is not None
+
+
+def test_check_for_updates_checks_when_confirmed(app, monkeypatch):
+    monkeypatch.setattr(app, "_confirm_update_check", lambda: True)
+    called = {}
+    monkeypatch.setattr(app.update_checker, "check_now", lambda: called.setdefault("called", True))
+
+    app.check_for_updates()
+
+    assert called.get("called") is True
+
+
+def test_check_for_updates_does_not_check_when_declined(app, monkeypatch):
+    monkeypatch.setattr(app, "_confirm_update_check", lambda: False)
+    monkeypatch.setattr(
+        app.update_checker, "check_now", lambda: pytest.fail("should not check when declined")
+    )
+
+    app.check_for_updates()
+
+
+def test_update_available_signal_shows_dialog(app, monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        app, "_show_update_available_dialog", lambda tag, url: captured.update(tag=tag, url=url)
+    )
+
+    app.update_checker.update_available.emit("v9.9.9", "https://example.com/release")
+
+    assert captured == {"tag": "v9.9.9", "url": "https://example.com/release"}
+
+
+def test_up_to_date_signal_shows_dialog(app, monkeypatch):
+    called = {}
+    monkeypatch.setattr(app, "_show_up_to_date_dialog", lambda: called.setdefault("called", True))
+
+    app.update_checker.up_to_date.emit()
+
+    assert called.get("called") is True
+
+
+def test_check_failed_signal_shows_dialog(app, monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        app, "_show_update_check_failed_dialog", lambda msg: captured.setdefault("msg", msg)
+    )
+
+    app.update_checker.check_failed.emit("Host not found")
+
+    assert captured.get("msg") == "Host not found"

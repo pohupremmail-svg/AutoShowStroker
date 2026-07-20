@@ -60,6 +60,8 @@ def test_privacy_tab_states_everything_stays_local(dialog):
     assert "locally" in text
     assert "no telemetry" in text
     assert "no account" in text
+    assert "Check for Updates" in text
+    assert "only when you click it" in text
 
 
 def test_close_button_accepts_dialog(dialog):

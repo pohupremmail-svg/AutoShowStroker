@@ -127,6 +127,19 @@ CHANGELOG = {
         "</ul>"
         "Keep playing - it'll let you know when it's time to get excited."
     ),
+    "0.6.3": (
+        "GoonerApp can finally tell you when it's grown - if you ask nicely first."
+        "<ul>"
+        "<li>A new \"Check for Updates...\" action under Help asks GitHub, once, whether a "
+        "newer version exists</li>"
+        "<li>Always asks permission first - a clear warning pops up every single time before "
+        "anything gets sent, no exceptions</li>"
+        "<li>Nothing automatic, nothing silent - no background checks, no Settings toggle to "
+        "forget about, just a button you press when you're curious</li>"
+        "<li>Finds one? A one-click link straight to the Releases page</li>"
+        "</ul>"
+        "Pop open Help when you're curious - it'll only ever speak up if you ask."
+    ),
 }
 
 

@@ -108,14 +108,16 @@ HELP_TOPICS = [
         "<p>GoonerApp runs 100% locally. Your media folders, session history, and settings "
         "never leave your machine - there's no account to create, no login, and no "
         "telemetry of any kind.</p>"
-        "<h3>No cloud, no calls home</h3>"
-        "<p>Nothing in the app makes an outbound network request. Loading your folder, "
-        "playing your files, tracking your stats - all of it happens entirely offline, "
-        "on-device.</p>"
+        "<h3>No cloud, no calls home - with one opt-in exception</h3>"
+        "<p>Nothing in the app makes an outbound network request on its own. Loading your "
+        "folder, playing your files, tracking your stats - all of it happens entirely "
+        "offline, on-device. The one exception is Help &gt; Check for Updates: only when "
+        "you click it and confirm the warning, GoonerApp sends a single request to "
+        "GitHub.com to check the latest release version. Nothing else is sent, and it "
+        "never runs automatically.</p>"
         "<h3>What that means going forward</h3>"
-        "<p>Any future feature that would need the internet (like an opt-in update "
-        "checker) will stay strictly opt-in and clearly disclosed here - never on by "
-        "default, never silent.</p>",
+        "<p>Any future feature that would need the internet stays held to the same bar: "
+        "strictly opt-in and clearly disclosed here - never on by default, never silent.</p>",
     ),
 ]
 
