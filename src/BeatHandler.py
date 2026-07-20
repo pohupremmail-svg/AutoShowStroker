@@ -155,6 +155,7 @@ class BeatHandler(QObject):
 
         self.sound_effect = None
         self.beat_loudness = 1.0
+        self.is_muted = False
 
         if beat_file is None:
             beat_file = Path(get_resource_path("res/mixkit-cool-interface-click-tone-2568.wav"))
@@ -248,6 +249,11 @@ class BeatHandler(QObject):
         if not self.sound_effect:
             return
         self.sound_effect.play()
+
+    def set_muted(self, muted: bool):
+        self.is_muted = muted
+        if self.sound_effect:
+            self.sound_effect.setMuted(muted)
 
     def toggle_blink(self):
         if self.is_red:

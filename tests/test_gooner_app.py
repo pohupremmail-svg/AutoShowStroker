@@ -45,6 +45,82 @@ def test_leaving_fullscreen_shows_controls_again(app):
     assert not app.controls_container.isHidden()
 
 
+# --- mute / panic ---
+
+
+def test_set_muted_mutes_video_and_beat_audio(app):
+    app.set_muted(True)
+    assert app.is_muted is True
+    assert app.audio_output.isMuted() is True
+    assert app.beat_handler.is_muted is True
+    assert app.btn_mute.isChecked() is True
+    assert app.btn_mute.text() == "Unmute"
+
+    app.set_muted(False)
+    assert app.is_muted is False
+    assert app.audio_output.isMuted() is False
+    assert app.beat_handler.is_muted is False
+    assert app.btn_mute.isChecked() is False
+    assert app.btn_mute.text() == "Mute"
+
+
+def test_mute_button_click_toggles_mute(app):
+    app.btn_mute.click()
+    assert app.is_muted is True
+
+    app.btn_mute.click()
+    assert app.is_muted is False
+
+
+def test_m_key_toggles_mute(app, monkeypatch, qtbot):
+    from PyQt6.QtCore import Qt
+
+    called = {"count": 0}
+    monkeypatch.setattr(app, "toggle_mute", lambda: called.__setitem__("count", called["count"] + 1))
+
+    qtbot.keyClick(app, Qt.Key.Key_M)
+
+    assert called["count"] == 1
+
+
+def test_toggle_mute_flips_state(app):
+    assert app.is_muted is False
+
+    app.toggle_mute()
+    assert app.is_muted is True
+
+    app.toggle_mute()
+    assert app.is_muted is False
+
+
+def test_panic_mutes_and_minimizes(app, monkeypatch):
+    minimized = {}
+    monkeypatch.setattr(app, "showMinimized", lambda: minimized.setdefault("called", True))
+
+    app.panic()
+
+    assert app.is_muted is True
+    assert minimized.get("called") is True
+
+
+def test_space_key_triggers_panic(app, monkeypatch, qtbot):
+    from PyQt6.QtCore import Qt
+
+    called = {}
+    monkeypatch.setattr(app, "panic", lambda: called.setdefault("panicked", True))
+
+    qtbot.keyClick(app, Qt.Key.Key_Space)
+
+    assert called.get("panicked") is True
+
+
+def test_control_buttons_are_not_keyboard_focusable(app):
+    from PyQt6.QtCore import Qt
+
+    for button in (app.btn_prev, app.btn_load, app.btn_next, app.btn_stop, app.btn_mute):
+        assert button.focusPolicy() == Qt.FocusPolicy.NoFocus
+
+
 # --- folder scanning ---
 
 

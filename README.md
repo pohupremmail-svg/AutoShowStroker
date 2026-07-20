@@ -28,6 +28,8 @@ A specialized, interactive PyQt6 multimedia application designed to transform yo
     * **Next Media:** `Right Arrow` key or click "Skip >>".
     * **Previous Media:** `Left Arrow` key or click "<< Previous".
     * **Stop Session:** `Ctrl + Space` or click "Stop".
+    * **Mute:** `M` or click "Mute" — silences beat sound and video audio together.
+    * **Panic:** `Space` — instantly minimizes the window and mutes audio. Doesn't stop the session or auto-unmute when you come back.
     * **Fullscreen:** `F` or `F11` to toggle, `Escape` to leave.
     * **Guide:** `F1` or **Help > Guide** — also has the full shortcut list.
 4. **Settings:** Press `Ctrl + S` or use the menu in the top left corner to open the tabbed settings dialog:

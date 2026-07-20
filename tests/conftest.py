@@ -26,6 +26,9 @@ class _FakeSoundEffect:
     def play(self):
         pass
 
+    def setMuted(self, muted):
+        self.muted = muted
+
 
 @pytest.fixture(autouse=True)
 def _no_real_audio(monkeypatch):
