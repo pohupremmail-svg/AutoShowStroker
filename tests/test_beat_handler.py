@@ -47,6 +47,16 @@ def test_settings_override_defaults(qtbot, tmp_path):
     handler.stop()
 
 
+def test_set_muted_mutes_and_unmutes_sound_effect(handler):
+    handler.set_muted(True)
+    assert handler.is_muted is True
+    assert handler.sound_effect.muted is True
+
+    handler.set_muted(False)
+    assert handler.is_muted is False
+    assert handler.sound_effect.muted is False
+
+
 def test_recalc_beat_only_picks_from_selected_patterns(handler):
     handler.selected_beat_patterns = ["Standard Beat"]
     handler.recalc_beat()

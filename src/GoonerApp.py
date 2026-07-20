@@ -167,10 +167,24 @@ class GoonerApp(QMainWindow):
         self.btn_stop.setShortcut("Ctrl+Space")
         self.btn_stop.setToolTip("Ctrl+Space")
 
+        self.btn_mute = QPushButton("Mute")
+        self.btn_mute.setCheckable(True)
+        self.btn_mute.clicked.connect(self.set_muted)
+        self.btn_mute.setShortcut("M")
+        self.btn_mute.setToolTip("M")
+
+        # Space triggers Panic (see keyPressEvent) - QPushButton intercepts Space/Enter for
+        # whichever button currently has keyboard focus before it ever reaches keyPressEvent,
+        # so Panic would silently fail to fire while any of these had focus. NoFocus keeps them
+        # mouse/shortcut-clickable but out of the keyboard-focus chain entirely.
+        for button in (self.btn_prev, self.btn_load, self.btn_next, self.btn_stop, self.btn_mute):
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
         controls_layout.addWidget(self.btn_prev)
         controls_layout.addWidget(self.btn_load)
         controls_layout.addWidget(self.btn_stop)
         controls_layout.addWidget(self.btn_next)
+        controls_layout.addWidget(self.btn_mute)
 
         self.auto_play_timer = QTimer()
         self.auto_play_timer.timeout.connect(self.next_img_timer)
@@ -227,6 +241,7 @@ class GoonerApp(QMainWindow):
 
         self.is_running = False
         self._was_maximized_before_fullscreen = False
+        self.is_muted = False
 
         self.callout_handler = CalloutHandler(self.settings)
 
@@ -241,6 +256,8 @@ class GoonerApp(QMainWindow):
             self._toggle_fullscreen()
         elif event.key() == Qt.Key.Key_Escape:
             self._leave_fullscreen()
+        elif event.key() == Qt.Key.Key_Space:
+            self.panic()
         else:
             super().keyPressEvent(event)
 
@@ -263,6 +280,20 @@ class GoonerApp(QMainWindow):
                 self.showMaximized()
             else:
                 self.showNormal()
+
+    def panic(self):
+        """Instant hide-and-silence: minimizes the window and mutes audio in one keypress.
+        Deliberately does not stop/pause the session (see Ctrl+Space) or auto-unmute on
+        restore - the user decides when sound comes back, same as toggling Mute normally."""
+        self.set_muted(True)
+        self.showMinimized()
+
+    def set_muted(self, muted: bool):
+        self.is_muted = muted
+        self.audio_output.setMuted(muted)
+        self.beat_handler.set_muted(muted)
+        self.btn_mute.setChecked(muted)
+        self.btn_mute.setText("Unmute" if muted else "Mute")
 
     def display_new_tease(self, tease: str):
         self.callout_label.setText(tease)

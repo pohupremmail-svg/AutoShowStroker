@@ -42,6 +42,8 @@ def test_shortcuts_tab_lists_every_shortcut(dialog):
     assert "Right Arrow" in text
     assert "Left Arrow" in text
     assert "Ctrl+Space" in text
+    assert "Toggle mute" in text
+    assert "Panic" in text
     assert "F11" in text
     assert "Escape" in text
     assert "Ctrl+S" in text
