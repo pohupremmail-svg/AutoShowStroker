@@ -1,11 +1,12 @@
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QGuiApplication, QPixmap
+from PyQt6.QtGui import QColor, QGuiApplication, QPainter, QPixmap
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QWidget
 
 from src import theme
 from src.utils import get_project_root
 
 LOGO_SIZE = 320
+CORNER_RADIUS = 28
 
 
 class SplashScreen(QWidget):
@@ -23,8 +24,7 @@ class SplashScreen(QWidget):
         self._hold_ms = hold_ms
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
-        self.setAutoFillBackground(True)
-        self.setStyleSheet(f"background-color: {theme.BACKGROUND};")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(LOGO_SIZE + 80, LOGO_SIZE + 140)
         self.setWindowOpacity(0.0)
 
@@ -74,6 +74,13 @@ class SplashScreen(QWidget):
         self._fade_out.setEndValue(0.0)
         self._fade_out.setEasingCurve(QEasingCurve.Type.InOutQuad)
         self._fade_out.finished.connect(self._on_fade_out_finished)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(theme.BACKGROUND))
+        painter.drawRoundedRect(self.rect(), CORNER_RADIUS, CORNER_RADIUS)
 
     def showEvent(self, event):
         super().showEvent(event)
