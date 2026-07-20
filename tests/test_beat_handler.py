@@ -9,7 +9,6 @@ from src.BeatHandler import BeatHandler
 @pytest.fixture
 def handler(qtbot):
     h = BeatHandler()
-    qtbot.addWidget(h.beat_meter)
     yield h
     h.stop()
 
@@ -23,7 +22,7 @@ def test_defaults_dict_matches_init_defaults(handler):
         assert getattr(handler, var_name) == default_value
 
 
-def test_settings_override_defaults(qtbot, tmp_path):
+def test_settings_override_defaults(tmp_path):
     ini = tmp_path / "settings.ini"
     settings = QSettings(str(ini), QSettings.Format.IniFormat)
     settings.setValue("BeatHandler/min_beat_freq", 2.0)
@@ -35,7 +34,6 @@ def test_settings_override_defaults(qtbot, tmp_path):
     settings.setValue("BeatHandler/ramp_window_width", 0.25)
 
     handler = BeatHandler(settings=settings)
-    qtbot.addWidget(handler.beat_meter)
 
     assert handler.min_beat_freq == 2.0
     assert handler.max_beat_freq == 2.0
@@ -102,20 +100,46 @@ def test_pause_loop_resumes_and_resets_frequency(handler, qtbot):
     assert handler.cur_freq != 0  # reset_beat_timer immediately recalculates a new beat
 
 
-def test_toggle_blink_alternates_state(handler):
+def test_toggle_blink_alternates_state(handler, qtbot):
     handler.is_red = False
-    handler.toggle_blink()
+    with qtbot.waitSignal(handler.beat_meter_update_event, timeout=1000) as blocker:
+        handler.toggle_blink()
     assert handler.is_red is True
-    assert handler.beat_meter.text() == "DOWN"
-    handler.toggle_blink()
+    assert blocker.args == ["DOWN", "down"]
+
+    with qtbot.waitSignal(handler.beat_meter_update_event, timeout=1000) as blocker:
+        handler.toggle_blink()
     assert handler.is_red is False
-    assert handler.beat_meter.text() == "UP"
+    assert blocker.args == ["UP", "up"]
 
 
-def test_stop_resets_beat_meter_text(handler):
-    handler.beat_meter.setText("something")
-    handler.stop()
-    assert handler.beat_meter.text() == "Strokemeter appears here."
+def test_stop_emits_idle_beat_meter_reset(handler, qtbot):
+    with qtbot.waitSignal(handler.beat_meter_update_event, timeout=1000) as blocker:
+        handler.stop()
+    assert blocker.args == ["Strokemeter appears here.", "idle"]
+
+
+def test_recalc_beat_emits_new_beat_meter_update(handler, qtbot):
+    with qtbot.waitSignal(handler.beat_meter_update_event, timeout=1000) as blocker:
+        handler.recalc_beat()
+    text, kind = blocker.args
+    assert text == f"New Beat! {handler.current_beat_pattern}"
+    assert kind == "new_beat"
+
+
+def test_start_pause_emits_pause_meter_update(handler, qtbot):
+    handler.min_pause_dur = 5
+    handler.max_pause_dur = 5
+    with qtbot.waitSignal(handler.beat_meter_update_event, timeout=1000) as blocker:
+        handler.start_pause()
+    assert blocker.args == ["Pause: 5 seconds left.", "pause"]
+
+
+def test_pause_loop_emits_pause_meter_update_on_tick(handler, qtbot):
+    handler.cur_pause_dur = 3
+    with qtbot.waitSignal(handler.beat_meter_update_event, timeout=1000) as blocker:
+        handler.pause_loop()
+    assert blocker.args == ["Pause: 2 seconds left.", "pause"]
 
 
 # --- difficulty ramping ---
@@ -281,11 +305,10 @@ def test_add_custom_pattern_auto_selects_it(handler):
     assert "My Pattern" in handler.selected_beat_patterns
 
 
-def test_add_custom_pattern_persists_to_settings(qtbot, tmp_path):
+def test_add_custom_pattern_persists_to_settings(tmp_path):
     ini = tmp_path / "settings.ini"
     settings = QSettings(str(ini), QSettings.Format.IniFormat)
     handler = BeatHandler(settings=settings)
-    qtbot.addWidget(handler.beat_meter)
 
     handler.add_or_update_custom_pattern("My Pattern", [1, -1, 2])
 
@@ -302,13 +325,12 @@ def test_update_existing_custom_pattern_does_not_duplicate_selection(handler):
     assert handler.selected_beat_patterns.count("My Pattern") == 1
 
 
-def test_custom_patterns_loaded_from_settings(qtbot, tmp_path):
+def test_custom_patterns_loaded_from_settings(tmp_path):
     ini = tmp_path / "settings.ini"
     settings = QSettings(str(ini), QSettings.Format.IniFormat)
     settings.setValue("BeatHandler/custom_patterns", json.dumps({"Loaded": [1, -1]}))
 
     handler = BeatHandler(settings=settings)
-    qtbot.addWidget(handler.beat_meter)
 
     assert handler.available_beat_patterns["Loaded"] == [1, -1]
     handler.stop()

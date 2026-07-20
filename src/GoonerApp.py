@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QStackedWidget,
     QVBoxLayout,
@@ -213,6 +214,13 @@ class GoonerApp(QMainWindow):
         self._climax_status_text = ""
         self._climax_status_colors = ("transparent", "transparent")
 
+        self.beat_meter = QLabel("Strokemeter appears here.")
+        self.beat_meter.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.beat_meter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        background, color = self.BEAT_METER_COLORS["idle"]
+        self.beat_meter.setStyleSheet(self._beat_meter_style(background, color))
+        self.beat_handler.register_beat_meter_update_event(self._update_beat_meter)
+
         # Fixed total height so the media area above never wobbles when the climax label
         # appears/disappears - only the split *within* this container changes (beat_meter
         # expands to fill it via stretch when the label is hidden, shrinks when it's shown).
@@ -222,7 +230,7 @@ class GoonerApp(QMainWindow):
         self.footer_layout.setContentsMargins(0, 0, 0, 0)
         self.footer_layout.setSpacing(0)
         self.footer_layout.addWidget(self.climax_status_label, stretch=0)
-        self.footer_layout.addWidget(self.beat_handler.beat_meter, stretch=1)
+        self.footer_layout.addWidget(self.beat_meter, stretch=1)
         self.main_splitter.addWidget(self.footer_container)
 
         self.video_start_time = 0
@@ -572,6 +580,25 @@ class GoonerApp(QMainWindow):
         self.climax_blink_timer.stop()
         if self._climax_status_text:
             self.climax_status_label.setStyleSheet(self._climax_label_style(self._climax_status_colors[0]))
+
+    BEAT_METER_COLORS = {
+        "idle": (theme.SECONDARY, theme.TEXT),
+        "up": (theme.SECONDARY, theme.TEXT),
+        "down": (theme.ACCENT, theme.BACKGROUND),
+        "new_beat": (theme.ACCENT, theme.BACKGROUND),
+        "pause": (theme.PAUSE, theme.TEXT),
+    }
+
+    def _beat_meter_style(self, background, color):
+        return (
+            f"background-color: {background}; color: {color}; "
+            "font-weight: bold; font-size: 24px; border-radius: 8px;"
+        )
+
+    def _update_beat_meter(self, text, kind):
+        self.beat_meter.setText(text)
+        background, color = self.BEAT_METER_COLORS[kind]
+        self.beat_meter.setStyleSheet(self._beat_meter_style(background, color))
 
     def register_start_event(self, handler):
         self.session_started_event.connect(handler)

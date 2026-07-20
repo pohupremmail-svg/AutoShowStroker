@@ -558,6 +558,30 @@ def test_climax_blink_interval_is_fast(app):
     assert app.climax_blink_timer.interval() <= 150
 
 
+# --- beat meter (GoonerApp owns the widget, BeatHandler only emits state) ---
+
+
+def test_beat_meter_starts_idle(app):
+    assert app.beat_meter.text() == "Strokemeter appears here."
+    background, color = app.BEAT_METER_COLORS["idle"]
+    assert background in app.beat_meter.styleSheet()
+    assert color in app.beat_meter.styleSheet()
+
+
+def test_update_beat_meter_sets_text_and_colors_per_kind(app):
+    for kind, text in [("up", "UP"), ("down", "DOWN"), ("new_beat", "New Beat! [1]"), ("pause", "Pause: 5s")]:
+        app._update_beat_meter(text, kind)
+        assert app.beat_meter.text() == text
+        background, color = app.BEAT_METER_COLORS[kind]
+        assert background in app.beat_meter.styleSheet()
+        assert color in app.beat_meter.styleSheet()
+
+
+def test_beat_handler_meter_updates_reach_the_gooner_app_owned_label(app):
+    app.beat_handler.toggle_blink()
+    assert app.beat_meter.text() in ("UP", "DOWN")
+
+
 def test_climax_handler_status_event_wired_to_label(app):
     app.climax_handler.status_changed_event.emit("ruined")
     assert app.climax_status_label.text() == "RUINED"

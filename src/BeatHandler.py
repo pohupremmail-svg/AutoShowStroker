@@ -5,11 +5,8 @@ import sys
 import time
 from pathlib import Path
 
-from PyQt6.QtCore import QMutex, QObject, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QMutex, QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtMultimedia import QSoundEffect
-from PyQt6.QtWidgets import QLabel, QSizePolicy
-
-from src import theme
 
 
 def get_resource_path(relative_path):
@@ -69,6 +66,10 @@ class BeatHandler(QObject):
     beat_resumed_event = pyqtSignal()
     beat_change_event = pyqtSignal(float, str)
     beat_event = pyqtSignal()
+    # (text, kind) - kind is one of "idle"/"up"/"down"/"new_beat"/"pause". BeatHandler owns no
+    # widget (see GoonerApp._update_beat_meter) - it only describes what the meter should show,
+    # same pattern CalloutHandler/ClimaxHandler already use for their GoonerApp-owned labels.
+    beat_meter_update_event = pyqtSignal(str, str)
 
     def __init__(self, beat_file=None, settings=None):
         super().__init__()
@@ -78,15 +79,6 @@ class BeatHandler(QObject):
         self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
         self.cur_pause_dur = None
         self.is_red = False
-
-        self.beat_meter = QLabel("Strokemeter appears here.")
-        self.beat_meter.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.beat_meter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        self.footer_style_base = "font-weight: bold; font-size: 24px; border-radius: 8px;"
-        self.beat_meter.setStyleSheet(
-            f"background-color: {theme.SECONDARY}; color: {theme.TEXT}; {self.footer_style_base}"
-        )
 
         self.settings = settings  # QSettings Instanz speichern
 
@@ -232,10 +224,7 @@ class BeatHandler(QObject):
         self.beat_pattern_mutex.unlock()
 
         # Mark a new beat or speed with a different color for one beat:
-        self.beat_meter.setText(f"New Beat! {self.current_beat_pattern}")
-        self.beat_meter.setStyleSheet(
-            f"background-color: {theme.ACCENT}; color: {theme.BACKGROUND}; {self.footer_style_base}"
-        )
+        self.beat_meter_update_event.emit(f"New Beat! {self.current_beat_pattern}", "new_beat")
         self.just_changed_beat = True
         self.beat_changed_counter = 5
         self.beat_change_event.emit(self.cur_freq, self.current_beat_pattern_name)
@@ -257,15 +246,9 @@ class BeatHandler(QObject):
 
     def toggle_blink(self):
         if self.is_red:
-            color = theme.SECONDARY
-            text_col = theme.TEXT
-            self.beat_meter.setText("UP")
+            self.beat_meter_update_event.emit("UP", "up")
         else:
-            color = theme.ACCENT
-            text_col = theme.BACKGROUND
-            self.beat_meter.setText("DOWN")
-
-        self.beat_meter.setStyleSheet(f"background-color: {color}; color: {text_col}; {self.footer_style_base}")
+            self.beat_meter_update_event.emit("DOWN", "down")
         self.is_red = not self.is_red
 
     def beat(self):
@@ -289,10 +272,7 @@ class BeatHandler(QObject):
         self.beat_meter_timer.stop()
         self.cur_pause_dur = random.randint(self.min_pause_dur, self.max_pause_dur)
         self.beat_meter_pause_timer.start(1000)
-        self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
-        self.beat_meter.setStyleSheet(
-            f"background-color: {theme.PAUSE}; color: {theme.TEXT}; {self.footer_style_base}"
-        )
+        self.beat_meter_update_event.emit(f"Pause: {self.cur_pause_dur} seconds left.", "pause")
         self.beat_paused_event.emit()
         return
 
@@ -306,15 +286,12 @@ class BeatHandler(QObject):
             self.beat_meter_pause_timer.stop()
             return
         self.beat_meter_pause_timer.start(1000)
-        self.beat_meter.setText(f"Pause: {self.cur_pause_dur} seconds left.")
+        self.beat_meter_update_event.emit(f"Pause: {self.cur_pause_dur} seconds left.", "pause")
 
     def stop(self):
         self.beat_meter_timer.stop()
         self.beat_meter_pause_timer.stop()
-        self.beat_meter.setStyleSheet(
-            f"background-color: {theme.SECONDARY}; color: {theme.TEXT}; {self.footer_style_base}"
-        )
-        self.beat_meter.setText("Strokemeter appears here.")
+        self.beat_meter_update_event.emit("Strokemeter appears here.", "idle")
 
     def register_beat_pause_events(self, pause_start_event, pause_resume_event):
         self.beat_paused_event.connect(pause_start_event)
@@ -325,6 +302,9 @@ class BeatHandler(QObject):
 
     def register_beat_change_event(self, handler):
         self.beat_change_event.connect(handler)
+
+    def register_beat_meter_update_event(self, handler):
+        self.beat_meter_update_event.connect(handler)
 
     @staticmethod
     def _validate_pattern_steps(steps):
