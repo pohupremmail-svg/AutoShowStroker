@@ -108,6 +108,16 @@ CHANGELOG = {
         "</ul>"
         "Keep Space in the back of your mind. You'll know when you need it."
     ),
+    "0.5.4": (
+        "GoonerApp finally says the quiet part out loud."
+        "<ul>"
+        "<li>A new Privacy tab in the Guide, spelling out plainly: everything runs 100% "
+        "locally, nothing ever phones home</li>"
+        "<li>The same promise now sits right at the top of the README, not buried in a "
+        "feature list</li>"
+        "</ul>"
+        "Your folder, your history, your business. Nobody else's."
+    ),
 }
 
 
