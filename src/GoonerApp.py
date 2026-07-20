@@ -50,6 +50,7 @@ class GoonerApp(QMainWindow):
         "max_dur": 4.0,
         "video_min_dur": 1.5,
         "vid_loudness": 1.0,
+        "show_startup_splash": True,
     }
 
     def __init__(self, settings: QSettings | None = None):
@@ -192,6 +193,9 @@ class GoonerApp(QMainWindow):
         self.max_dur = float(self.settings.value("GoonerApp/max_dur", 4.0))
         self.min_dur = float(self.settings.value("GoonerApp/min_dur", 0.5))
         self.video_min_dur = float(self.settings.value("GoonerApp/video_min_dur", 1.5))
+        self.show_startup_splash = bool(
+            self.settings.value("GoonerApp/show_startup_splash", self.DEFAULTS["show_startup_splash"], type=bool)
+        )
 
         media_layout.addWidget(self.controls_container)
         self.main_splitter.addWidget(media_container)

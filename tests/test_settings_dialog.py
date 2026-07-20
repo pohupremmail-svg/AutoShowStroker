@@ -122,6 +122,20 @@ def test_accept_settings_does_not_recalculate_beat_when_stopped(app, dialog, mon
     dialog.accept_settings()
 
 
+def test_startup_splash_checkbox_initialized_from_app(app, dialog):
+    assert dialog.show_startup_splash_checkbox.isChecked() == app.show_startup_splash
+
+
+def test_accept_settings_updates_show_startup_splash(app, dialog):
+    dialog.show_startup_splash_checkbox.setChecked(not app.show_startup_splash)
+    expected = dialog.show_startup_splash_checkbox.isChecked()
+
+    dialog.accept_settings()
+
+    assert app.show_startup_splash == expected
+    assert app.settings.value("GoonerApp/show_startup_splash", type=bool) == expected
+
+
 def test_ramping_fields_initialized_from_beat_handler(app, dialog):
     assert dialog.ramping_active_checkbox.isChecked() == app.beat_handler.ramping_active
     assert dialog.settings_fields["min_ramp_duration"]["object"] is app.beat_handler
@@ -191,6 +205,7 @@ def test_playback_reset_button_resets_fields(app, dialog):
     dialog.settings_fields["video_min_dur"]["widget"].setValue(9.9)
     dialog.settings_fields["beat_loudness"]["widget"].setValue(0.0)
     dialog.settings_fields["vid_loudness"]["widget"].setValue(0.0)
+    dialog.show_startup_splash_checkbox.setChecked(not app.DEFAULTS["show_startup_splash"])
 
     dialog.playback_reset_button.click()
 
@@ -203,6 +218,7 @@ def test_playback_reset_button_resets_fields(app, dialog):
         app.beat_handler.DEFAULTS["beat_loudness"]
     )
     assert dialog.settings_fields["vid_loudness"]["widget"].value() == pytest.approx(app.DEFAULTS["vid_loudness"])
+    assert dialog.show_startup_splash_checkbox.isChecked() == app.DEFAULTS["show_startup_splash"]
 
 
 def test_beat_reset_button_resets_fields(app, dialog):

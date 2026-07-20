@@ -660,6 +660,21 @@ def test_defaults_dict_matches_init_defaults(app):
         assert getattr(app, var_name) == default_value
 
 
+# --- startup splash ---
+
+
+def test_show_startup_splash_defaults_to_true(app):
+    assert app.show_startup_splash is True
+
+
+def test_show_startup_splash_respects_saved_setting(qtbot, qsettings):
+    qsettings.setValue("GoonerApp/show_startup_splash", False)
+    window = GoonerApp(settings=qsettings)
+    qtbot.addWidget(window)
+
+    assert window.show_startup_splash is False
+
+
 # --- what's new ---
 
 

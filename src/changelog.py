@@ -102,6 +102,16 @@ CHANGELOG = {
         "</ul>"
         "Pop open Help &gt; Guide - it's got a lot more to say for itself now."
     ),
+    "0.6.1": (
+        "GoonerApp finally makes an entrance instead of just barging in."
+        "<ul>"
+        "<li>A glowing logo fade-in greets you on launch now - the neon mark easing in, "
+        "holding for a beat, then dissolving away right before your session starts</li>"
+        "<li>Not in the mood for a tease before the tease? A new \"Show startup splash "
+        "animation\" toggle in Settings &gt; Playback turns it off instantly</li>"
+        "</ul>"
+        "Watch it once, then decide if you want the intro every time."
+    ),
 }
 
 

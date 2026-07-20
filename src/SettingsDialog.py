@@ -43,8 +43,14 @@ class SettingsDialog(QDialog):
         self.add_section_header("General Settings")
         self.add_setting("Beat Volume", "beat_loudness", self.beat_handler, float, 0.0, 1.0, 0.1)
         self.add_setting("Video Volume", "vid_loudness", self.main_app, float, 0.0, 1.0, 0.1)
+        self.show_startup_splash_checkbox = QCheckBox("Show startup splash animation")
+        self.show_startup_splash_checkbox.setChecked(self.main_app.show_startup_splash)
+        self._current_layout.addWidget(self.show_startup_splash_checkbox)
         self.playback_reset_button = self.add_reset_button(
-            ["min_dur", "max_dur", "video_min_dur", "beat_loudness", "vid_loudness"]
+            ["min_dur", "max_dur", "video_min_dur", "beat_loudness", "vid_loudness"],
+            checkbox_defaults=[
+                (self.show_startup_splash_checkbox, self.main_app.DEFAULTS["show_startup_splash"]),
+            ],
         )
         self._current_layout.addStretch()
 
@@ -236,6 +242,9 @@ class SettingsDialog(QDialog):
             settings.setValue(key, new_value)
 
         self.beat_handler.sound_effect.setVolume(self.settings_fields['beat_loudness']['widget'].value())
+
+        settings.setValue("GoonerApp/show_startup_splash", self.show_startup_splash_checkbox.isChecked())
+        self.main_app.show_startup_splash = self.show_startup_splash_checkbox.isChecked()
 
         new_selected_patterns = []
         for name, checkbox in self.beat_checkboxes.items():
