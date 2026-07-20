@@ -86,6 +86,16 @@ CHANGELOG = {
         "</ul>"
         "Pop open Help &gt; Guide and finally learn what makes this thing tick."
     ),
+    "0.5.2": (
+        "GoonerApp finally spells out every trick up its sleeve."
+        "<ul>"
+        "<li>A new Keyboard Shortcuts tab in the Guide lists every shortcut in the app - "
+        "navigation, fullscreen, and beyond</li>"
+        "<li>The README's Navigation section got the same treatment, so it's there before "
+        "you even open the app</li>"
+        "</ul>"
+        "Pop open Help &gt; Guide and stop fumbling for the right key mid-session."
+    ),
 }
 
 
