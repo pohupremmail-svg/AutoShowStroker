@@ -102,6 +102,24 @@ def test_handshake_scan_and_linear_selection_run_off_ui_thread(controller, serve
     qtbot.waitUntil(lambda: bool(commands(server, "Ping")))
 
 
+@pytest.mark.parametrize("feature", [
+    {"ActuatorType": "Position", "StepCount": 100},
+    {"ActuatorType": None, "StepCount": 100},
+    {"StepCount": 100},
+], ids=["alternate-actuator-label", "null-actuator-label", "omitted-actuator-label"])
+def test_linear_capability_accepts_simulated_device_metadata(controller, server, qtbot, feature):
+    # LinearCmd is the capability. Simulated devices need not repeat "Linear" in
+    # ActuatorType; filtering by that label prevented them from being selected.
+    server.devices[0]["DeviceMessages"]["LinearCmd"] = [feature]
+    connect(controller, server, qtbot)
+    controller.test_up()
+    qtbot.waitUntil(lambda: bool(commands(server, "LinearCmd")))
+    move = commands(server, "LinearCmd")[-1]
+    assert move["DeviceIndex"] == 7
+    assert move["Vectors"][0]["Index"] == 0
+    assert move["Vectors"][0]["Position"] == 0.85
+
+
 def test_predictive_target_uses_remaining_deadline_and_configured_range(controller, server, qtbot):
     connect(controller, server, qtbot)
     controller.session_started()
