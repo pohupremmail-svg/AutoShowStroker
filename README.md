@@ -2,7 +2,7 @@
 
 A specialized, interactive PyQt6 multimedia application designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter") and motivational text instructions (callouts).
 
-**100% local and private.** Your media, session history, and settings never leave your machine — no account, no login, no telemetry, no cloud calls of any kind. The one optional exception: Help > Check for Updates pings GitHub.com when you explicitly ask it to, and only then.
+**Local and private by default.** Your media and session history stay on your machine — no account, no login, no telemetry. Help > Check for Updates contacts GitHub only when you explicitly request it. Optional Intiface support connects to the server you configure and sends the app name, device discovery/heartbeat messages, and movement/stop commands; it never sends media paths, images, callouts, or session history. The default Intiface address is on your own machine. A remote server receives those device commands over your network.
 
 Local still means written somewhere, so: your data (session history, custom patterns, custom phrase files, remembered media folders) lives as plain JSON in `%LOCALAPPDATA%\GoonerCock\GoonerApp`, and your settings in `HKEY_CURRENT_USER\Software\GoonerCock\GoonerApp`. GoonerApp is portable, so deleting the `.exe` leaves both behind — **Help > Privacy & Data** shows the exact paths, opens the data folder, and deletes any of it per category.
 
@@ -16,6 +16,7 @@ Local still means written somewhere, so: your data (session history, custom patt
     * Audio feedback with a precise sound effect played on every beat.
     * Optional difficulty ramping that gradually intensifies beat frequency and duration as the session goes on.
 * **Custom Beat Patterns:** Build your own rhythm patterns in the built-in Pattern Editor and mix them in alongside the presets.
+* **Optional Intiface Support:** Drive a linear device through Intiface Central with predictive position-and-duration commands, configurable stroke range, test movements, and an emergency stop.
 * **Random Pause Phases:** The Strokemeter unexpectedly transitions into a controlled pause featuring a countdown display in the green-colored footer.
 * **Climax System:** Configurable climax announcements with real, ruined, and denied orgasm outcomes, plus optional fake climax cues to keep you guessing — chances for every outcome are independently tunable.
 * **Multilingual Callouts (Teases):** Random text instructions tailored to the current event (e.g., during tempo changes, pauses, or media transitions). Available in German, English and French (expandable via JSON files).
@@ -48,6 +49,32 @@ Local still means written somewhere, so: your data (session history, custom patt
 ## 💬 Community
 
 Join the Discord: https://discord.gg/qqkcxvq37Z
+
+## Intiface Central / Linear Devices
+
+1. Start [Intiface Central](https://intiface.com/central/), start its server, and connect your device there.
+2. Open **Settings > Device**, tick **Enable Intiface**, and use `ws://127.0.0.1:12345` (or your server's address).
+3. Set the **minimum (DOWN)** and **maximum (UP)** positions. The default range is **10–90%**. Click **Apply Device Settings**; the status shows the first available device advertising linear support. **Scan for Devices** repeats discovery.
+4. Use **Test Up** / **Test Down** to check the endpoints. Each test is one movement lasting one second. These buttons use the applied settings and stop automatic device sync.
+5. Start a session to sync, or use **Resume Device Sync** if a session is already running.
+
+**Timing:** targets are sent before an audible beat, with the time remaining until that beat as the movement duration. The device interpolates toward UP or DOWN; the app does not stream intermediate positions. Silent pattern steps extend the travel time without extra endpoint changes. Predictions stop at a segment-ending rest and are recalculated when the next segment begins. During the meter's pattern-change highlight, movements continue and align with the next visible UP/DOWN direction.
+
+The app's frequency is **audible beats per second**, not full stroke cycles. With Standard Beat at 2 Hz, each direction takes about 500 ms and a complete up/down cycle takes about one second. Pattern weights change individual intervals; there is no extra blanket division by two. Queue delays are subtracted before sending, and expired targets are discarded. A device's advertised minimum command gap is respected, so patterns faster than its command rate may skip targets.
+
+**Stopping:** rhythm pauses send a stop and resume with the next segment. Session Stop, Panic (Space), Emergency Stop, disabling Intiface, and application exit cancel pending movement and send a stop. Panic keeps the media session running as before, but device sync stays stopped until **Resume Device Sync** or a new session. Reconnection also requires an explicit resume or a new session; old movements are never replayed. On exit, the app waits asynchronously for the stop acknowledgement, with a bounded timeout.
+
+Intiface is **disabled by default**. Once enabled, the connection is remembered across launches and retries automatically when the server is unavailable. Playback remains usable without Intiface or a connected device. Only devices exposing Buttplug v3 `LinearCmd` are controlled, using their first linear actuator; unsupported devices are left alone. This is intended for compatible linear strokers such as Keon 2, but physical compatibility and timing need checking with your device. Device mechanics and connection latency limit how closely it can follow the beat. If the connection is lost, an in-flight movement may finish before the server/device stops it; the app cannot deliver a stop over a broken connection.
+
+### Implementation and verification
+
+`src/IntifaceController.py` keeps WebSocket I/O, protocol negotiation, discovery, heartbeats and reconnect timers in a dedicated Qt worker thread. `BeatHandler.linear_movement_planned` exposes the next audible target and a monotonic arrival deadline; the existing `beat_event` and session plan remain unchanged. `src/IntifaceSettingsWidget.py` supplies the Device tab. QtWebSockets is already bundled with the pinned PyQt6 dependency, so no additional Python client package is required.
+
+The wire format follows the [Buttplug v3 linear/stop specification](https://buttplug.io/docs/spec-v3/spec/generic/) and [discovery specification](https://buttplug.io/docs/spec-v3/spec/enumeration/). Tests use a local simulated WebSocket server, never physical devices:
+
+```powershell
+python -m pytest tests/test_intiface.py tests/test_intiface_beat_sync.py tests/test_intiface_ui.py
+```
 
 ## 🚀 Installation & Execution (Developers)
 

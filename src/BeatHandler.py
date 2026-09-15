@@ -110,6 +110,9 @@ class BeatHandler(QObject):
     session_planned_event = pyqtSignal(float)
     plan_extended_event = pyqtSignal(list)
     segment_started_event = pyqtSignal(object)
+    # Next audible target: (note identity, UP?, monotonic arrival deadline). Emitted when
+    # scheduled, before beat_event, so linear devices can interpolate toward the beat.
+    linear_movement_planned = pyqtSignal(int, bool, float)
 
     def __init__(self, beat_file=None, settings=None, data_store=None):
         super().__init__()
@@ -120,6 +123,7 @@ class BeatHandler(QObject):
         self.beat_meter_pause_timer.timeout.connect(self.pause_loop)
         self.cur_pause_dur = None
         self.is_red = False
+        self._linear_note_id = 0
 
         self.settings = settings
 
@@ -393,6 +397,7 @@ class BeatHandler(QObject):
     # --- running the beat ---
 
     def start_beat(self):
+        self._linear_note_id += 1
         self.session_start_time = time.time()
         self.ramp_target_duration = random.uniform(self.min_ramp_duration, self.max_ramp_duration)
         self._plan.clear()
@@ -425,6 +430,37 @@ class BeatHandler(QObject):
         finally:
             self.beat_pattern_mutex.unlock()
         self.beat_meter_timer.start(beat_time_ms)
+        movement = self.next_linear_movement()
+        if movement is not None:
+            self.linear_movement_planned.emit(*movement)
+
+    def next_linear_movement(self):
+        """Predicts the next audible target within the running segment.
+
+        Silent pattern steps extend the travel time, without adding endpoint flips.
+        Stop at a segment-ending rest: the next segment publishes its own target when
+        it starts. The current rhythm stays authoritative during live settings changes.
+        """
+        if self.is_paused() or not self.beat_meter_timer.isActive() or not self.current_beat_pattern:
+            return None
+        delay = max(0, self.beat_meter_timer.remainingTime()) / 1000
+        ends_in = float("inf") if self._holding else self._current_segment_end - time.time()
+        position = self.current_beat_position
+        base = self._base_step_sec()
+        # A validated pattern has at least one audible step; one cycle suffices.
+        for _ in self.current_beat_pattern:
+            step = self.current_beat_pattern[position]
+            if step > 0:
+                # The UI suppresses UP/DOWN for five notes during a pattern-change
+                # highlight. Count backwards from its next visible direction so device
+                # movement continues through that highlight and matches it afterwards.
+                up = self.is_red ^ (self.just_changed_beat and self.beat_changed_counter % 2 == 1)
+                return self._linear_note_id, up, time.monotonic() + delay
+            if delay >= ends_in:
+                return None
+            delay += base / abs(step)
+            position = (position + 1) % len(self.current_beat_pattern)
+        return None
 
     def _base_step_sec(self):
         """Seconds a weight-1 step lasts at the current frequency and pattern.
@@ -678,6 +714,7 @@ class BeatHandler(QObject):
             self.beat_pattern_mutex.unlock()
 
         if play_beat:
+            self._linear_note_id += 1
             self.play_beat_sound()
             if not self.just_changed_beat:
                 self.toggle_blink()

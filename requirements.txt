@@ -1,3 +1,4 @@
+# Includes QtWebSockets for the optional Intiface worker; no additional client package.
 PyQt6==6.10.0
 PyQt6-Qt6==6.10.0
 PyQt6_sip==13.10.2

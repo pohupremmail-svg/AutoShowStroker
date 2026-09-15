@@ -9,8 +9,7 @@ log = applog.get_logger(__name__)
 
 
 class UpdateChecker(QObject):
-    """The app's one and only network code path - deliberately isolated in its own module
-    so "what does this app send over the network" has one obvious place to audit. Only ever
+    """The app's GitHub update request, separate from optional Intiface device control. Only ever
     contacted when GoonerApp.check_for_updates() is explicitly triggered by the user."""
 
     GITHUB_RELEASES_API_URL = "https://api.github.com/repos/pohupremmail-svg/AutoShowStroker/releases/latest"
