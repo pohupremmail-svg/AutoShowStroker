@@ -1,6 +1,6 @@
 """What is on screen, and what replaces it.
 
-A QStackedWidget with two pages - a QLabel for images and animated GIFs, a QVideoWidget for
+A QStackedWidget with two pages - a QLabel for images and animated GIFs, a VideoDisplay for
 clips - plus the timer that decides how long the current one stays up. It is the stack
 rather than a wrapper around one, so it drops into the layout exactly where the bare stack
 used to sit.
@@ -22,11 +22,11 @@ import time
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QMovie
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
-from PyQt6.QtMultimediaWidgets import QVideoWidget
 from PyQt6.QtWidgets import QLabel, QStackedWidget
 
 from src import applog, media_kinds, theme
 from src.utils import load_scaled_pixmap
+from src.VideoDisplay import VideoDisplay
 
 log = applog.get_logger(__name__)
 
@@ -76,11 +76,11 @@ class PlaylistPlayer(QStackedWidget):
         )
         self.addWidget(self.image_label)
 
-        self.video_widget = QVideoWidget()
+        self.video_widget = VideoDisplay()
         self.media_player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.media_player.setAudioOutput(self.audio_output)
-        self.media_player.setVideoOutput(self.video_widget)
+        self.media_player.setVideoOutput(self.video_widget.video_item)
         self.addWidget(self.video_widget)
 
         self.media_player.mediaStatusChanged.connect(self.video_status_changed)
