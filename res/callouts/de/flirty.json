@@ -255,5 +255,29 @@
     "Das war nur ein Necken. Pump weiter, nicht aufhören.",
     "Nur am Rumalbern. Weiter wichsen.",
     "Ha, heute nicht - weiter am Schaft."
+  ],
+  "fake_climax_fell_for": [
+    "Na, wer sagt's denn. Kaum gefragt, schon passiert.",
+    "Da war aber jemand in Eile.",
+    "Ich hatte noch nicht mal ausgeredet.",
+    "So gehorsam. Das steht dir ausgezeichnet.",
+    "Sieh einer an. Kein Zögern, keine Widerrede.",
+    "Du hast nur auf die Erlaubnis gewartet, stimmt's?",
+    "Artig. Sehr artig sogar.",
+    "Mmh. Ich hab dich also richtig eingeschätzt.",
+    "Na also. War doch gar nicht so schwer.",
+    "Das merk ich mir, wie schnell das bei dir geht."
+  ],
+  "edge_reached": [
+    "Finger weg, du Ungeduldiger.",
+    "Oho, so kurz davor? Dann lassen wir das mal sacken.",
+    "Nicht doch. Wir sind noch lange nicht fertig.",
+    "Schön, dass du es sagst. Und jetzt: Pause.",
+    "Da zittert wohl jemand. Loslassen.",
+    "Ganz ruhig atmen. Ich warte solange.",
+    "So nah dran und trotzdem brav gemeldet. Gefällt mir.",
+    "Hände hoch, weg von dem Ding.",
+    "Genieß das Kribbeln. Mehr gibt es gerade nicht.",
+    "Runterkommen. Und dann sehen wir mal weiter."
   ]
 }

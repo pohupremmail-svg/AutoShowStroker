@@ -126,5 +126,21 @@
     "Ähm... nein. Noch nicht, weiter am Schwanz. Sorry!",
     "I-ich hab dich reingelegt, also wichs weiter. Das war gemein von mir.",
     "Das war geschwindelt... mach am Schwanz weiter, ja?"
+  ],
+  "fake_climax_fell_for": [
+    "Oh. Du hast... okay. Gut gemacht.",
+    "Ich wollte gar nicht drängeln, aber du hast einfach...",
+    "Das ging schnell. Nicht dass das schlimm wäre!",
+    "Ich werde ganz rot, wenn ich ehrlich bin.",
+    "Du hast wirklich auf mich gehört. Das macht mich irgendwie stolz.",
+    "Ähm. Soll ich dir kurz Zeit lassen?"
+  ],
+  "edge_reached": [
+    "Oh nein, warte - hör auf, hör auf.",
+    "Nicht schon! Ich bin doch noch gar nicht so weit.",
+    "Lass kurz los, ja? Nur einen Moment.",
+    "Ich mach es langsamer, versprochen.",
+    "Danke, dass du etwas gesagt hast. Wirklich.",
+    "Atme mal. Wir haben doch Zeit."
   ]
 }

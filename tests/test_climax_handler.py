@@ -591,3 +591,226 @@ def test_session_started_resets_state(handler):
     assert handler._fake_climax_pending is False
     assert handler.finale_at is None
     assert handler.planned_fake_boundaries == set()
+
+
+# --- replaying a saved session ---
+
+
+def script(climax_at=180.0, outcome="ruined", fakes=(40.0, 120.0), segments=6,
+           duration=200.0):
+    from src.SessionScript import SessionScript
+
+    recorded = [
+        {"kind": "beat", "pattern": "Standard Beat", "freq": 2.0, "duration_sec": 20.0}
+        for _ in range(segments)
+    ]
+    return SessionScript({
+        "duration_sec": duration, "segments": recorded, "custom_patterns": {}, "media": [],
+        "climax": None if climax_at is None else {"at_sec": climax_at, "outcome": outcome},
+        "fake_climaxes": list(fakes),
+    })
+
+
+def test_a_replay_takes_the_recorded_climax_time_and_outcome(handler, beat_handler):
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 999.0  # would land nowhere near
+
+    handler.on_session_planned(5000.0, script=script(climax_at=180.0, outcome="denied"))
+
+    assert handler.finale_at == 5180.0
+    assert handler.outcome == "denied"
+    beat_handler.set_finale_at.assert_called_once_with(5180.0)
+
+
+def test_a_replay_is_not_clamped_to_the_ramp(handler, beat_handler):
+    """The time was recorded, not negotiated - holding it back would replay a different
+    session than the one that was saved."""
+    beat_handler.ramp_complete_at = 5900.0
+    handler.climax_active = True
+    handler.climax_only_after_ramp = True
+
+    handler.on_session_planned(5000.0, script=script(climax_at=100.0))
+
+    assert handler.finale_at == 5100.0
+
+
+def test_a_replay_of_a_session_that_never_climaxed_draws_one(handler, beat_handler):
+    """A recording that stops before the climax is almost always one the user did not last
+    through - replaying it to try again has to be a session that can actually be finished,
+    so from the end of the recording on it is an ordinary session."""
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 500.0
+
+    handler.on_session_planned(5000.0, script=script(climax_at=None))
+
+    assert handler.finale_at == 5500.0
+    assert handler.outcome in ("real", "ruined", "denied")
+    beat_handler.set_finale_at.assert_called_once_with(5500.0)
+
+
+def test_the_drawn_climax_never_lands_inside_the_recording(handler):
+    """Otherwise the retry would end sooner than the session it is retrying - backwards,
+    and the run-in cannot be built into segments that are read from the file anyway."""
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 30.0
+
+    handler.on_session_planned(5000.0, script=script(climax_at=None, duration=200.0))
+
+    assert handler.finale_at >= 5200.0
+
+
+def test_a_replay_of_a_session_without_a_climax_still_obeys_the_climax_switch(
+    handler, beat_handler
+):
+    handler.climax_active = False
+
+    handler.on_session_planned(5000.0, script=script(climax_at=None))
+
+    assert handler.finale_at is None
+    beat_handler.set_finale_at.assert_called_once_with(None)
+
+
+def test_a_replay_pins_the_recorded_fake_outs(handler):
+    handler.fake_climax_active = True
+    handler.fake_climax_chance = 0.0  # would never roll one live
+
+    handler.on_session_planned(5000.0, script=script(fakes=(40.0, 120.0)))
+
+    assert handler.scripted_fake_count == 2
+
+
+def test_a_replay_does_not_roll_fake_outs_of_its_own(handler):
+    handler.fake_climax_active = True
+    handler.fake_climax_chance = 1.0  # would roll one on every boundary live
+
+    handler.on_session_planned(5000.0, script=script(fakes=(), segments=6))
+    handler.on_plan_extended(beats(3, 4, 5))  # all still inside the recording
+
+    assert handler.planned_fake_boundaries == set()
+
+
+def test_fake_outs_start_again_past_the_end_of_the_recording(handler):
+    """The stretch after the recording is an ordinary session, and an ordinary session has
+    fake-outs in it."""
+    handler.fake_climax_active = True
+    handler.fake_climax_chance = 1.0
+
+    handler.on_session_planned(5000.0, script=script(climax_at=None, fakes=(), segments=4))
+    handler.on_plan_extended(beats(2, 3, 4, 5))
+
+    assert handler.planned_fake_boundaries == {4, 5}
+
+
+def test_a_scripted_fake_out_fires_when_its_moment_arrives(handler, callout_handler, qtbot):
+    handler.fake_climax_active = True
+    handler.min_fake_climax_delay = handler.max_fake_climax_delay = 0.05
+
+    handler.on_session_planned(time.time(), script=script(climax_at=None, fakes=(0.05,)))
+
+    qtbot.waitUntil(lambda: handler._fake_climax_pending or callout_handler.force_output_sentence.called,
+                    timeout=2000)
+    callout_handler.force_output_sentence.assert_called_with("climax_real")
+
+
+def test_a_new_live_session_forgets_the_script(handler, beat_handler):
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 100.0
+    handler.on_session_planned(5000.0, script=script(climax_at=180.0))
+
+    handler.session_started()
+    handler.on_session_planned(6000.0)
+
+    assert handler.finale_at == 6100.0
+
+
+# --- a denial ends the rhythm on the spot ---
+
+
+def test_a_denied_climax_stops_the_beat_immediately(handler, beat_handler):
+    """There is nothing left to stroke to, and that is the point: carrying on after a denial
+    has to be the user's own doing, not the app still driving them."""
+    handler.climax_active = True
+    handler.denied_orgasm_active = True
+    handler.denied_orgasm_chance = 1.0
+    handler.ruined_orgasm_active = False
+
+    handler.on_session_planned(time.time() - 1)
+    handler._on_climax_due()
+
+    assert handler.outcome == "denied"
+    beat_handler.stop.assert_called_once()
+    beat_handler.hold_final_segment.assert_not_called()
+
+
+def test_a_real_climax_still_carries_the_beat_through_it(handler, beat_handler):
+    handler.climax_active = True
+    handler.ruined_orgasm_active = False
+    handler.denied_orgasm_active = False
+
+    handler.on_session_planned(time.time() - 1)
+    handler._on_climax_due()
+
+    assert handler.outcome == "real"
+    beat_handler.hold_final_segment.assert_called_once()
+    beat_handler.stop.assert_not_called()
+
+
+# --- an edge pushes everything back ---
+
+
+def test_postponing_moves_the_climax_and_tells_the_planner(handler, beat_handler):
+    """Without this an edge pause would silently cost the user the rhythm leading up to the
+    climax rather than buying them time - the climax sits on an absolute clock."""
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 100.0
+    handler.on_session_planned(5000.0)
+    beat_handler.set_finale_at.reset_mock()
+
+    handler.postpone(20.0)
+
+    assert handler.finale_at == 5120.0
+    beat_handler.set_finale_at.assert_called_once_with(5120.0)
+
+
+def test_postponing_survives_a_later_settings_change(handler, beat_handler):
+    """The pre-clamp moment has to move too, or saving Settings snaps the climax back to
+    where it was before the edge."""
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 100.0
+    handler.on_session_planned(5000.0)
+
+    handler.postpone(20.0)
+    handler.settings_changed()
+
+    assert handler.finale_at == 5120.0
+
+
+def test_postponing_shifts_a_replays_recorded_fake_outs_too(handler):
+    """Everything after the edge plays as recorded, just later - the fakes included."""
+    handler.fake_climax_active = True
+    handler.on_session_planned(time.time(), script=script(climax_at=200.0, fakes=(60.0,)))
+    before = handler._scripted_fake_timers[0].remainingTime()
+
+    handler.postpone(20.0)
+
+    assert handler._scripted_fake_timers[0].remainingTime() >= before + 19000
+
+
+def test_postponing_does_nothing_once_the_climax_has_already_landed(handler, beat_handler):
+    handler.climax_active = True
+    handler.min_climax_after = handler.max_climax_after = 100.0
+    handler.on_session_planned(5000.0)
+    handler.climax_triggered = True
+
+    handler.postpone(20.0)
+
+    assert handler.finale_at == 5100.0
+
+
+def test_postponing_a_session_without_a_climax_is_harmless(handler, beat_handler):
+    handler.climax_active = False
+    handler.on_session_planned(5000.0)
+
+    handler.postpone(20.0)
+
+    assert handler.finale_at is None

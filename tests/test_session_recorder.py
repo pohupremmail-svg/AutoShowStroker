@@ -237,3 +237,18 @@ def test_fake_climaxes_do_not_survive_into_the_next_session(recorder):
     recorder.session_started(at=2000.0)
 
     assert recorder.timeline(now=2010.0)["fake_climaxes"] == []
+
+
+def test_a_segment_carries_the_length_it_was_planned_to_be(recorder):
+    """Next to the length it measured. A saved session replays the *planned* one: the
+    measured one already includes the overshoot to the next note, and replaying that makes
+    the segment overshoot a second time."""
+    recorder.segment_started(Segment("beat", 20.0, 2.0, "Standard Beat", 0), at=1000.0)
+    recorder.segment_started(Segment("beat", 5.0, 3.0, "Quick Swing", 1), at=1020.4)
+    recorder.session_ended(at=1030.0)
+
+    first, second = recorder.timeline()["segments"]
+
+    assert first["planned_sec"] == 20.0
+    assert first["end"] - first["start"] == pytest.approx(20.4)  # what it actually ran
+    assert second["planned_sec"] == 5.0

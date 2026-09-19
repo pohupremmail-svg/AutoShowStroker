@@ -126,5 +126,21 @@
     "C'était un mensonge et tu es tombé dedans instantanément. Continue de branler.",
     "Même pas proche. Retourne au travail sur ta bite.",
     "Trop facile. La main en mouvement, tu branles."
+  ],
+  "fake_climax_fell_for": [
+    "Trois mots, et te voilà fini.",
+    "Aucune tenue. Absolument aucune.",
+    "Tu n'es même pas capable d'attendre.",
+    "C'était couru d'avance, remarque.",
+    "Tu te rends compte du peu qu'il a fallu ?",
+    "Quel gâchis, après tout ce temps."
+  ],
+  "edge_reached": [
+    "Tu craques déjà ? C'est consternant.",
+    "Toujours au bord, jamais capable.",
+    "Repose-toi, va. Tu en as visiblement besoin.",
+    "Quelle endurance. Absolument impressionnante.",
+    "Encore une pause. On n'avancera jamais.",
+    "Tu demandes grâce après ça ? Sérieusement ?"
   ]
 }

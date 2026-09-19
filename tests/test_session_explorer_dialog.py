@@ -56,8 +56,10 @@ def source():
 
 @pytest.fixture
 def make_dialog(qtbot, source):
-    def build(data):
-        dialog = SessionExplorerDialog(data, thumbnail_source=source, parent=None)
+    def build(data, save_session=None):
+        dialog = SessionExplorerDialog(
+            data, thumbnail_source=source, save_session=save_session, parent=None
+        )
         qtbot.addWidget(dialog)
         dialog.resize(900, 600)
         dialog.show()
@@ -292,3 +294,69 @@ def test_a_fake_climax_is_not_confused_with_the_real_one(make_dialog):
     dialog.scrub_to(80.0)
     assert "Fake-out" not in dialog.moment_label.text()
     assert "Climax landed here" in dialog.moment_label.text()
+
+
+# --- saving the session ---
+
+
+def test_there_is_no_save_button_when_nothing_can_be_saved_to(make_dialog):
+    """The explorer is also opened on sessions that have nowhere to go - a button that
+    cannot do anything is worse than no button."""
+    dialog = make_dialog(timeline())
+
+    assert dialog.save_button is None
+
+
+def test_saving_hands_the_session_over_once(make_dialog):
+    calls = []
+    dialog = make_dialog(timeline(), save_session=lambda: calls.append(True) or True)
+
+    dialog.save_button.click()
+
+    assert len(calls) == 1
+
+
+def test_the_button_says_it_saved_and_will_not_save_the_same_session_twice(make_dialog):
+    """Two clicks used to mean two identical sessions on the shelf."""
+    calls = []
+    dialog = make_dialog(timeline(), save_session=lambda: calls.append(True) or True)
+
+    dialog.save_button.click()
+    dialog.save_button.click()
+
+    assert len(calls) == 1
+    assert dialog.save_button.isEnabled() is False
+    assert "saved" in dialog.save_button.text().lower()
+
+
+def test_the_user_is_told_where_the_saved_session_lives_and_that_it_holds_paths(
+    make_dialog, monkeypatch
+):
+    """Saving writes media paths to disk, which is the one thing this app otherwise never
+    does - so the save says so, and says where to delete it again."""
+    shown = []
+    monkeypatch.setattr(
+        "src.SessionExplorerDialog.QMessageBox.information",
+        lambda parent, title, text: shown.append(text),
+    )
+    dialog = make_dialog(timeline(), save_session=lambda: True)
+
+    dialog.save_button.click()
+
+    assert len(shown) == 1
+    assert "path" in shown[0].lower()
+    assert "Privacy" in shown[0]
+
+
+def test_a_save_that_fails_says_so_and_can_be_tried_again(make_dialog, monkeypatch):
+    warned = []
+    monkeypatch.setattr(
+        "src.SessionExplorerDialog.QMessageBox.warning",
+        lambda parent, title, text: warned.append(text),
+    )
+    dialog = make_dialog(timeline(), save_session=lambda: False)
+
+    dialog.save_button.click()
+
+    assert len(warned) == 1
+    assert dialog.save_button.isEnabled() is True

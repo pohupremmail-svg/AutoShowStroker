@@ -7,8 +7,10 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from src import media_kinds, theme
@@ -146,7 +148,7 @@ class SessionExplorerDialog(QDialog):
     app keeps out of its data directory and out of its log.
     """
 
-    def __init__(self, timeline, thumbnail_source=None, parent=None):
+    def __init__(self, timeline, thumbnail_source=None, save_session=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Session Explorer")
         self.setModal(True)
@@ -163,6 +165,9 @@ class SessionExplorerDialog(QDialog):
         # the bar stutter on exactly the move it is built for.
         self._video_frames = {}
         self.selected_path = None
+        # A callable returning whether the session landed. The explorer deliberately does
+        # not know where it goes - it only knows which session is on screen.
+        self._save_session = save_session
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._build_heading(timeline))
@@ -197,7 +202,32 @@ class SessionExplorerDialog(QDialog):
             parts.append(OUTCOME_LABELS.get(self._outcome, self._outcome))
         label = QLabel("  -  ".join(parts))
         label.setStyleSheet(f"color: {theme.TEXT}; font-size: 14px; font-weight: bold;")
-        return label
+
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addWidget(label, 1)
+        self.save_button = self._build_save_button()
+        if self.save_button is not None:
+            row_layout.addWidget(self.save_button)
+        return row
+
+    def _build_save_button(self):
+        """Saving belongs here: this dialog is already showing the session in question.
+
+        None when the caller gave nowhere to save to - the explorer is also opened on
+        sessions that have no shelf behind them, and a dead button is worse than none.
+        """
+        if self._save_session is None:
+            return None
+        button = QPushButton("Save this session")
+        button.setObjectName("primary")
+        button.setToolTip(
+            "Keeps the beats, the climax and the media pacing so this session can be "
+            "played again."
+        )
+        button.clicked.connect(self._on_save_clicked)
+        return button
 
     def _build_preview(self):
         self.preview_label = QLabel("Move along the timeline below to see what was on screen.")
@@ -231,6 +261,30 @@ class SessionExplorerDialog(QDialog):
         row.addWidget(self.play_button)
         row.addWidget(self.reveal_button)
         return row
+
+    # --- saving ---
+
+    def _on_save_clicked(self):
+        if not self._save_session():
+            QMessageBox.warning(
+                self,
+                "Could not save",
+                "This session could not be saved. There may be no room left on the disk.",
+            )
+            return
+
+        # Disabled rather than hidden: the same session saved twice is two identical
+        # entries on the shelf, and a button that vanishes reads as a failure.
+        self.save_button.setEnabled(False)
+        self.save_button.setText("Saved")
+        QMessageBox.information(
+            self,
+            "Session saved",
+            "Saved under Sessions > Saved Sessions, where it can be played again.\n\n"
+            "It records the paths of the media it showed, so replaying finds them again. "
+            "Delete saved sessions under Help > Privacy & Data, and leave the paths out "
+            "when exporting one to somebody else.",
+        )
 
     # --- scrubbing ---
 

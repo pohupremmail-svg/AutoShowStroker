@@ -700,3 +700,24 @@ def test_is_paused_reports_the_pause_phase(handler):
 
     handler.beat_meter_pause_timer.stop()
     assert handler.is_paused() is False
+
+
+def test_a_pause_lasting_a_hair_under_a_whole_second_is_not_cut_short(handler):
+    """A replayed pause carries the length it was *measured* at, not the whole number it was
+    drawn as - and truncating 1.9987 to 1 made every replayed pause up to a second shorter
+    than the one it was replaying."""
+    handler._current_segment = Segment("pause", 1.9987, None, None, 0)
+
+    handler.start_pause()
+
+    assert handler.cur_pause_dur == 2
+
+
+def test_a_pause_never_counts_down_from_zero(handler):
+    """int() on a sub-second measurement gave 0, and pause_loop() would end the pause before
+    it began."""
+    handler._current_segment = Segment("pause", 0.4, None, None, 0)
+
+    handler.start_pause()
+
+    assert handler.cur_pause_dur == 1

@@ -65,6 +65,8 @@ The available Trigger Keys at the moment are:
 | `climax_ruined`       | Fired once per session when the climax system decides on a ruined orgasm outcome.             |
 | `climax_denied`       | Fired once per session when the climax system decides the session ends without an orgasm.     |
 | `fake_climax_reveal`  | Fired a few seconds after a fake climax cue (which reuses `climax_real`) to reveal it was a joke. |
+| `fake_climax_fell_for` | Fired when the user answers a fake climax cue with "I Came". Must **not** give the joke away - the reveal is still a few seconds out, and that order is the point. |
+| `edge_reached`        | Fired when the user presses "I reached my Edge" (or `E`) - the one moment they ask the app for mercy. A pause and a gentler rhythm follow, so answer the admission rather than announcing the pause. |
 
 The tones that ship today:
 

@@ -77,6 +77,17 @@ class SettingsDialog(QDialog):
         self.add_setting("Pause Max. duration (s):", "max_pause_dur", self.beat_handler, int, 1, 180, 1)
         self.add_setting("Pause chance (per beat change)", "pause_chance", self.beat_handler, float, 0.001, 1, 0.001)
 
+        self.add_section_header("Edge Relief")
+        self.edge_relief_active_checkbox = QCheckBox("\"I reached my Edge\" button active")
+        self.edge_relief_active_checkbox.setToolTip(
+            "Press E during a session for a pause now and a gentler rhythm behind it. The "
+            "climax waits out the break rather than being paid for with it."
+        )
+        self.edge_relief_active_checkbox.setChecked(self.beat_handler.edge_relief_active)
+        self._current_layout.addWidget(self.edge_relief_active_checkbox)
+        self.add_setting("Edge pause duration (s):", "edge_pause_dur", self.beat_handler, int, 5, 300, 5)
+        self.add_setting("Edge cooldown (s):", "edge_cooldown_sec", self.beat_handler, int, 0, 900, 10)
+
         self.add_section_header("Difficulty Ramping")
         self.ramping_active_checkbox = QCheckBox("Difficulty ramping active")
         self.ramping_active_checkbox.setChecked(self.beat_handler.ramping_active)
@@ -96,10 +107,12 @@ class SettingsDialog(QDialog):
             [
                 "min_beat_freq", "max_beat_freq", "min_beat_dur", "max_beat_dur",
                 "min_pause_dur", "max_pause_dur", "pause_chance",
+                "edge_pause_dur", "edge_cooldown_sec",
                 "min_ramp_duration", "max_ramp_duration", "ramp_window_width",
             ],
             checkbox_defaults=[
                 (self.ramping_active_checkbox, self.beat_handler.DEFAULTS["ramping_active"]),
+                (self.edge_relief_active_checkbox, self.beat_handler.DEFAULTS["edge_relief_active"]),
             ],
             extra_reset=lambda: [cb.setChecked(True) for cb in self.beat_checkboxes.values()],
         )
@@ -152,6 +165,15 @@ class SettingsDialog(QDialog):
         self.add_setting(
             "Fake climax reveal delay Max. (s)", "max_fake_climax_delay", self.climax_handler, float, 1.0, 30.0, 0.5
         )
+        self.ask_for_outcome_checkbox = QCheckBox("Ask what actually happened")
+        self.ask_for_outcome_checkbox.setToolTip(
+            "Offers I Came / I Ruined It / I Stopped at every climax cue, and asks once when "
+            "you stop a session yourself - otherwise the app only ever records what it told "
+            "you to do."
+        )
+        self.ask_for_outcome_checkbox.setChecked(self.main_app.ask_for_outcome)
+        self._current_layout.addWidget(self.ask_for_outcome_checkbox)
+
         self.climax_reset_button = self.add_reset_button(
             [
                 "min_climax_after", "max_climax_after",
@@ -167,6 +189,7 @@ class SettingsDialog(QDialog):
                 (self.ruined_orgasm_active_checkbox, self.climax_handler.DEFAULTS["ruined_orgasm_active"]),
                 (self.denied_orgasm_active_checkbox, self.climax_handler.DEFAULTS["denied_orgasm_active"]),
                 (self.fake_climax_active_checkbox, self.climax_handler.DEFAULTS["fake_climax_active"]),
+                (self.ask_for_outcome_checkbox, self.main_app.DEFAULTS["ask_for_outcome"]),
             ],
         )
         self._current_layout.addStretch()
@@ -340,6 +363,8 @@ class SettingsDialog(QDialog):
 
         settings.setValue("GoonerApp/show_session_timer", self.show_session_timer_checkbox.isChecked())
         self.main_app.show_session_timer = self.show_session_timer_checkbox.isChecked()
+        settings.setValue("GoonerApp/ask_for_outcome", self.ask_for_outcome_checkbox.isChecked())
+        self.main_app.ask_for_outcome = self.ask_for_outcome_checkbox.isChecked()
         self.main_app._update_session_timer()
 
         new_selected_patterns = []
@@ -352,6 +377,12 @@ class SettingsDialog(QDialog):
 
         settings.setValue("BeatHandler/ramping_active", self.ramping_active_checkbox.isChecked())
         self.beat_handler.ramping_active = self.ramping_active_checkbox.isChecked()
+
+        settings.setValue("BeatHandler/edge_relief_active", self.edge_relief_active_checkbox.isChecked())
+        self.beat_handler.edge_relief_active = self.edge_relief_active_checkbox.isChecked()
+        # Applied at once rather than at the next session: a button that is still there but
+        # switched off would do nothing when pressed.
+        self.main_app._reset_edge_button()
 
         settings.setValue("ClimaxHandler/climax_active", self.climax_active_checkbox.isChecked())
         self.climax_handler.climax_active = self.climax_active_checkbox.isChecked()

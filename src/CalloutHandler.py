@@ -22,6 +22,13 @@ TRIGGER_KEYS = [
     "climax_ruined",
     "climax_denied",
     "fake_climax_reveal",
+    # The user pressing "I Came" at a fake climax. Deliberately does *not* give the joke
+    # away - the reveal is still on its own timer and lands seconds later, which is the
+    # whole shape of the moment.
+    "fake_climax_fell_for",
+    # The user pressing "I reached my Edge" - the one moment they ask the app for mercy
+    # rather than the other way round.
+    "edge_reached",
 ]
 
 

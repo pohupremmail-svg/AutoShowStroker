@@ -46,6 +46,20 @@ def _no_modal_dialogs(monkeypatch):
     monkeypatch.setattr(QDialog, "exec", lambda self: None)
     # QMessageBox overrides exec() itself rather than inheriting QDialog's - patch it too.
     monkeypatch.setattr(QMessageBox, "exec", lambda self: None)
+    # The static shortcuts (information/warning/...) build and run their own box down in
+    # C++, so patching exec() above does not reach them: a test that trips one hangs the
+    # whole suite on a modal loop with nothing to click. question() answers No, so a test
+    # can never silently confirm a destructive action it did not mean to.
+    for name, answer in (
+        ("information", QMessageBox.StandardButton.Ok),
+        ("warning", QMessageBox.StandardButton.Ok),
+        ("critical", QMessageBox.StandardButton.Ok),
+        ("about", None),
+        ("question", QMessageBox.StandardButton.No),
+    ):
+        monkeypatch.setattr(
+            QMessageBox, name, staticmethod(lambda *args, _answer=answer, **kwargs: _answer)
+        )
 
 
 @pytest.fixture

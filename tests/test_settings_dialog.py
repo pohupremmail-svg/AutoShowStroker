@@ -601,3 +601,36 @@ def test_the_save_button_shows_its_ampersand(dialog):
     """Qt reads a single & as a mnemonic prefix and swallows it - the button read
     'Save  Close Settings' with a hole in the middle. && is the literal one."""
     assert dialog.button_ok.text() == "Save && Close Settings"
+
+
+def test_the_outcome_question_can_be_turned_off_and_saved(app, dialog):
+    assert dialog.ask_for_outcome_checkbox.isChecked() is True
+
+    dialog.ask_for_outcome_checkbox.setChecked(False)
+    dialog.accept_settings()
+
+    assert app.ask_for_outcome is False
+    assert app.settings.value("GoonerApp/ask_for_outcome", type=bool) is False
+
+
+def test_the_edge_relief_settings_reach_the_beat_handler(app, dialog):
+    assert dialog.edge_relief_active_checkbox.isChecked() is True
+
+    dialog.settings_fields["edge_pause_dur"]["widget"].setValue(35)
+    dialog.settings_fields["edge_cooldown_sec"]["widget"].setValue(90)
+    dialog.edge_relief_active_checkbox.setChecked(False)
+    dialog.accept_settings()
+
+    assert app.beat_handler.edge_pause_dur == 35
+    assert app.beat_handler.edge_cooldown_sec == 90
+    assert app.beat_handler.edge_relief_active is False
+    assert app.settings.value("BeatHandler/edge_relief_active", type=bool) is False
+
+
+def test_switching_edge_relief_off_takes_the_button_away_at_once(app, dialog):
+    """Applied immediately, like every other setting - waiting for the next session would
+    leave a button that does nothing."""
+    dialog.edge_relief_active_checkbox.setChecked(False)
+    dialog.accept_settings()
+
+    assert app.btn_edge.isVisible() is False

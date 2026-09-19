@@ -126,5 +126,21 @@
     "Psych!! Continue, wooo!",
     "Not real!! Keep jerking, I’m a mess!",
     "Joke!! Don’t stop, tomorrow is gonna be painful!"
+  ],
+  "fake_climax_fell_for": [
+    "Whoa, already? Tha's... tha's actually impressive.",
+    "Heyyy, you did it! Good for you, seriously.",
+    "Wait, wait - you finished? Damn. Okay.",
+    "S'like I *said* it and you just... went. Amazing.",
+    "Hic - sorry. Yeah no, tha's hot, go off.",
+    "You're so easy an' honestly I love it."
+  ],
+  "edge_reached": [
+    "Whoa okay, hands off, hands off. Breathe.",
+    "Nooo, not yet! Stop. We're not done.",
+    "Okay okay, slow. Slooow. There ya go.",
+    "Hey - good job tellin' me. Take a sec.",
+    "S'fine, s'fine, jus' let go for a minute.",
+    "Nope. Not happenin' yet. Hands off, buddy."
   ]
 }

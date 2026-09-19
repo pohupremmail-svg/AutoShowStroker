@@ -256,5 +256,29 @@
     "C'était juste une taquinerie. Continue de pomper, n'arrête pas.",
     "Je te charriais juste. Continue de te branler.",
     "Ha, pas aujourd'hui — continue sur ta queue."
+  ],
+  "fake_climax_fell_for": [
+    "Trois secondes. Je n'exagère même pas.",
+    "Quelle docilité, c'en est presque touchant.",
+    "Tu fais tout ce qu'on te dit, toi.",
+    "Je m'y attendais, mais pas si vite.",
+    "Voilà. Et tu te sens mieux, j'imagine.",
+    "Mon petit obéissant.",
+    "Pas une seconde de résistance. Pas une.",
+    "Je note. Ça pourra servir.",
+    "C'est d'une facilité déconcertante avec toi.",
+    "Bon. Reprends ton souffle, va."
+  ],
+  "edge_reached": [
+    "Ah non. Pas comme ça, pas maintenant.",
+    "Tu me préviens au dernier moment, évidemment.",
+    "Alors on arrête. Regarde-moi plutôt.",
+    "Ce serait dommage, après tout ce chemin.",
+    "Tu tiendras bien encore un peu, pour moi ?",
+    "Je te laisse redescendre. Profites-en.",
+    "C'est mignon, cette panique.",
+    "On ne touche plus à rien.",
+    "Regarde-toi, tout tremblant.",
+    "Un peu de patience. Ça te va si bien."
   ]
 }

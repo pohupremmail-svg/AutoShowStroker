@@ -31,6 +31,12 @@ non-empty — a missing or typo'd key does not raise, the app just goes silent f
 - `climax_ruined`
 - `climax_denied`
 - `fake_climax_reveal`
+- `fake_climax_fell_for` - the user just admitted they came at a fake cue. Write the reaction
+  to the confession *without* revealing the trick: `fake_climax_reveal` still fires seconds
+  later and is what lands it.
+- `edge_reached` - the user pressed "I reached my Edge". They are asking for mercy, and a pause
+  plus a slower beat is already on its way, so answer the admission rather than narrating the
+  pause (`pause_start` does that).
 
 ## Adding phrases to an existing file
 

@@ -126,5 +126,21 @@
     "Invalid climax cue. Keep stroking.",
     "False. Maintain cadence.",
     "Not real. Penile stimulation continues."
+  ],
+  "fake_climax_fell_for": [
+    "Noted. Response latency well below average.",
+    "Climax achieved on verbal instruction. Recorded.",
+    "Interesting - almost no delay between cue and response.",
+    "Subject complied immediately. Logged.",
+    "Confirmed. Continuing observation.",
+    "That is a notably low threshold. Noted for the record."
+  ],
+  "edge_reached": [
+    "Noted. Reducing tempo. Hands off.",
+    "Arousal reported near threshold. Pausing.",
+    "Understood. Rest interval initiated.",
+    "Stop stimulation. We resume at a lower rate.",
+    "Recorded. Your threshold is closer than expected.",
+    "Pausing. Let the response subside."
   ]
 }

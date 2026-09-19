@@ -126,5 +126,21 @@
     "Ich hab gelogen. Hand bleibt am Wichsen. Sofort.",
     "Noch nicht - zurück ans Wichsen. Ich sehe dich gern hoffen.",
     "Falsch. Hand zurück an den Schwanz - so leicht kriegst du das nicht."
+  ],
+  "fake_climax_fell_for": [
+    "Auf mein Wort. So und nicht anders.",
+    "Gut. Und merk dir, wem du das zu verdanken hast.",
+    "Keine Widerrede. Genau so gehört sich das.",
+    "Du gehorchst schnell. Das notiere ich mir.",
+    "Erlaubt war es, also war es richtig.",
+    "Sehr schön. Weiter geht es, wenn ich es sage."
+  ],
+  "edge_reached": [
+    "Loslassen. Ich habe nichts erlaubt.",
+    "Weg damit. Du kommst, wenn ich es sage.",
+    "Gemeldet. Gut. Und jetzt rührst du dich nicht.",
+    "Hände runter und still halten.",
+    "So nah kommst du nur, wenn ich es will.",
+    "Warten. Das ist der ganze Befehl."
   ]
 }

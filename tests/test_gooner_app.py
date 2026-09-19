@@ -7,9 +7,10 @@ import pytest
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import QDialog
 
-from src import applog
+from src import applog, session_files
 from src.BeatTrackWidget import BeatTrackWidget
 from src.GoonerApp import GoonerApp
+from src.SessionScript import SessionScript
 
 
 class _FakeDialogBase:
@@ -494,8 +495,9 @@ def test_beat_meter_gets_stretch_priority_over_climax_label(app):
     # climax_status_label: index 0, stretch 0 (fixed to its own size hint when visible, 0
     # space when hidden). beat_meter: index 1, stretch 1 (absorbs whatever space the label
     # isn't using) - this is what lets the Strokebar reclaim full height when idle.
-    assert app.footer_layout.stretch(0) == 0
-    assert app.footer_layout.stretch(1) == 1
+    assert app.footer_layout.stretch(app.footer_layout.indexOf(app.climax_status_label)) == 0
+    assert app.footer_layout.stretch(app.footer_layout.indexOf(app.outcome_row)) == 0
+    assert app.footer_layout.stretch(app.footer_layout.indexOf(app.beat_track)) == 1
 
 
 def test_climax_status_label_hidden_by_default(app):
@@ -785,7 +787,7 @@ def test_show_statistics_passes_new_records(app, monkeypatch):
     captured = {}
 
     class FakeDialog(_FakeDialogBase):
-        def __init__(self, stats_data, new_records=None, timeline=None, parent=None):
+        def __init__(self, stats_data, new_records=None, **kwargs):
             captured["new_records"] = new_records
 
         def exec(self):
@@ -1434,7 +1436,7 @@ def test_the_timeline_reaches_the_statistics_dialog(app, tmp_path, monkeypatch):
     captured = {}
 
     class FakeStatisticsDialog:
-        def __init__(self, stats_data, new_records=None, timeline=None, parent=None):
+        def __init__(self, stats_data, new_records=None, timeline=None, parent=None, **kwargs):
             captured["timeline"] = timeline
 
         def exec(self):
@@ -1458,3 +1460,741 @@ def test_a_fake_climax_is_recorded_for_the_timeline(app, tmp_path):
     app.climax_handler.fake_climax_triggered_event.emit()
 
     assert app.session_recorder.timeline()["fake_climaxes"]
+
+
+# --- replaying a saved session ---
+
+
+def _replay_script(media, ignore_paths=False, segments=None):
+    from src.SessionScript import SessionScript
+
+    return SessionScript({
+        "duration_sec": 100.0,
+        "segments": segments or [{"kind": "beat", "pattern": "Standard Beat",
+                                  "freq": 2.0, "duration_sec": 100.0}],
+        "custom_patterns": {}, "climax": None, "fake_climaxes": [], "media": media,
+    }, ignore_paths=ignore_paths)
+
+
+def test_a_replay_shows_the_recorded_media_in_order(app, tmp_path):
+    first, second = tmp_path / "one.png", tmp_path / "two.png"
+    for path in (first, second):
+        path.write_bytes(b"")
+    script = _replay_script([{"at_sec": 0.0, "path": str(first)},
+                             {"at_sec": 4.0, "path": str(second)}])
+
+    app.start(script=script)
+
+    assert str(first) in [path for _at, path in app.session_recorder._media]
+
+
+def test_a_replay_uses_the_recorded_media_gaps(app, tmp_path):
+    """The pacing is part of what was saved, not just the beats."""
+    app.playlist = [tmp_path / "a.png"]
+    script = _replay_script([{"at_sec": 0.0, "path": str(tmp_path / "a.png")},
+                             {"at_sec": 7.0, "path": str(tmp_path / "a.png")}])
+
+    app.start(script=script)
+
+    assert app.auto_play_timer.interval() == 7000
+
+
+def test_a_replay_falls_back_to_the_settings_once_the_script_runs_out(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.min_dur = app.max_dur = 2.0
+    app.start(script=_replay_script([{"at_sec": 0.0, "path": str(tmp_path / "a.png")}]))
+
+    app.recalc_autoplay_timer()  # the single recorded gap is already spent
+
+    assert app.auto_play_timer.interval() == 2000
+
+
+def test_ignoring_the_paths_uses_the_loaded_playlist(app, tmp_path):
+    """Replaying someone else's difficulty against your own library."""
+    mine = tmp_path / "mine.png"
+    mine.write_bytes(b"")
+    app.playlist = [mine]
+    script = _replay_script([{"at_sec": 0.0, "path": r"C:\someone\else.png"}], ignore_paths=True)
+
+    app.start(script=script)
+
+    shown = [path for _at, path in app.session_recorder._media]
+    assert shown == [str(mine)]
+
+
+def test_a_replay_without_paths_keeps_the_recorded_gaps(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.min_dur = app.max_dur = 99.0
+    script = _replay_script([{"at_sec": 0.0}, {"at_sec": 6.0}], ignore_paths=True)
+
+    app.start(script=script)
+
+    assert app.auto_play_timer.interval() == 6000
+
+
+def test_a_replayed_video_does_not_escape_its_recorded_gap(app, tmp_path, monkeypatch):
+    """load_media normally stops the autoplay timer for video and advances on EndOfMedia -
+    in a replay the recorded gap wins and cuts the clip where it was cut before."""
+    app.media_player = MagicMock()
+    app.audio_output = MagicMock()
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"")
+    script = _replay_script([{"at_sec": 0.0, "path": str(clip)}, {"at_sec": 5.0, "path": str(clip)}])
+
+    app.start(script=script)
+
+    assert app.auto_play_timer.isActive()
+    assert app.auto_play_timer.interval() == 5000
+
+
+def test_a_normal_session_afterwards_is_not_scripted(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.min_dur = app.max_dur = 3.0
+    app.start(script=_replay_script([{"at_sec": 0.0, "path": str(tmp_path / "a.png")},
+                                     {"at_sec": 9.0, "path": str(tmp_path / "a.png")}]))
+    app._end_session(show_statistics=False)
+
+    app.start()
+
+    assert app.auto_play_timer.interval() == 3000
+
+
+def test_a_video_starting_a_session_is_not_cut_short_by_the_autoplay_timer(app, tmp_path):
+    """load_media deliberately leaves video off the autoplay timer - it advances on
+    EndOfMedia, honouring video_min_dur. start() used to restart the timer right after,
+    so the first clip of a session was cut after a random 0.5-4s."""
+    app.media_player = MagicMock()
+    app.audio_output = MagicMock()
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"")
+    app.playlist = [clip]
+
+    app.start()
+
+    assert app.auto_play_timer.isActive() is False
+
+
+# --- saving a session for later ---
+
+
+def _recorded_timeline():
+    return {
+        "started_at": 100.0,
+        "ended_at": 200.0,
+        "climax_at": 190.0,
+        "climax_outcome": "real",
+        "fake_climaxes": [150.0],
+        "segments": [
+            {"kind": "beat", "pattern": "My Rhythm", "freq": 2.0, "start": 100.0, "end": 160.0,
+             "media": [{"path": "a.png", "start": 100.0, "end": 160.0, "carried_over": False}]},
+            {"kind": "finale", "pattern": "Standard Beat", "freq": 5.0, "start": 160.0,
+             "end": 200.0, "media": []},
+        ],
+    }
+
+
+def test_saving_the_session_puts_it_on_the_shelf(app, monkeypatch):
+    monkeypatch.setattr(app.session_recorder, "timeline", _recorded_timeline)
+
+    assert app.save_current_session() is True
+
+    stored = session_files.load_saved_sessions(app.data_store)
+    assert len(stored) == 1
+    assert [s["kind"] for s in stored[0]["segments"]] == ["beat", "finale"]
+    assert stored[0]["climax"]["outcome"] == "real"
+
+
+def test_a_saved_session_carries_the_custom_rhythms_it_played(app, monkeypatch):
+    """Without the definition, a replay on another machine reaches that segment with
+    nothing to play."""
+    monkeypatch.setattr(app.session_recorder, "timeline", _recorded_timeline)
+    app.beat_handler.custom_beat_patterns = {"My Rhythm": [1, 2, -1], "Unused": [1]}
+
+    app.save_current_session()
+
+    stored = session_files.load_saved_sessions(app.data_store)
+    assert stored[0]["custom_patterns"] == {"My Rhythm": [1, 2, -1]}
+
+
+def test_the_statistics_dialog_is_handed_the_way_to_save(app, monkeypatch):
+    monkeypatch.setattr(app.session_recorder, "timeline", _recorded_timeline)
+    built = {}
+
+    class _FakeStats:
+        def __init__(self, *args, save_session=None, **kwargs):
+            built["save_session"] = save_session
+
+        def exec(self):
+            pass
+
+        def deleteLater(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.StatisticsDialog", _FakeStats)
+
+    app.show_statistics()
+
+    assert built["save_session"] == app.save_current_session
+
+
+def test_a_replay_reaches_the_climax_handler_with_the_recorded_times(app, tmp_path):
+    """The planner is told the script directly; the climax only hears about the session
+    through session_planned_event, so the script has to travel with it."""
+    saved = session_files.to_saved_session(_recorded_timeline())
+    app.playlist = [tmp_path / "a.png"]
+
+    app.start(script=SessionScript(saved))
+
+    # As an offset - pytest.approx is relative, so against a Unix timestamp its tolerance
+    # runs to well over an hour and any error at all would pass.
+    assert app.climax_handler.finale_at - app.beat_handler.session_start_time == pytest.approx(
+        90.0
+    )
+    assert app.climax_handler.outcome == "real"
+    assert app.climax_handler.scripted_fake_count == 1
+
+
+# --- replaying a saved session ---
+
+
+def _saved_with_media(tmp_path, count=3):
+    files = []
+    for index in range(count):
+        path = tmp_path / f"rec{index}.png"
+        path.write_bytes(b"x")
+        files.append(str(path))
+    return {
+        "format": 1,
+        "duration_sec": 90.0,
+        "segments": [{"kind": "beat", "pattern": "Standard Beat", "freq": 2.0,
+                      "duration_sec": 90.0}],
+        "custom_patterns": {},
+        "climax": {"at_sec": 80.0, "outcome": "real"},
+        "fake_climaxes": [],
+        "media": [{"at_sec": index * 30.0, "path": path} for index, path in enumerate(files)],
+    }
+
+
+def test_replaying_a_session_plays_the_recorded_files_in_the_recorded_order(app, tmp_path):
+    """Not shuffled: the order is part of what was saved, and it is what the scripted gaps
+    were measured against."""
+    saved = _saved_with_media(tmp_path)
+
+    assert app.replay_session(saved) is True
+
+    assert [str(path) for path in app.playlist] == session_files.recorded_paths(saved)
+    assert app.current_index == 0
+    assert app.is_running is True
+
+
+def test_replaying_a_session_replays_its_segments_and_its_climax(app, tmp_path):
+    saved = _saved_with_media(tmp_path)
+
+    app.replay_session(saved)
+
+    assert app.beat_handler.current_segment.duration_sec == pytest.approx(90.0)
+    assert app.climax_handler.outcome == "real"
+
+
+def test_replaying_against_your_own_library_leaves_the_playlist_alone(app, tmp_path):
+    saved = _saved_with_media(tmp_path)
+    mine = [tmp_path / "mine1.png", tmp_path / "mine2.png"]
+    app.playlist = list(mine)
+
+    assert app.replay_session(saved, ignore_paths=True) is True
+
+    assert app.playlist == mine
+
+
+def test_replaying_against_your_own_library_needs_one_to_be_loaded(app, tmp_path):
+    saved = _saved_with_media(tmp_path)
+    app.playlist = []
+
+    assert app.replay_session(saved, ignore_paths=True) is False
+    assert app.is_running is False
+
+
+def test_a_replay_ends_the_session_that_is_already_running(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    ended = []
+    app.session_ended_event.connect(lambda: ended.append(True))
+
+    app.replay_session(_saved_with_media(tmp_path))
+
+    assert ended == [True]
+    assert app.is_running is True
+
+
+def test_a_replay_starts_its_recording_fresh(app, tmp_path):
+    """The replay is a session of its own - it can be saved again, and what it records has
+    to be what it just played, not the tail of whatever came before."""
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.show_next()
+
+    app.replay_session(_saved_with_media(tmp_path))
+
+    assert len(app.session_recorder._media) == 1
+
+
+def test_the_sessions_menu_opens_the_saved_sessions_manager(app, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    captured = {}
+
+    class FakeDialog(_FakeDialogBase):
+        def __init__(self, main_app, parent=None):
+            captured["main_app"] = main_app
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.SavedSessionsDialog.SavedSessionsDialog", FakeDialog)
+
+    menu_bar = app.menuBar()
+    sessions_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Sessions")
+    action = next(a for a in sessions_menu.actions() if a.text() == "Saved Sessions...")
+    action.trigger()
+
+    assert captured.get("main_app") is app
+
+
+def test_replaying_against_your_own_library_starts_it_at_the_beginning(app, tmp_path):
+    """The index is left over from whatever played before - and a replay of a long session
+    leaves it far past the end of a short own library, which walked straight off it."""
+    app.playlist = [tmp_path / "mine1.png", tmp_path / "mine2.png"]
+    app.current_index = 7
+
+    assert app.replay_session(_saved_with_media(tmp_path), ignore_paths=True) is True
+
+    assert app.current_index == 0
+
+
+# --- reporting what actually happened ---
+
+
+def test_the_outcome_buttons_stay_hidden_until_something_is_announced(app):
+    assert app.outcome_row.isVisible() is False
+
+
+def test_a_real_climax_asks_what_happened(app, tmp_path, qtbot):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.showMaximized()
+    qtbot.waitExposed(app)
+
+    app.climax_handler.outcome_decided_event.emit("real")
+
+    assert app.outcome_row.isVisible() is True
+
+
+def test_a_fake_climax_asks_exactly_the_same_thing(app, tmp_path, qtbot):
+    """If the buttons only showed up for the real one they would *be* the announcement -
+    a fake only works while it is indistinguishable."""
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.showMaximized()
+    qtbot.waitExposed(app)
+
+    app.climax_handler.fake_climax_triggered_event.emit()
+
+    assert app.outcome_row.isVisible() is True
+    assert app.btn_came.text() == "I Came"
+
+
+def test_reporting_at_a_real_climax_is_written_down(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.outcome_decided_event.emit("denied")
+
+    app.btn_came.click()
+
+    assert app.score_tracker.reported_outcome == "came"
+    assert app.score_tracker.climax_outcome == "denied"
+
+
+def test_reporting_hides_the_buttons_again(app, tmp_path, qtbot):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.showMaximized()
+    qtbot.waitExposed(app)
+    app.climax_handler.outcome_decided_event.emit("real")
+
+    app.btn_ruined.click()
+
+    assert app.outcome_row.isVisible() is False
+    assert app.score_tracker.reported_outcome == "ruined"
+
+
+def test_coming_at_a_fake_out_counts_as_falling_for_it(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.fake_climax_triggered_event.emit()
+
+    app.btn_came.click()
+
+    assert app.score_tracker.fakeouts_fallen_for == 1
+    # Not the session's outcome: the session is still running, and the real one is still due.
+    assert app.score_tracker.reported_outcome is None
+
+
+def test_holding_out_through_a_fake_out_is_not_counted_as_falling_for_it(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.fake_climax_triggered_event.emit()
+
+    app.btn_stopped.click()
+
+    assert app.score_tracker.fakeouts_fallen_for == 0
+
+
+def test_an_unanswered_fake_out_takes_its_buttons_away_at_the_reveal(app, tmp_path, qtbot):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.showMaximized()
+    qtbot.waitExposed(app)
+    app.climax_handler.fake_climax_triggered_event.emit()
+
+    app.climax_handler.fake_climax_revealed_event.emit()
+
+    assert app.outcome_row.isVisible() is False
+    assert app.score_tracker.fakeouts_fallen_for == 0
+
+
+def test_a_denied_session_waits_for_the_answer_instead_of_stopping_after_five_seconds(
+    app, tmp_path
+):
+    """The buttons would otherwise be gone before the user could reach them."""
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app.climax_handler.outcome_decided_event.emit("denied")
+
+    assert app.is_running is True
+    assert app._denied_stop_timer.isActive() is True
+    assert app._denied_stop_timer.interval() == GoonerApp.DENIED_ANSWER_TIMEOUT_MS
+
+
+def test_answering_after_a_denial_ends_the_session(app, tmp_path, monkeypatch):
+    ended = []
+    monkeypatch.setattr(app, "_end_session", lambda show_statistics: ended.append(show_statistics))
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.outcome_decided_event.emit("denied")
+
+    app.btn_came.click()
+
+    assert ended == [True]
+
+
+def test_stopping_by_hand_asks_how_it_ended(app, tmp_path, monkeypatch):
+    """A session the user ends has no outcome at all otherwise, and every average silently
+    counts it as a session that never climaxed."""
+    monkeypatch.setattr(app, "_ask_how_it_ended", lambda: "stopped")
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app.stop()
+
+    assert app.score_tracker.get_history()[-1]["reported_outcome"] == "stopped"
+
+
+def test_stopping_does_not_ask_again_when_the_climax_already_did(app, tmp_path, monkeypatch):
+    asked = []
+    monkeypatch.setattr(app, "_ask_how_it_ended", lambda: asked.append(True) or "came")
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.outcome_decided_event.emit("real")
+    app.btn_came.click()
+
+    app.stop()
+
+    assert asked == []
+
+
+def test_closing_the_window_never_asks(app, tmp_path, monkeypatch):
+    """Someone who just hit the X wants the window gone, not a question - same reasoning
+    that already keeps the statistics recap out of closeEvent."""
+    from PyQt6.QtGui import QCloseEvent
+
+    asked = []
+    monkeypatch.setattr(app, "_ask_how_it_ended", lambda: asked.append(True) or "came")
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app.closeEvent(QCloseEvent())
+
+    assert asked == []
+
+
+def test_the_question_can_be_switched_off(app, tmp_path, monkeypatch):
+    asked = []
+    monkeypatch.setattr(app, "_ask_how_it_ended", lambda: asked.append(True) or "came")
+    app.ask_for_outcome = False
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app.climax_handler.outcome_decided_event.emit("real")
+    assert app.outcome_row.isVisible() is False
+
+    app.stop()
+    assert asked == []
+
+
+def test_falling_for_a_fake_out_gets_its_own_line(app, tmp_path, monkeypatch):
+    """Not the pause line and not the reveal - the reveal is still seconds out, and being
+    congratulated before being told it was never real is the whole point."""
+    spoken = []
+    monkeypatch.setattr(
+        app.callout_handler, "force_output_sentence", lambda key: spoken.append(key)
+    )
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.fake_climax_triggered_event.emit()
+
+    app.btn_came.click()
+
+    assert spoken == ["fake_climax_fell_for"]
+
+
+def test_the_outcome_buttons_do_not_crush_the_beat_track(app, qtbot):
+    """The footer has a fixed height so the media above never wobbles. Squeezing a third
+    widget into it left the note track 29px tall and the buttons too small to hit, so the
+    footer grows for the question instead and shrinks back afterwards."""
+    app.resize(1280, 800)
+    app.showMaximized()
+    qtbot.waitExposed(app)
+    app.is_running = True
+    app._update_climax_status_label("cum")
+    qtbot.wait(10)
+    track_without_question = app.beat_track.height()
+
+    app._show_outcome_buttons("climax")
+    qtbot.wait(10)
+
+    assert app.beat_track.height() >= track_without_question
+    assert app.outcome_row.height() >= GoonerApp.OUTCOME_ROW_HEIGHT
+    assert app.footer_container.height() > GoonerApp.FOOTER_HEIGHT
+
+    app._hide_outcome_buttons()
+    qtbot.wait(10)
+    assert app.footer_container.height() == GoonerApp.FOOTER_HEIGHT
+
+
+# --- "I reached my Edge" ---
+
+
+def test_the_edge_button_is_only_live_during_a_session(app, tmp_path):
+    assert app.btn_edge.isEnabled() is False
+
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    assert app.btn_edge.isEnabled() is True
+
+
+def test_reaching_your_edge_buys_a_pause_and_pushes_the_climax_back(app, tmp_path):
+    app.playlist = [tmp_path / "a.png"]
+    app.beat_handler.edge_pause_dur = 15
+    app.climax_handler.climax_active = True
+    app.climax_handler.min_climax_after = app.climax_handler.max_climax_after = 600.0
+    app.start()
+    climax_before = app.climax_handler.finale_at
+
+    app.btn_edge.click()
+
+    assert app.beat_handler.current_segment.kind == "pause"
+    assert app.climax_handler.finale_at == pytest.approx(climax_before + 15.0)
+    assert app.score_tracker.edge_count == 1
+
+
+def test_reaching_your_edge_gets_its_own_line(app, tmp_path, monkeypatch):
+    spoken = []
+    monkeypatch.setattr(
+        app.callout_handler, "force_output_sentence", lambda key: spoken.append(key)
+    )
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app.btn_edge.click()
+
+    assert spoken == ["edge_reached"]
+
+
+def test_a_second_edge_is_refused_until_the_cooldown_is_up(app, tmp_path):
+    """Holding the key down would otherwise turn the session into a nap."""
+    app.playlist = [tmp_path / "a.png"]
+    app.beat_handler.edge_cooldown_sec = 60
+    app.start()
+    app.btn_edge.click()
+
+    app.btn_edge.click()
+
+    assert app.score_tracker.edge_count == 1
+    assert app.btn_edge.isEnabled() is False
+    assert "60" in app.btn_edge.text()
+
+
+def test_the_cooldown_gives_the_button_back(app, tmp_path, qtbot):
+    app.playlist = [tmp_path / "a.png"]
+    app.beat_handler.edge_cooldown_sec = 1
+    app.start()
+    app.btn_edge.click()
+    assert app.btn_edge.isEnabled() is False
+
+    qtbot.waitUntil(lambda: app.btn_edge.isEnabled(), timeout=4000)
+
+    assert app.btn_edge.text() == GoonerApp.EDGE_BUTTON_TEXT
+
+
+def test_the_edge_button_goes_away_at_the_climax(app, tmp_path, qtbot):
+    """Nothing left to be relieved of, and the planner refuses it anyway."""
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.showMaximized()
+    qtbot.waitExposed(app)
+
+    app.climax_handler.outcome_decided_event.emit("real")
+
+    assert app.btn_edge.isVisible() is False
+
+
+def test_a_new_session_hands_the_edge_button_back(app, tmp_path, qtbot):
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.showMaximized()
+    qtbot.waitExposed(app)
+    app.climax_handler.outcome_decided_event.emit("real")
+    app._end_session(show_statistics=False)
+
+    app.start()
+
+    assert app.btn_edge.isVisible() is True
+    assert app.btn_edge.isEnabled() is True
+
+
+def test_the_edge_button_hides_entirely_when_switched_off(app, tmp_path, qtbot):
+    app.beat_handler.edge_relief_active = False
+    app.playlist = [tmp_path / "a.png"]
+    app.showMaximized()
+    qtbot.waitExposed(app)
+
+    app.start()
+
+    assert app.btn_edge.isVisible() is False
+
+
+def test_an_edge_the_planner_refuses_costs_nothing(app, tmp_path, monkeypatch):
+    """Refused mid-pause or after the climax - it must not burn the cooldown or count."""
+    monkeypatch.setattr(app.beat_handler, "edge_relief", lambda: 0.0)
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app.btn_edge.click()
+
+    assert app.score_tracker.edge_count == 0
+    assert app.btn_edge.isEnabled() is True
+
+
+# --- achievements ---
+
+
+def test_finishing_a_session_judges_it_for_achievements(app, tmp_path, monkeypatch):
+    """Evaluated after the session is already in the history, so a rule that counts sessions
+    can count this one."""
+    seen = {}
+
+    def fake_evaluate(played, history):
+        seen["history_length"] = len(history)
+        return []
+
+    monkeypatch.setattr(app.achievement_tracker, "evaluate", fake_evaluate)
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app._end_session(show_statistics=False)
+
+    assert seen["history_length"] == len(app.score_tracker.get_history())
+
+
+def test_newly_earned_achievements_reach_the_statistics_dialog(app, tmp_path, monkeypatch):
+    from src.achievements import CATALOGUE
+
+    captured = {}
+
+    class FakeStats(_FakeDialogBase):
+        def __init__(self, *args, new_achievements=None, **kwargs):
+            captured["new_achievements"] = new_achievements
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.GoonerApp.StatisticsDialog", FakeStats)
+    monkeypatch.setattr(app.achievement_tracker, "evaluate", lambda played, history: [CATALOGUE[0]])
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+
+    app._end_session(show_statistics=True)
+
+    assert captured["new_achievements"] == [CATALOGUE[0]]
+
+
+def test_replaying_a_session_says_so_in_the_stats(app, tmp_path):
+    saved = _saved_with_media(tmp_path)
+
+    app.replay_session(saved)
+
+    assert app.score_tracker.was_replay is True
+
+
+def test_the_statistics_menu_opens_the_achievements(app, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    captured = {}
+
+    class FakeDialog(_FakeDialogBase):
+        def __init__(self, tracker, history, parent=None):
+            captured["tracker"] = tracker
+
+        def exec(self):
+            pass
+
+    monkeypatch.setattr("src.AchievementsDialog.AchievementsDialog", FakeDialog)
+
+    menu_bar = app.menuBar()
+    stats_menu = next(m for m in menu_bar.findChildren(QMenu) if m.title() == "Statistics")
+    action = next(a for a in stats_menu.actions() if a.text() == "Achievements")
+    action.trigger()
+
+    assert captured["tracker"] is app.achievement_tracker
+
+
+def test_answering_after_any_climax_ends_the_session(app, tmp_path, monkeypatch):
+    """You have said what happened - the session is over. It used to end only after a
+    denial, so a real or ruined climax left the beat running with nothing left to come."""
+    ended = []
+    monkeypatch.setattr(app, "_end_session", lambda show_statistics: ended.append(show_statistics))
+    for announced in ("real", "ruined", "denied"):
+        ended.clear()
+        app.playlist = [tmp_path / "a.png"]
+        app.is_running = True
+        app.climax_handler.outcome_decided_event.emit(announced)
+
+        app.btn_came.click()
+
+        assert ended == [True], announced
+        assert app._denied_stop_timer.isActive() is False
+
+
+def test_reporting_at_a_fake_out_leaves_the_session_running(app, tmp_path, monkeypatch):
+    """The real climax is still to come - ending here would cut the session short on a joke."""
+    ended = []
+    monkeypatch.setattr(app, "_end_session", lambda show_statistics: ended.append(show_statistics))
+    app.playlist = [tmp_path / "a.png"]
+    app.start()
+    app.climax_handler.fake_climax_triggered_event.emit()
+
+    app.btn_came.click()
+
+    assert ended == []

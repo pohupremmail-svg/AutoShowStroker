@@ -311,3 +311,47 @@ def test_the_level_dropdown_is_disabled_while_logging_is_off(dialog):
 
     dialog.diagnostic_log_checkbox.setChecked(True)
     assert dialog.diagnostic_log_level.isEnabled() is True
+
+
+# --- saved sessions ---
+
+
+def test_saved_sessions_are_counted(app, dialog):
+    from src import session_files
+
+    session_files.store_session(app.data_store, {"format": 1, "segments": [], "media": []})
+    dialog.refresh_counts()
+
+    assert dialog.category_counts()["saved_sessions"] == 1
+
+
+def test_saved_sessions_can_be_deleted(app, dialog):
+    from src import session_files
+
+    session_files.store_session(app.data_store, {"format": 1, "segments": [], "media": []})
+
+    dialog.clear_categories(["saved_sessions"])
+
+    assert session_files.load_saved_sessions(app.data_store) == []
+
+
+def test_the_saved_sessions_entry_says_it_holds_media_paths(dialog):
+    """This is the one category that carries paths into the data directory, and a user
+    deciding what to wipe before handing the laptop over needs to know which one that is."""
+    description = next(
+        text for key, _label, text in dialog.CATEGORIES if key == "saved_sessions"
+    )
+
+    assert "path" in description.lower()
+
+
+def test_achievements_are_counted_and_deletable(app, dialog):
+    app.achievement_tracker.unlocked["endurance_45"] = "2026-09-17 21:00"
+    app.achievement_tracker._save()
+    dialog.refresh_counts()
+    assert dialog.category_counts()["achievements"] == 1
+
+    dialog.clear_categories(["achievements"])
+
+    assert app.achievement_tracker.unlocked == {}
+    assert dialog.category_counts()["achievements"] == 0

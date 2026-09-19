@@ -9,11 +9,16 @@ class SessionRecorder:
     personal records, the persisted history), and an ordered recording is not a score. It
     also means the file ScoreTracker writes to disk cannot pick any of this up.
 
-    **Nothing here is ever persisted.** The timeline holds media file paths, which is
-    exactly the thing this app promises to keep on the user's machine and out of its own
-    data directory - see the logging rules in CLAUDE.md. It lives for one session, feeds the
-    Session Explorer, and is dropped when the next session starts or the app closes. For
-    the same reason it is never logged either, not even at INFO.
+    **Nothing here is ever logged, and nothing is persisted on its own.** The timeline holds
+    media file paths, which is exactly the thing this app promises to keep on the user's
+    machine and out of its own data directory - see the logging rules in CLAUDE.md. It lives
+    for one session, feeds the Session Explorer, and is dropped when the next session starts
+    or the app closes.
+
+    The single exception is the user pressing Save in the Explorer: src/session_files.py
+    then turns this timeline into a saved session, paths and all, so it can be replayed
+    later. That is a deliberate, disclosed, deletable exception (Help > Privacy & Data) and
+    it is the only route out of here - this class still writes nothing itself.
 
     A plain class rather than a QObject: it emits nothing, and Qt happily connects a signal
     to any callable, the way ScoreTracker.beat is already connected.
@@ -84,6 +89,11 @@ class SessionRecorder:
                     "freq": segment.freq,
                     "start": start,
                     "end": end,
+                    # What the planner asked for, next to what it measured. They differ:
+                    # a segment ends at the first note *past* its planned end, and the
+                    # final one is held open until the session stops. Saving a session
+                    # replays the planned figure - see src/session_files.py.
+                    "planned_sec": segment.duration_sec,
                     "media": self._media_within(media_spans, start, end, is_first=index == 0),
                 }
             )

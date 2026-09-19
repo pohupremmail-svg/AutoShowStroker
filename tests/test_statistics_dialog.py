@@ -271,3 +271,58 @@ def test_the_explorer_button_is_inside_the_locked_dialog_size(qtbot):
 
     button = dialog.explorer_button
     assert button.geometry().bottom() <= dialog.height()
+
+
+def test_the_explorer_is_given_the_way_to_save_the_session(qtbot, monkeypatch):
+    """The stats dialog does not save anything itself - it only carries the hook through to
+    the explorer, which is the dialog actually showing the session."""
+    built = {}
+
+    class _FakeExplorer:
+        def __init__(self, timeline, save_session=None, parent=None):
+            built["save_session"] = save_session
+
+        def exec(self):
+            pass
+
+        def deleteLater(self):
+            pass
+
+    monkeypatch.setattr("src.SessionExplorerDialog.SessionExplorerDialog", _FakeExplorer)
+    saver = object()
+    dialog = StatisticsDialog(
+        dict(FULL_STATS), timeline=_timeline(), save_session=saver, parent=None
+    )
+    qtbot.addWidget(dialog)
+
+    dialog.explorer_button.click()
+
+    assert built["save_session"] is saver
+
+
+def test_newly_earned_achievements_get_a_card_of_their_own(qtbot):
+    from src.achievements import CATALOGUE
+
+    dialog = StatisticsDialog(dict(FULL_STATS), new_achievements=[CATALOGUE[0]], parent=None)
+    qtbot.addWidget(dialog)
+
+    assert len(dialog.achievement_cards) == 1
+    assert CATALOGUE[0].name in dialog.achievement_cards[0].findChild(QLabel).text()
+
+
+def test_no_achievement_cards_when_nothing_was_earned(qtbot):
+    dialog = StatisticsDialog(dict(FULL_STATS), parent=None)
+    qtbot.addWidget(dialog)
+
+    assert dialog.achievement_cards == []
+
+
+def test_an_achievement_card_sits_inside_the_locked_dialog_size(qtbot):
+    """_populate_table() freezes the dialog size, so anything added after it is invisible -
+    the same trap the Session Explorer button already fell into."""
+    from src.achievements import CATALOGUE
+
+    dialog = StatisticsDialog(dict(FULL_STATS), new_achievements=[CATALOGUE[0]], parent=None)
+    qtbot.addWidget(dialog)
+
+    assert dialog.achievement_cards[0].geometry().bottom() <= dialog.height()

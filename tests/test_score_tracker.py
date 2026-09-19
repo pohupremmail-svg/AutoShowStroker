@@ -474,3 +474,114 @@ def test_clear_history_empties_memory_and_the_data_store(tmp_path):
     assert tracker.get_history() == []
     assert tracker.get_all_time_bests() == ScoreTracker._compute_bests(tracker, [])
     assert not store.path_for("session_history").exists()
+
+
+# --- what the user says actually happened ---
+
+
+def test_the_reported_outcome_starts_unknown():
+    """Unknown is a real answer and must not be guessed at: a session nobody answered for
+    is not the same as one that was stopped."""
+    tracker = ScoreTracker()
+    assert tracker.reported_outcome is None
+    assert tracker.deliver_infos()["reported_outcome"] is None
+
+
+def test_the_reported_outcome_is_kept_apart_from_the_announced_one():
+    """The whole point: demanded 'denied' and reported 'came' is disobedience, and that only
+    exists as a fact if the two are stored separately."""
+    tracker = ScoreTracker()
+    tracker.climax_decided("denied")
+
+    tracker.outcome_reported("came")
+
+    assert tracker.deliver_infos()["climax_outcome"] == "denied"
+    assert tracker.deliver_infos()["reported_outcome"] == "came"
+
+
+def test_falling_for_a_fake_out_is_counted():
+    tracker = ScoreTracker()
+    tracker.fake_climax_triggered()
+    tracker.fake_climax_triggered()
+
+    tracker.fell_for_fake_climax()
+
+    assert tracker.deliver_infos()["fakeout_count"] == 2
+    assert tracker.deliver_infos()["fakeouts_fallen_for"] == 1
+
+
+def test_a_new_session_forgets_what_was_reported_last_time():
+    tracker = ScoreTracker()
+    tracker.outcome_reported("came")
+    tracker.fell_for_fake_climax()
+
+    tracker.session_started()
+
+    assert tracker.reported_outcome is None
+    assert tracker.fakeouts_fallen_for == 0
+
+
+def test_the_history_remembers_both_outcomes_so_achievements_can_look_back(tmp_path, monkeypatch):
+    from src.user_data import UserDataStore
+
+    store = UserDataStore(base_dir=tmp_path / "data")
+    tracker = ScoreTracker(data_store=store)
+    tracker.session_started()
+    tracker.climax_decided("denied")
+    tracker.outcome_reported("came")
+    tracker.fell_for_fake_climax()
+    monkeypatch.setattr(time, "time", lambda: tracker.session_start_time + 1.0)
+
+    tracker.session_ended()
+
+    entry = tracker.get_history()[-1]
+    assert entry["climax_outcome"] == "denied"
+    assert entry["reported_outcome"] == "came"
+    assert entry["fakeouts_fallen_for"] == 1
+
+
+def test_edges_are_counted_and_remembered(tmp_path, monkeypatch):
+    from src.user_data import UserDataStore
+
+    store = UserDataStore(base_dir=tmp_path / "data")
+    tracker = ScoreTracker(data_store=store)
+    tracker.session_started()
+    tracker.edge_reached()
+    tracker.edge_reached()
+    monkeypatch.setattr(time, "time", lambda: tracker.session_start_time + 1.0)
+
+    tracker.session_ended()
+
+    assert tracker.deliver_infos()["edge_count"] == 2
+    assert tracker.get_history()[-1]["edge_count"] == 2
+
+
+def test_a_new_session_starts_at_zero_edges():
+    tracker = ScoreTracker()
+    tracker.edge_reached()
+    tracker.session_started()
+    assert tracker.edge_count == 0
+
+
+def test_a_replayed_session_is_marked_as_one(tmp_path, monkeypatch):
+    """Otherwise nothing downstream can tell a replay from a fresh session - they look
+    identical in every number."""
+    from src.user_data import UserDataStore
+
+    store = UserDataStore(base_dir=tmp_path / "data")
+    tracker = ScoreTracker(data_store=store)
+    tracker.session_started()
+    tracker.replay_started()
+    monkeypatch.setattr(time, "time", lambda: tracker.session_start_time + 1.0)
+
+    tracker.session_ended()
+
+    assert tracker.deliver_infos()["was_replay"] is True
+    assert tracker.get_history()[-1]["was_replay"] is True
+
+
+def test_a_fresh_session_is_not_marked_as_a_replay():
+    tracker = ScoreTracker()
+    tracker.replay_started()
+    tracker.session_started()
+    assert tracker.deliver_infos()["was_replay"] is False

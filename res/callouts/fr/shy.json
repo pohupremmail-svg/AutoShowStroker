@@ -126,5 +126,21 @@
     "Euh... non. Pas encore, continue sur ta queue. Pardon !",
     "J-je t'ai piégé, alors branle. C'était méchant de ma part.",
     "C'était un petit mensonge... continue sur ta bite, d'accord ?"
+  ],
+  "fake_climax_fell_for": [
+    "Oh ! Enfin, je veux dire... très bien.",
+    "Je ne savais pas que ça irait si vite.",
+    "Ce n'est pas grave du tout, hein.",
+    "Tu m'as vraiment écoutée, alors.",
+    "Je ne sais pas trop quoi dire, là.",
+    "Prends ton temps, je ne bouge pas."
+  ],
+  "edge_reached": [
+    "Attends, attends ! Ne fais plus rien.",
+    "Je préférerais que tu tiennes encore un peu...",
+    "Tu peux t'arrêter, c'est permis.",
+    "Je vais y aller plus doucement, promis.",
+    "C'est courageux de le dire, je trouve.",
+    "On souffle un peu tous les deux."
   ]
 }

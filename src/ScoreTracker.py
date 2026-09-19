@@ -12,6 +12,14 @@ class ScoreTracker:
     # single source of truth for StatisticsDialog's "New Record!" cards and
     # LongTermStatisticsDialog's all-time-bests summary.
     PR_METRICS = ("total_dur_sec", "total_num_beat", "average_beat_speed_active", "fakeout_count")
+    # Written into every history entry alongside the record metrics. Not records themselves -
+    # nobody chases a personal best in being denied - but achievements read them back across
+    # sessions, which only works if they were stored at the time. Entries written by older
+    # builds simply lack the keys.
+    HISTORY_EXTRA_FIELDS = (
+        "climax_outcome", "reported_outcome", "fakeouts_fallen_for", "edge_count",
+        "was_replay",
+    )
     PR_METRIC_LABELS = {
         "total_dur_sec": "Total Duration",
         "total_num_beat": "Total Beats",
@@ -63,12 +71,37 @@ class ScoreTracker:
         self.skips = 0
         self.repeats = 0
         self.climax_outcome = None
+        self.reported_outcome = None
         self.fakeout_count = 0
+        self.fakeouts_fallen_for = 0
+        self.edge_count = 0
+        self.was_replay = False
         self.history = self._load_history()
         self.last_session_new_records = {}
 
     def climax_decided(self, outcome):
         self.climax_outcome = outcome
+
+    def outcome_reported(self, reported):
+        """What the user says actually happened: came / ruined / stopped.
+
+        Kept strictly apart from climax_outcome, which is what the app *demanded*. A denial
+        the user obeyed and a denial they ignored are the same announcement and opposite
+        sessions, and that difference only exists if both are written down. None stays None:
+        an unanswered session is not a guess.
+        """
+        self.reported_outcome = reported
+
+    def fell_for_fake_climax(self):
+        self.fakeouts_fallen_for += 1
+
+    def edge_reached(self):
+        self.edge_count += 1
+
+    def replay_started(self):
+        """This session is a saved one being played again. Set after session_started(),
+        which clears it - a replay is otherwise indistinguishable in every number."""
+        self.was_replay = True
 
     def beat_paused(self):
         log.info("Beat paused")
@@ -104,7 +137,11 @@ class ScoreTracker:
         self.number_of_beat_changes = 0
         self.patterns = {}
         self.climax_outcome = None
+        self.reported_outcome = None
         self.fakeout_count = 0
+        self.fakeouts_fallen_for = 0
+        self.edge_count = 0
+        self.was_replay = False
 
     def session_ended(self):
         log.info("Score tracking ended")
@@ -147,7 +184,11 @@ class ScoreTracker:
             'skips': self.skips,
             'repeats': self.repeats,
             'climax_outcome': self.climax_outcome,
+            'reported_outcome': self.reported_outcome,
             'fakeout_count': self.fakeout_count,
+            'fakeouts_fallen_for': self.fakeouts_fallen_for,
+            'edge_count': self.edge_count,
+            'was_replay': self.was_replay,
         }
 
     def beat_changed(self, _, new_pattern):
@@ -238,6 +279,7 @@ class ScoreTracker:
 
         entry = {"ended_at": time.strftime("%Y-%m-%d %H:%M", time.localtime())}
         entry.update(current)
+        entry.update({field: info[field] for field in self.HISTORY_EXTRA_FIELDS})
         self.history.append(entry)
         self.history = self.history[-self.MAX_HISTORY_ENTRIES:]
         self._save_history()
