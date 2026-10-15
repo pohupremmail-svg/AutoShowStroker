@@ -8,6 +8,7 @@ drift.
 
 Run from the repo root:  .venv/Scripts/python.exe -m parity.generate [out_dir]
 """
+import copy
 import json
 import sys
 import tempfile
@@ -15,6 +16,7 @@ import time
 from pathlib import Path
 
 from src import session_files, utils
+from src.SessionScript import SessionScript
 
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
@@ -249,23 +251,92 @@ def clock_cases():
     }
 
 
+# --- SessionScript -----------------------------------------------------------------------------
+
+
+def _drain(script, first_index):
+    """Everything a script hands out, in the order the consumers would ask for it.
+
+    Gaps and paths are drained one after the other, not interleaved: they run on separate
+    cursors, and a port that shared one would hand out half as many of the second.
+    """
+    out = {
+        "segment_count": script.segment_count,
+        "duration": script.duration,
+        "has_media_paths": script.has_media_paths,
+        "climax_offset": script.climax_offset,
+        "climax_outcome": script.climax_outcome,
+        "fake_offsets": script.fake_offsets,
+        "custom_patterns": script.custom_patterns,
+        "had_segments": script.has_segments_left,
+    }
+    segments, index = [], first_index
+    while (segment := script.next_segment(index)) is not None:
+        segments.append(list(segment))
+        index += 1
+    out["segments"] = segments
+    out["has_segments_left"] = script.has_segments_left
+    out["gaps"] = list(iter(script.next_media_gap, None))
+    out["paths"] = list(iter(script.next_media_path, None))
+    return out
+
+
+def script_cases():
+    recorded = session_files.to_saved_session(_timeline(), {"My Rhythm": [1, -1, 0, 1], "Unplayed": [1]})
+    partially_stripped = _handwritten()
+    partially_stripped["media"] = [{"at_sec": 0.0, "path": "a.png"}, {"at_sec": 10.0},
+                                   {"at_sec": 25.0, "path": "c.png"}]
+    integers = _handwritten()
+    integers["duration_sec"] = 120
+    integers["segments"][0]["duration_sec"] = 60
+    integers["segments"][0]["freq"] = 2
+    integers["media"] = [{"at_sec": 0}, {"at_sec": 30}]
+    overlong = _handwritten()
+    overlong["media"] = [{"at_sec": 0.0}, {"at_sec": 150.0}]  # past the end: the gap clamps at 0
+    sessions = {
+        "handwritten": (_handwritten(), False),
+        "recorded": (recorded, False),
+        "recorded_paths_ignored": (recorded, True),
+        "stripped": (session_files.strip_paths(recorded), False),
+        "partially_stripped": (partially_stripped, False),
+        "partially_stripped_ignored": (partially_stripped, True),
+        "no_climax": (dict(_handwritten(), climax=None), False),
+        "climax_without_moment": (dict(_handwritten(), climax={"at_sec": None, "outcome": None}), False),
+        "no_fakes": (dict(_handwritten(), fake_climaxes=[]), False),
+        "no_duration": (dict(_handwritten(), duration_sec=None), False),
+        "zero_duration": (dict(_handwritten(), duration_sec=0), False),
+        "integers": (integers, False),
+        "overlong_media": (overlong, False),
+        "no_media": (dict(_handwritten(), media=[]), False),
+        "no_segments": (dict(_handwritten(), segments=[]), False),
+        "no_custom_patterns": (dict(_handwritten(), custom_patterns=None), False),
+    }
+    return [{"name": name, "input": saved, "ignore_paths": ignore,
+             "expected": _drain(SessionScript(copy.deepcopy(saved), ignore_paths=ignore), first_index=5)}
+            for name, (saved, ignore) in sessions.items()]
+
+
 # --- writing -----------------------------------------------------------------------------------
+
+
+def _write_module(out_dir: Path, module: str, golden: dict) -> None:
+    golden = {"generated_at": time.strftime("%Y-%m-%d %H:%M:%S"), **golden}
+    target = out_dir / f"{module}.json"
+    target.write_text(json.dumps(golden, ensure_ascii=False, indent=2), encoding="utf-8")
+    counts = {key: len(value) for key, value in golden.items() if isinstance(value, list)}
+    print(f"{target}: {counts}")
 
 
 def write(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    golden = {
-        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    _write_module(out_dir, "session_files", {
         "validate": validation_cases(),
         "to_saved_session": saving_cases(),
         "describe": describe_cases(),
         "read_session_file": reading_cases(),
         **clock_cases(),
-    }
-    target = out_dir / "session_files.json"
-    target.write_text(json.dumps(golden, ensure_ascii=False, indent=2), encoding="utf-8")
-    counts = {key: len(value) for key, value in golden.items() if isinstance(value, list)}
-    print(f"{target}: {counts}")
+    })
+    _write_module(out_dir, "session_script", {"drain": script_cases()})
 
 
 if __name__ == "__main__":
