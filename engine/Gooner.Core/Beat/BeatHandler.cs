@@ -22,9 +22,10 @@ public readonly record struct UpcomingBeat(double Offset, bool Audible, int Weig
 // planned; drift is corrected while segments are still queued and nothing of them is on screen.
 // BeatHandler knows nothing about climaxes; it is only ever told "be fast here".
 //
-// No timers fire on their own in here. The two QTimers of the Python side are ClockTimers on the
-// session clock, and the host calls Advance() every frame: each note or pause second that has come
-// due fires, in order, at the moment it was due - so a late frame never shifts the rhythm. A note
+// No timers fire on their own in here. The two QTimers of the Python side are ClockTimers on a
+// ClockScheduler, shared with whatever else runs on the session clock, and the host advances it
+// every frame: each note or pause second that has come due fires, in order, at the moment it was
+// due - so a late frame never shifts the rhythm. A note
 // gap stays the whole milliseconds Python schedules (int(step * 1000)); at 48 kHz that is exact,
 // and it keeps the two implementations comparable note for note.
 public sealed class BeatHandler
@@ -69,8 +70,7 @@ public sealed class BeatHandler
     private readonly ISettingsStore? _settings;
     private readonly UserDataStore? _dataStore;
     private readonly IRandomSource _random;
-    private readonly ISessionClock _clock;
-    private double? _dispatchAt;
+    private readonly ClockScheduler _scheduler;
 
     private double _pauseTotal;
     private int _nextIndex;
@@ -88,14 +88,16 @@ public sealed class BeatHandler
         ISettingsStore? settings = null,
         UserDataStore? dataStore = null,
         IRandomSource? random = null,
-        ISessionClock? clock = null)
+        ISessionClock? clock = null,
+        ClockScheduler? scheduler = null)
     {
         _settings = settings;
         _dataStore = dataStore;
         _random = random ?? new SystemRandomSource();
-        _clock = clock ?? new WallClock();
-        NoteTimer = new ClockTimer(() => Now);
-        PauseTimer = new ClockTimer(() => Now);
+        _scheduler = scheduler ?? new ClockScheduler(clock ?? new WallClock());
+        // Created in the order Python creates them, which is the order a tie fires in.
+        PauseTimer = _scheduler.CreateTimer(PauseLoop);
+        NoteTimer = _scheduler.CreateTimer(Beat);
 
         MaxBeatDur = (double)Defaults["max_beat_dur"];
         MinBeatDur = (double)Defaults["min_beat_dur"];
@@ -213,7 +215,7 @@ public sealed class BeatHandler
     internal ClockTimer PauseTimer { get; }
 
     // The session clock: the moment a timer was due while it fires, the clock itself otherwise.
-    private double Now => _dispatchAt ?? _clock.Now;
+    private double Now => _scheduler.Now;
 
     // The same clock, for the parity run to stamp events with.
     internal double ClockNow => Now;
@@ -222,35 +224,9 @@ public sealed class BeatHandler
 
     // --- the clock ---
 
-    // Fires every note and pause second that has come due by now, in order, each at the moment it
-    // was due. The host calls this every frame.
-    public void Advance()
-    {
-        var until = Now;
-        while (true)
-        {
-            ClockTimer? next = null;
-            if (NoteTimer.Active && NoteTimer.Due <= until)
-                next = NoteTimer;
-            if (PauseTimer.Active && PauseTimer.Due <= until && (next is null || PauseTimer.Due < next.Due))
-                next = PauseTimer;
-            if (next is null) return;
-
-            var generation = next.Generation;
-            _dispatchAt = next.Due;
-            try
-            {
-                if (next == NoteTimer) Beat();
-                else PauseLoop();
-                // A Qt timer repeats unless it is restarted or stopped.
-                if (next.Generation == generation && next.Active) next.Repeat();
-            }
-            finally
-            {
-                _dispatchAt = null;
-            }
-        }
-    }
+    // Fires every timer on the session clock that has come due by now - this handler's notes and
+    // pause seconds, and anything else sharing its scheduler. The host calls this every frame.
+    public void Advance() => _scheduler.Advance();
 
     // --- the plan ---
 
