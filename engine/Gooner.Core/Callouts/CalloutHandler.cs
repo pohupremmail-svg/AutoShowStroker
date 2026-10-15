@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Gooner.Core.Climax;
 using Gooner.Core.Data;
 using Gooner.Core.Logging;
 using Gooner.Core.Randomness;
@@ -35,7 +36,7 @@ public sealed record CustomPhraseFile(string Path, string Lang, string? Tone);
 // No timer in here: a shown tease ends TeaseTime later on the TimeProvider, and the host calls
 // Tick() every frame to let that happen. Python's QTimer repeats and resends the hide every
 // 7 seconds; only the first of those ever did anything.
-public sealed class CalloutHandler
+public sealed class CalloutHandler : ICalloutVoice
 {
     public const string SettingsGroup = "CalloutHandler";
     private const string Log = "CalloutHandler";

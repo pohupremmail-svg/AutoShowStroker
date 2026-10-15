@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Gooner.Core.Climax;
 using Gooner.Core.Data;
 using Gooner.Core.Logging;
 using Gooner.Core.Randomness;
@@ -28,7 +29,7 @@ public readonly record struct UpcomingBeat(double Offset, bool Audible, int Weig
 // due - so a late frame never shifts the rhythm. A note
 // gap stays the whole milliseconds Python schedules (int(step * 1000)); at 48 kHz that is exact,
 // and it keeps the two implementations comparable note for note.
-public sealed class BeatHandler
+public sealed class BeatHandler : IFinalePlanner
 {
     public const string SettingsGroup = "BeatHandler";
     private const string Log = "BeatHandler";
@@ -242,9 +243,9 @@ public sealed class BeatHandler
 
     // Asks the planner to guarantee a fast rhythm across the given moment - "be fast here", not
     // "the orgasm is here". Null withdraws it. Replans what is queued, so it works mid-session.
-    public void SetFinaleAt(double? when)
+    public void SetFinaleAt(double? moment)
     {
-        FinaleAt = when;
+        FinaleAt = moment;
         if (CurrentSegment is not null)
             ReplanFromNextSegment();
     }
@@ -697,6 +698,8 @@ public sealed class BeatHandler
         PauseTimer.Start(1000);
         MeterUpdated?.Invoke("pause");
     }
+
+    void IFinalePlanner.EndRhythm() => Stop();
 
     // Ends the rhythm.
     public void Stop()
