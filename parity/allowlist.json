@@ -1,0 +1,7 @@
+{
+  "_about": "Cases where the C# port deliberately answers differently from the Python oracle. Every entry says why. A difference that is not listed here is drift, and fails the parity run.",
+  "session_files.validate": {
+    "duration_bool": "Python treats a bool as an int, so \"duration_sec\": true passes as one second. The port refuses it - a session that says true there is wrong, and saying so beats playing a one-second session.",
+    "freq_bool": "Same quirk: \"freq\": true would play at one beat per second. The port refuses it."
+  }
+}
