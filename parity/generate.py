@@ -14,9 +14,12 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from unittest import mock
 
 from src import session_files, utils
+from src.ScoreTracker import ScoreTracker
 from src.SessionScript import SessionScript
+from src.user_data import UserDataStore
 
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
@@ -316,6 +319,115 @@ def script_cases():
             for name, (saved, ignore) in sessions.items()]
 
 
+# --- ScoreTracker ------------------------------------------------------------------------------
+
+# Steps are [clock, call, *args]: the clock is set first, then the call is made. A call that is
+# not a ScoreTracker method is a probe, and what it reads goes into "probes" in order.
+_PROBES = {
+    "live": lambda t: t.live_metrics(),
+    "chase": lambda t, bests: (lambda s: list(s) if s else None)(t.record_chase_status(bests)),
+    "bests": lambda t: t.get_all_time_bests(),
+    "infos": lambda t: t.deliver_infos(),
+    "records": lambda t: t.last_session_new_records,
+    "history": lambda t: [_without_ended_at(e) for e in t.get_history()],
+}
+
+
+def _without_ended_at(entry):
+    """ended_at is the wall clock at the end, which neither side can be held to."""
+    return {k: v for k, v in entry.items() if k != "ended_at"}
+
+
+def _run_tracker(history, steps):
+    clock = [0.0]
+    probes = []
+    with tempfile.TemporaryDirectory() as tmp, mock.patch("time.time", lambda: clock[0]):
+        store = UserDataStore(base_dir=Path(tmp))
+        if history is not None:
+            store.save("session_history", history)
+        tracker = ScoreTracker(data_store=store)
+        for at, call, *args in steps:
+            clock[0] = at
+            if call in _PROBES:
+                probes.append(_PROBES[call](tracker, *args))
+            else:
+                getattr(tracker, call)(*args)
+        saved = store.load("session_history", None)
+    return {"probes": probes, "saved_history": None if saved is None else [_without_ended_at(e) for e in saved]}
+
+
+def _past(dur, beats, speed, fakeouts, **extra):
+    return {"ended_at": "2026-01-01 00:00", "total_dur_sec": dur, "total_num_beat": beats,
+            "average_beat_speed_active": speed, "fakeout_count": fakeouts, **extra}
+
+
+def tracker_cases():
+    played = [
+        [0.0, "session_started"],
+        [1.0, "beat"], [1.5, "beat"], [2.0, "beat_changed", 2.0, "Quick Swing"],
+        [2.5, "beat"], [3.0, "beat_paused"], [8.0, "beat_resumed"],
+        [9.0, "beat_changed", 3.0, "Standard Beat"], [9.5, "beat"],
+        [10.0, "beat_changed", 2.0, "Quick Swing"], [11.0, "media_skipped"], [12.0, "media_repeated"],
+    ]
+    history = [_past(30.0, 40, 1.5, 1), _past(12.0, 90, 2.5, 0, climax_outcome="ruined")]
+    cases = {
+        "a_plain_session": (None, [*played, [60.0, "session_ended"], [60.0, "infos"], [60.0, "records"],
+                                   [60.0, "bests"], [60.0, "history"]]),
+        "records_against_a_history": (history, [*played, [45.0, "beat"], [45.0, "session_ended"],
+                                                [45.0, "records"], [45.0, "bests"]]),
+        "tying_a_record": ([_past(10.0, 1, 0.1, 0)], [[0.0, "session_started"], [10.0, "session_ended"],
+                                                      [10.0, "records"]]),
+        "ended_without_a_start": (None, [[5.0, "session_ended"], [5.0, "infos"], [5.0, "history"]]),
+        "ended_inside_a_pause": (None, [[0.0, "session_started"], [1.0, "beat"], [4.0, "beat_paused"],
+                                        [10.0, "session_ended"], [10.0, "infos"]]),
+        "paused_the_whole_time": (None, [[0.0, "session_started"], [0.0, "beat_paused"],
+                                         [10.0, "beat_resumed"], [10.0, "session_ended"], [10.0, "infos"]]),
+        "a_second_pause_at_zero": (None, [[0.0, "session_started"], [0.0, "beat_paused"],
+                                          [3.0, "beat_paused"], [5.0, "beat_resumed"], [9.0, "session_ended"],
+                                          [9.0, "infos"]]),
+        "everything_the_user_reports": (None, [
+            [0.0, "session_started"], [0.5, "replay_started"], [1.0, "fake_climax_triggered"],
+            [2.0, "fell_for_fake_climax"], [3.0, "fake_climax_triggered"], [4.0, "edge_reached"],
+            [5.0, "climax_decided", "denied"], [6.0, "outcome_reported", "came"],
+            [7.0, "session_ended"], [7.0, "infos"], [7.0, "history"]]),
+        "a_tie_goes_to_the_first_pattern": (None, [
+            [0.0, "session_started"], [1.0, "beat_changed", 1.0, "A"], [2.0, "beat_changed", 1.0, "B"],
+            [3.0, "beat_changed", 1.0, "B"], [4.0, "beat_changed", 1.0, "A"], [5.0, "infos"]]),
+        "the_next_session_starts_clean": (None, [
+            *played, [20.0, "climax_decided", "real"], [20.0, "session_ended"],
+            [30.0, "session_started"], [31.0, "beat"], [40.0, "session_ended"], [40.0, "infos"],
+            [40.0, "records"], [40.0, "history"]]),
+        "an_old_history_without_newer_keys": ([
+            {"ended_at": "2025-01-01 00:00", "total_dur_sec": 99.0, "total_num_beat": 10},
+            {"ended_at": "2025-01-02 00:00", "total_dur_sec": None, "fakeout_count": 4},
+        ], [[0.0, "bests"], [0.0, "session_started"], [100.0, "session_ended"], [100.0, "records"],
+            [100.0, "bests"]]),
+        "live_and_the_chase": ([_past(100.0, 10, 0.5, 2)], [
+            [0.0, "live"], [0.0, "chase", {"total_num_beat": 10}],
+            [0.0, "session_started"], [1.0, "beat"], [2.0, "beat"],
+            [5.0, "live"], [5.0, "chase", {"total_num_beat": 10, "total_dur_sec": 100.0}],
+            [5.0, "beat_paused"], [15.0, "beat_resumed"], [20.0, "live"],
+            [81.0, "chase", {"total_dur_sec": 100.0, "fakeout_count": 2}],
+            [82.0, "fake_climax_triggered"], [82.0, "fake_climax_triggered"], [82.0, "fake_climax_triggered"],
+            [82.0, "chase", {"total_dur_sec": 100.0, "fakeout_count": 2}],
+            [82.0, "chase", {"total_dur_sec": 0, "fakeout_count": None, "average_beat_speed_active": 0.01}],
+            [90.0, "session_ended"], [90.0, "records"]]),
+    }
+    return [{"name": name, "history": history, "steps": steps, "expected": _run_tracker(copy.deepcopy(history), steps)}
+            for name, (history, steps) in cases.items()]
+
+
+def metric_format_cases():
+    values = {
+        "total_dur_sec": [0, 0.5, 59.4, 125.0, 3600.0, 3735.9],
+        "average_beat_speed_active": [0, 0.005, 0.4321, 1.0, 2.675, 12.3456],
+        "total_num_beat": [0, 42, 12345],
+        "fakeout_count": [0, 3],
+    }
+    return [[metric, value, ScoreTracker.format_metric_value(metric, value)]
+            for metric, metric_values in values.items() for value in metric_values]
+
+
 # --- writing -----------------------------------------------------------------------------------
 
 
@@ -337,6 +449,7 @@ def write(out_dir: Path) -> None:
         **clock_cases(),
     })
     _write_module(out_dir, "session_script", {"drain": script_cases()})
+    _write_module(out_dir, "score_tracker", {"run": tracker_cases(), "format_metric_value": metric_format_cases()})
 
 
 if __name__ == "__main__":
