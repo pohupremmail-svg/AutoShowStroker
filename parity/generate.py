@@ -18,7 +18,9 @@ from unittest import mock
 
 from src import achievements, session_files, utils
 from src.achievements import AchievementTracker
+from src.BeatHandler import Segment
 from src.ScoreTracker import ScoreTracker
+from src.SessionRecorder import SessionRecorder
 from src.SessionScript import SessionScript
 from src.user_data import UserDataStore
 
@@ -429,6 +431,77 @@ def metric_format_cases():
             for metric, metric_values in values.items() for value in metric_values]
 
 
+# --- SessionRecorder ---------------------------------------------------------------------------
+
+
+def _record(steps):
+    """Plays [call, *args] steps into a recorder. A "segment" step carries the Segment's fields;
+    "timeline" is a probe, read with the moment given (or none). The last timeline read is also
+    turned into a saved session, so the whole way from recording to file is compared."""
+    recorder = SessionRecorder()
+    timelines = []
+    for call, *args in steps:
+        if call == "timeline":
+            timelines.append(recorder.timeline(now=args[0]))
+        elif call == "segment":
+            kind, duration, freq, pattern, index, at = args
+            recorder.segment_started(Segment(kind, duration, freq, pattern, index), at=at)
+        else:
+            *values, at = args
+            getattr(recorder, call)(*values, at=at)
+    saved = session_files.to_saved_session(timelines[-1], {"My Rhythm": [1, 0, 1]})
+    saved.pop("app_version")
+    saved.pop("saved_at")
+    return {"timelines": timelines, "saved": saved}
+
+
+def recorder_cases():
+    played = [
+        ["media_shown", "first.png", 1000.0],
+        ["segment", "beat", 20.0, 2.0, "Standard Beat", 0, 1000.5],
+        ["media_shown", "a.png", 1005.0], ["media_shown", "b.png", 1012.0],
+        ["segment", "pause", 10.0, None, None, 1, 1020.4],
+        ["media_shown", "c.png", 1025.0], ["fake_climax_recorded", 1027.0],
+        ["segment", "beat", 15.0, 1.7, "My Rhythm", 2, 1030.4],
+        ["media_shown", "d.png", 1030.4],
+        ["segment", "finale", 30.0, 4.5, "Quick Swing", 3, 1045.9],
+        ["climax_recorded", "ruined", 1070.0], ["media_shown", "e.png", 1071.0],
+    ]
+    cases = {
+        "never_started": [["timeline", 5.0]],
+        "started_and_nothing_else": [["session_started", 1000.0], ["timeline", 1010.0]],
+        "a_whole_session": [["session_started", 1000.0], *played, ["session_ended", 1090.0], ["timeline", None]],
+        "read_while_running": [["session_started", 1000.0], *played, ["timeline", 1080.0], ["timeline", 1085.0]],
+        "a_medium_across_three_segments": [
+            ["session_started", 0.0], ["segment", "beat", 5.0, 2.0, "Standard Beat", 0, 0.0],
+            ["media_shown", "long.png", 1.0], ["segment", "pause", 5.0, None, None, 1, 5.0],
+            ["segment", "beat", 5.0, 3.0, "Quick Swing", 2, 10.0], ["session_ended", 20.0], ["timeline", None]],
+        "a_medium_shown_on_a_boundary": [
+            ["session_started", 0.0], ["segment", "beat", 5.0, 2.0, "Standard Beat", 0, 0.0],
+            ["media_shown", "edge.png", 5.0], ["segment", "beat", 5.0, 2.0, "Standard Beat", 1, 5.0],
+            ["session_ended", 10.0], ["timeline", None]],
+        "two_media_at_the_same_moment": [
+            ["session_started", 0.0], ["segment", "beat", 5.0, 2.0, "Standard Beat", 0, 0.0],
+            ["media_shown", "x.png", 2.0], ["media_shown", "y.png", 2.0],
+            ["session_ended", 6.0], ["timeline", None]],
+        "two_segments_at_the_same_moment": [
+            ["session_started", 0.0], ["media_shown", "x.png", 0.0],
+            ["segment", "beat", 5.0, 2.0, "Standard Beat", 0, 1.0], ["segment", "pause", 5.0, None, None, 1, 1.0],
+            ["session_ended", 6.0], ["timeline", None]],
+        "a_medium_after_the_end": [
+            ["session_started", 0.0], ["segment", "beat", 5.0, 2.0, "Standard Beat", 0, 0.0],
+            ["session_ended", 6.0], ["media_shown", "late.png", 8.0], ["timeline", None]],
+        "a_second_session": [
+            ["session_started", 1000.0], *played, ["session_ended", 1090.0],
+            ["session_started", 2000.0], ["segment", "beat", 20.0, 2.0, "Standard Beat", 4, 2000.0],
+            ["media_shown", "new.png", 2001.0], ["session_ended", 2030.0], ["timeline", None]],
+        "a_climax_without_an_outcome": [
+            ["session_started", 0.0], ["segment", "finale", 5.0, 4.5, "Quick Swing", 0, 0.0],
+            ["climax_recorded", None, 3.0], ["session_ended", 6.0], ["timeline", None]],
+    }
+    return [{"name": name, "steps": steps, "expected": _record(steps)} for name, steps in cases.items()]
+
+
 # --- achievements ------------------------------------------------------------------------------
 
 
@@ -512,6 +585,7 @@ def write(out_dir: Path) -> None:
     })
     _write_module(out_dir, "session_script", {"drain": script_cases()})
     _write_module(out_dir, "score_tracker", {"run": tracker_cases(), "format_metric_value": metric_format_cases()})
+    _write_module(out_dir, "session_recorder", {"record": recorder_cases()})
     _write_module(out_dir, "achievements", {
         "catalogue": catalogue_cases(),
         "grouped": [[a.id for a in tile] for tile in achievements.grouped()],
