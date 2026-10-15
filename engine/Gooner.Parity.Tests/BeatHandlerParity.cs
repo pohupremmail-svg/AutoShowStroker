@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Beat;
+using Gooner.Core.Climax;
 using Gooner.Core.Randomness;
 using Gooner.Core.Sessions;
 using Gooner.Core.Timing;
@@ -22,19 +23,26 @@ public class BeatHandlerParity
         var c = JsonNode.Parse(json)!;
         var expected = c["expected"]!.AsArray();
         var actual = Play(c["config"]!.AsObject(), c["steps"]!.AsArray(), c["draws"]!.AsArray());
+        Compare(name, expected, actual);
+    }
 
-        // Compared event by event, so a failure names the first moment the two part ways.
+    // Event by event, so a failure names the first moment the two part ways.
+    internal static void Compare(string name, JsonArray expected, JsonArray actual)
+    {
         for (var i = 0; i < Math.Min(expected.Count, actual.Count); i++)
             Assert.True(Golden.Equivalent(expected[i], actual[i]),
                 $"{name}: event {i} differs\nexpected {expected[i]!.ToJsonString()}\nactual   {actual[i]!.ToJsonString()}");
         Assert.True(expected.Count == actual.Count, $"{name}: {expected.Count} events expected, {actual.Count} happened");
     }
 
-    // Mirrors parity/generate.py's _play_beat().
-    private static JsonArray Play(JsonObject config, JsonArray steps, JsonArray draws)
+    // Mirrors parity/generate.py's _play(): the beat alone, or - given a climax config - the beat
+    // and the climax on one scheduler and one stream of dice, wired the way GoonerApp wires them.
+    internal static JsonArray Play(JsonObject config, JsonArray steps, JsonArray draws, JsonObject? climaxConfig = null)
     {
         var clock = new SetClock { Now = steps[0]![1]!.GetValue<double>() };
-        var handler = new BeatHandler(random: new Replayed(draws), clock: clock);
+        var scheduler = new ClockScheduler(clock);
+        var random = new Replayed(draws);
+        var handler = new BeatHandler(random: random, scheduler: scheduler);
         foreach (var (key, value) in config)
             Set(handler, key, value);
 
@@ -51,6 +59,21 @@ public class BeatHandlerParity
         handler.SegmentStarted += s => Note("segment", Segment(s));
         handler.NoteScheduled += () => Note("scheduled", handler.NoteTimer.IntervalMs);
 
+        ClimaxHandler? climax = null;
+        if (climaxConfig is not null)
+        {
+            climax = new ClimaxHandler(handler, new Voice(Note), random: random, scheduler: scheduler);
+            foreach (var (key, value) in climaxConfig)
+                SetClimax(climax, key, value);
+            handler.SessionPlanned += climax.OnSessionPlanned;
+            handler.PlanExtended += climax.OnPlanExtended;
+            handler.SegmentStarted += climax.OnSegmentStarted;
+            climax.OutcomeDecided += outcome => Note("outcome", outcome);
+            climax.StatusChanged += status => Note("status", status);
+            climax.FakeClimaxTriggered += () => Note("fake");
+            climax.FakeClimaxRevealed += () => Note("revealed");
+        }
+
         foreach (var step in steps)
         {
             var s = step!.AsArray();
@@ -58,8 +81,20 @@ public class BeatHandlerParity
             handler.Advance();
             switch ((string)s[0]!)
             {
-                case "start": handler.StartBeat(s.Count > 2 ? new SessionScript(s[2]!.DeepClone().AsObject()) : null); break;
-                case "edge": Note("edge_given", handler.EdgeRelief()); break;
+                case "start":
+                    climax?.SessionStarted();
+                    handler.StartBeat(s.Count > 2 ? new SessionScript(s[2]!.DeepClone().AsObject()) : null);
+                    break;
+                case "edge":
+                    // GoonerApp.edge_reached: the beat grants the pause, the climax waits as long.
+                    var seconds = handler.EdgeRelief();
+                    Note("edge_given", seconds);
+                    if (seconds != 0) climax?.Postpone(seconds);
+                    break;
+                case "climax_set":
+                    SetClimax(climax!, (string)s[2]!, s[3]);
+                    climax!.SettingsChanged();
+                    break;
                 case "finale": handler.SetFinaleAt(s[2]!.GetValue<double>()); break;
                 case "hold": handler.HoldFinalSegment(); break;
                 case "replan": handler.ReplanFromNextSegment(); break;
@@ -67,14 +102,26 @@ public class BeatHandlerParity
                 case "stop": handler.Stop(); break;
                 case "advance": break;
                 case "probe":
-                    Note("probe",
+                    JsonNode?[] beat =
+                    [
                         new JsonArray([.. handler.UpcomingBeats(s[2]!.GetValue<double>()).Select(b => (JsonNode)new JsonArray(b.Offset, b.Audible, b.Weight))]),
                         handler.PauseProgress(),
                         handler.IsPaused(),
                         Segment(handler.CurrentSegment),
                         new JsonArray([.. handler.PlannedSegments.Select(Segment)]),
                         handler.FinaleAt,
-                        handler.RampCompleteAt);
+                        handler.RampCompleteAt,
+                    ];
+                    JsonNode?[] climaxState = climax is null ? [] :
+                    [
+                        climax.FinaleAt,
+                        climax.Outcome,
+                        new JsonArray([.. climax.PlannedFakeBoundaries.Order().Select(i => (JsonNode)i)]),
+                        climax.ScriptedFakeCount,
+                        climax.ClimaxTriggered,
+                        climax.FakeClimaxPending,
+                    ];
+                    Note("probe", [.. beat, .. climaxState]);
                     break;
                 default: throw new ArgumentException($"Unknown step '{s[0]}'.", nameof(steps));
             }
@@ -106,6 +153,34 @@ public class BeatHandlerParity
             case "selected_beat_patterns": handler.SelectedBeatPatterns = [.. value!.AsArray().Select(n => (string)n!)]; break;
             default: throw new ArgumentException($"Unknown setting '{key}'.", nameof(key));
         }
+    }
+
+    private static void SetClimax(ClimaxHandler climax, string key, JsonNode? value)
+    {
+        double D() => value!.GetValue<double>();
+        bool B() => (bool)value!;
+        switch (key)
+        {
+            case "climax_active": climax.ClimaxActive = B(); break;
+            case "min_climax_after": climax.MinClimaxAfter = D(); break;
+            case "max_climax_after": climax.MaxClimaxAfter = D(); break;
+            case "climax_only_after_ramp": climax.ClimaxOnlyAfterRamp = B(); break;
+            case "ruined_orgasm_active": climax.RuinedOrgasmActive = B(); break;
+            case "ruined_orgasm_chance": climax.RuinedOrgasmChance = D(); break;
+            case "denied_orgasm_active": climax.DeniedOrgasmActive = B(); break;
+            case "denied_orgasm_chance": climax.DeniedOrgasmChance = D(); break;
+            case "fake_climax_active": climax.FakeClimaxActive = B(); break;
+            case "fake_climax_chance": climax.FakeClimaxChance = D(); break;
+            case "min_fake_climax_delay": climax.MinFakeClimaxDelay = D(); break;
+            case "max_fake_climax_delay": climax.MaxFakeClimaxDelay = D(); break;
+            default: throw new ArgumentException($"Unknown climax setting '{key}'.", nameof(key));
+        }
+    }
+
+    // The callouts, as far as the climax is concerned: the lines it forces, written down.
+    private sealed class Voice(Action<string, JsonNode?[]> note) : ICalloutVoice
+    {
+        public void ForceOutputSentence(string category) => note("said", [category]);
     }
 
     // The draws the Python side recorded, in order. Asking for an index below a different n than

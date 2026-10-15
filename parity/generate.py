@@ -681,6 +681,9 @@ def callout_custom_files():
 
 class _Clock:
     now = 0.0
+    # Every fake QTimer of the run, in the order they were created - the order a tie fires in,
+    # as on the C# side's ClockScheduler.
+    timers = []
 
 
 class _FakeTimer:
@@ -692,8 +695,13 @@ class _FakeTimer:
         self.due = 0.0
         self.interval_ms = 0
         self.generation = 0
+        self.single_shot = False
         self._slots = []
         self.timeout = self
+        _Clock.timers.append(self)
+
+    def setSingleShot(self, single_shot):
+        self.single_shot = single_shot
 
     def connect(self, slot):
         self._slots.append(slot)
@@ -762,18 +770,20 @@ class _Recorder:
         ]
 
 
-def _advance(handler, until):
-    timers = (handler.beat_meter_timer, handler.beat_meter_pause_timer)
+def _advance(until):
+    """Fires every fake timer that has come due by `until`, earliest first, a tie going to the
+    timer created first - each at the moment it was due."""
     while True:
-        due = [t for t in timers if t.active and t.due <= until]
+        due = [timer for timer in _Clock.timers if timer.active and timer.due <= until]
         if not due:
             break
-        # The note timer wins a tie, as on the C# side.
-        timer = min(due, key=lambda t: (t.due, t is not handler.beat_meter_timer))
-        generation = timer.generation
+        timer = min(due, key=lambda candidate: candidate.due)  # min() keeps the first of a tie
         _Clock.now = timer.due
+        if timer.single_shot:
+            timer.stop()  # a single-shot QTimer has stopped by the time it signals
+        generation = timer.generation
         timer.fire()
-        if timer.generation == generation and timer.active:
+        if not timer.single_shot and timer.generation == generation and timer.active:
             timer.due += timer.interval_ms / 1000
     _Clock.now = until
 
@@ -782,27 +792,43 @@ def _segment(s):
     return None if s is None else [s.kind, s.duration_sec, s.freq, s.pattern_name, s.index]
 
 
-def _play_beat(config, steps, seed):
+class _Voice:
+    """The callouts, as far as the climax is concerned: the lines it forces, written down."""
+
+    def __init__(self, note):
+        self._note = note
+
+    def force_output_sentence(self, category):
+        self._note("said", category)
+
+
+def _play(config, steps, seed, climax_config=None):
+    """One session through BeatHandler - and, given a climax_config, through ClimaxHandler as
+    well, wired the way GoonerApp wires them. Returns the draws and the event log."""
+    from src.ClimaxHandler import ClimaxHandler
     from src.SessionScript import SessionScript
 
     recorder = _Recorder(seed)
     log = []
+    _Clock.timers = []
     with ExitStack() as stack:
         for patch in [
             mock.patch("src.BeatHandler.QTimer", _FakeTimer),
-            mock.patch("src.BeatHandler.time.time", lambda: _Clock.now),
+            mock.patch("src.ClimaxHandler.QTimer", _FakeTimer),
+            mock.patch("time.time", lambda: _Clock.now),
             mock.patch.object(BeatHandler, "init_beat_sound", lambda self, path: None),
             *recorder.patches(),
         ]:
             stack.enter_context(patch)
         _Clock.now = steps[0][1]
+
+        def note(name, *args):
+            log.append([_Clock.now, name, *args])
+
         handler = BeatHandler()
         handler.selected_beat_patterns = list(BeatHandler.BEAT_PATTERNS_MAP)
         for key, value in config.items():
             setattr(handler, key, value)
-
-        def note(name, *args):
-            log.append([_Clock.now, name, *args])
 
         handler.beat_paused_event.connect(lambda: note("paused"))
         handler.beat_resumed_event.connect(lambda: note("resumed"))
@@ -814,12 +840,32 @@ def _play_beat(config, steps, seed):
         handler.segment_started_event.connect(lambda s: note("segment", _segment(s)))
         handler.note_scheduled_event.connect(lambda: note("scheduled", handler.beat_meter_timer.interval_ms))
 
+        climax = None
+        if climax_config is not None:
+            climax = ClimaxHandler(handler, _Voice(note))
+            for key, value in climax_config.items():
+                setattr(climax, key, value)
+            # GoonerApp's wiring: the climax hears about the plan from the beat.
+            handler.session_planned_event.connect(climax.on_session_planned)
+            handler.plan_extended_event.connect(climax.on_plan_extended)
+            handler.segment_started_event.connect(climax.on_segment_started)
+            climax.outcome_decided_event.connect(lambda outcome: note("outcome", outcome))
+            climax.status_changed_event.connect(lambda status: note("status", status))
+            climax.fake_climax_triggered_event.connect(lambda: note("fake"))
+            climax.fake_climax_revealed_event.connect(lambda: note("revealed"))
+
         for call, at, *args in steps:
-            _advance(handler, at)
+            _advance(at)
             if call == "start":
+                if climax is not None:
+                    climax.session_started()
                 handler.start_beat(script=SessionScript(args[0]) if args else None)
             elif call == "edge":
-                note("edge_given", handler.edge_relief())
+                # GoonerApp.edge_reached: the beat grants the pause, the climax waits as long.
+                seconds = handler.edge_relief()
+                note("edge_given", seconds)
+                if seconds and climax is not None:
+                    climax.postpone(seconds)
             elif call == "finale":
                 handler.set_finale_at(args[0])
             elif call == "hold":
@@ -828,12 +874,19 @@ def _play_beat(config, steps, seed):
                 handler.replan_from_next_segment()
             elif call == "set":
                 setattr(handler, args[0], args[1])
+            elif call == "climax_set":
+                setattr(climax, args[0], args[1])
+                climax.settings_changed()
             elif call == "stop":
                 handler.stop()
             elif call == "probe":
+                extra = [] if climax is None else [
+                    climax.finale_at, climax.outcome, sorted(climax.planned_fake_boundaries),
+                    climax.scripted_fake_count, climax.climax_triggered, climax._fake_climax_pending]
                 note("probe", [list(b) for b in handler.upcoming_beats(args[0])], handler.pause_progress(),
                      handler.is_paused(), _segment(handler.current_segment),
-                     [_segment(s) for s in handler.planned_segments], handler._finale_at, handler.ramp_complete_at)
+                     [_segment(s) for s in handler.planned_segments], handler._finale_at, handler.ramp_complete_at,
+                     *extra)
     return recorder.draws, log
 
 
@@ -878,8 +931,59 @@ def beat_sessions():
     }
     out = []
     for seed, (name, (config, steps)) in enumerate(runs.items()):
-        draws, log = _play_beat(config, steps, seed)
+        draws, log = _play(config, steps, seed)
         out.append({"name": name, "config": config, "steps": steps, "draws": draws, "expected": log})
+    return out
+
+
+def climax_sessions():
+    """Whole sessions with the climax wired in: drawn, clamped to the ramp, ruined and denied,
+    fakes rolled and revealed, edges that push it back, settings changed on the way, replays."""
+    quick = {"min_ramp_duration": 60.0, "max_ramp_duration": 90.0, "pause_chance": 0.1}
+    soon = {"min_climax_after": 70.0, "max_climax_after": 120.0, "fake_climax_chance": 0.4,
+            "min_fake_climax_delay": 2.0, "max_fake_climax_delay": 5.0}
+    replay = {
+        "format": 1, "duration_sec": 64.0, "custom_patterns": {},
+        "climax": {"at_sec": 58.5, "outcome": "ruined"}, "fake_climaxes": [12.25, 31.0], "media": [],
+        "segments": [
+            {"kind": "beat", "pattern": "Quick Swing", "freq": 2.3, "duration_sec": 20.0},
+            {"kind": "pause", "pattern": None, "freq": None, "duration_sec": 6.0},
+            {"kind": "finale", "pattern": "Build Up", "freq": 4.6, "duration_sec": 38.0},
+        ],
+    }
+    unfinished = dict(replay, climax=None, duration_sec=40.0)
+    runs = {
+        "a_real_climax": (quick, soon, [["start", 1000.0], ["probe", 1050.0, 2.5], ["advance", 1200.0],
+                                        ["probe", 1200.0, 2.5]]),
+        "held_back_to_the_ramp": ({"min_ramp_duration": 150.0, "max_ramp_duration": 150.0}, soon,
+                                  [["start", 1000.0], ["probe", 1001.0, 2.5], ["advance", 1260.0]]),
+        "ruined": (quick, dict(soon, ruined_orgasm_active=True, ruined_orgasm_chance=0.9),
+                   [["start", 1000.0], ["advance", 1200.0]]),
+        "denied_stops_the_beat": (quick, dict(soon, denied_orgasm_active=True, denied_orgasm_chance=1.0,
+                                              ruined_orgasm_active=True, ruined_orgasm_chance=0.6),
+                                  [["start", 1000.0], ["advance", 1200.0], ["probe", 1200.0, 2.5]]),
+        "fakes_everywhere": ({"min_beat_dur": 8.0, "max_beat_dur": 12.0, "pause_chance": 0.0},
+                             dict(soon, fake_climax_chance=1.0), [["start", 1000.0], ["advance", 1250.0]]),
+        "edges_push_it_back": (quick, soon, [["start", 1000.0], ["edge", 1030.0], ["edge", 1047.5],
+                                             ["probe", 1048.0, 2.5], ["advance", 1065.0], ["edge", 1065.0],
+                                             ["advance", 1300.0]]),
+        "settings_changed_on_the_way": (quick, soon, [
+            ["start", 1000.0], ["advance", 1020.0], ["climax_set", 1020.0, "denied_orgasm_active", True],
+            ["climax_set", 1021.0, "climax_only_after_ramp", False], ["probe", 1021.0, 2.5],
+            ["climax_set", 1030.0, "climax_active", False], ["advance", 1060.0],
+            ["climax_set", 1060.0, "climax_active", True], ["advance", 1400.0]]),
+        "switched_off": (quick, dict(soon, climax_active=False), [["start", 1000.0], ["advance", 1150.0]]),
+        "a_replay": ({}, dict(soon, fake_climax_chance=1.0),
+                     [["start", 1000.0, replay], ["probe", 1001.0, 2.5], ["edge", 1015.0], ["advance", 1150.0]]),
+        "a_replay_that_never_climaxed": (quick, soon, [["start", 1000.0, unfinished], ["advance", 1300.0]]),
+        "two_sessions_in_a_row": (quick, soon, [["start", 1000.0], ["advance", 1200.0], ["stop", 1200.0],
+                                                ["start", 1210.0], ["advance", 1400.0]]),
+    }
+    out = []
+    for seed, (name, (config, climax_config, steps)) in enumerate(runs.items(), start=100):
+        draws, log = _play(config, steps, seed, climax_config)
+        out.append({"name": name, "config": config, "climax_config": climax_config, "steps": steps,
+                    "draws": draws, "expected": log})
     return out
 
 
@@ -1032,6 +1136,7 @@ def _modules() -> dict:
         "session_recorder": {"record": recorder_cases()},
         "settings": {"read": settings_cases()},
         "beat_handler": {"sessions": beat_sessions()},
+        "climax_handler": {"sessions": climax_sessions()},
         "callouts": {
             "structure": callout_structure(),
             "draws": callout_draws(),
