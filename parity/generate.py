@@ -431,6 +431,44 @@ def metric_format_cases():
             for metric, metric_values in values.items() for value in metric_values]
 
 
+# --- settings ----------------------------------------------------------------------------------
+
+# Text the registry may hand over. QSettings gives most values back as strings, and the Python
+# read sides turn them into numbers with float() / int(float()) and into switches with type=bool.
+SETTING_TEXTS = {
+    "integer": "45", "fraction": "45.5", "negative": "-2.5", "padded": " 7 ", "exponent": "1e3",
+    "plus": "+5", "cut_up": "5.7", "cut_down": "-5.7", "zero": "0", "zero_point_zero": "0.0",
+    "double_zero": "00", "minus_zero": "-0", "true": "true", "false": "false", "False": "False",
+    "FALSE": "FALSE", "padded_false": " false ", "yes": "yes", "no": "no", "off": "off",
+    "one": "1", "empty": "", "words": "lots", "path_like": "C:/somewhere",
+}
+
+
+def _settings_read(raw):
+    from PyQt6.QtCore import QSettings
+
+    def attempt(read):
+        try:
+            return read()
+        except (ValueError, OverflowError):
+            return "error"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        settings = QSettings(str(Path(tmp) / "s.ini"), QSettings.Format.IniFormat)
+        settings.setValue("k", raw)
+        return {
+            "double": attempt(lambda: float(settings.value("k", 0.0))),
+            "int": attempt(lambda: int(float(settings.value("k", 0)))),
+            "bool_default_false": bool(settings.value("k", False, type=bool)),
+            "bool_default_true": bool(settings.value("k", True, type=bool)),
+            "string": str(settings.value("k", "")),
+        }
+
+
+def settings_cases():
+    return [{"name": name, "text": raw, "expected": _settings_read(raw)} for name, raw in SETTING_TEXTS.items()]
+
+
 # --- SessionRecorder ---------------------------------------------------------------------------
 
 
@@ -586,6 +624,7 @@ def write(out_dir: Path) -> None:
     _write_module(out_dir, "session_script", {"drain": script_cases()})
     _write_module(out_dir, "score_tracker", {"run": tracker_cases(), "format_metric_value": metric_format_cases()})
     _write_module(out_dir, "session_recorder", {"record": recorder_cases()})
+    _write_module(out_dir, "settings", {"read": settings_cases()})
     _write_module(out_dir, "achievements", {
         "catalogue": catalogue_cases(),
         "grouped": [[a.id for a in tile] for tile in achievements.grouped()],

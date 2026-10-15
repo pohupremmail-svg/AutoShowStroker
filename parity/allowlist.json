@@ -6,5 +6,8 @@
   },
   "achievements.evaluate": {
     "booleans_where_numbers_go": "Python's min(True, 5000) hands back True itself, so a bool in a count field reports its progress as true/5000. The port reports 1/5000. What unlocks is still compared and agrees."
+  },
+  "settings.read": {
+    "unreadable_numbers": "float()/int(float()) raise on text that is not a number, and Python raises that out of the constructor - the app does not start. The port reads such a value as the default and logs the key. Applies to every case the oracle marks \"error\"."
   }
 }
