@@ -1,0 +1,5 @@
+bin/
+obj/
+.godot/
+*.user
+TestResults/

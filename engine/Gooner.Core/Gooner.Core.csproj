@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The app's logic, data and formats. Deliberately no reference to Godot: everything in here
+       is tested with plain `dotnet test`, and the engine project is the only thing that knows
+       about scenes, audio and the screen. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gooner.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gooner.Core.Tests" />
+  </ItemGroup>
+
+</Project>
