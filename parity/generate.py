@@ -987,6 +987,37 @@ def climax_sessions():
     return out
 
 
+# --- applog ------------------------------------------------------------------------------------
+
+# Python formats with %s, C# with {0}: each line carries both spellings of the same message.
+_LOG_LINES = [
+    ["info", "BeatHandler", "Beat paused", "Beat paused", []],
+    ["warning", "CalloutHandler", "Language %r is not available", "Language {0} is not available", ["'fr'"]],
+    ["error", "user_data", "Could not save %s: %s", "Could not save {0}: {1}", ["history", "disk full"]],
+    ["info", "GoonerApp", "Playlist loaded: %d files", "Playlist loaded: {0} files", [42]],
+    ["warning", "Test", "Umlaute bleiben: %s", "Umlaute bleiben: {0}", ["Süß"]],
+]
+
+
+def applog_cases():
+    from src import applog
+
+    out = []
+    for level in ["INFO", "WARNING", "ERROR", "DEBUG", "loud"]:
+        with tempfile.TemporaryDirectory() as tmp:
+            applog.configure(enabled=True, log_dir=tmp, level=level)
+            for name, category, py_message, _cs_message, args in _LOG_LINES:
+                logger = applog.get_logger(f"src.{category}")
+                getattr(logger, name)(py_message, *[a.strip("'") if py_message.endswith("%r is not available") else a
+                                                    for a in args])
+            applog.configure(enabled=False, log_dir=None)
+            path = applog.log_file_path(tmp)
+            text = path.read_text(encoding="utf-8") if path.exists() else ""
+        # The timestamp is the wall clock - everything after it is the format.
+        out.append({"name": level, "lines": _LOG_LINES, "expected": [line[20:] for line in text.splitlines()]})
+    return out
+
+
 # --- SessionRecorder ---------------------------------------------------------------------------
 
 
@@ -1135,6 +1166,7 @@ def _modules() -> dict:
         "score_tracker": {"run": tracker_cases(), "format_metric_value": metric_format_cases()},
         "session_recorder": {"record": recorder_cases()},
         "settings": {"read": settings_cases()},
+        "applog": {"files": applog_cases()},
         "beat_handler": {"sessions": beat_sessions()},
         "climax_handler": {"sessions": climax_sessions()},
         "callouts": {
