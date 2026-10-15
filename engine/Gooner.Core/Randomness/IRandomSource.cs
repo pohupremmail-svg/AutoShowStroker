@@ -28,4 +28,18 @@ public static class RandomSourceExtensions
         ArgumentNullException.ThrowIfNull(items);
         return items[random.NextIndex(items.Count)];
     }
+
+    // random.uniform(a, b), computed the way CPython does: a + (b - a) * random().
+    public static double Uniform(this IRandomSource random, double a, double b)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        return a + (b - a) * random.NextDouble();
+    }
+
+    // random.randint(a, b), both ends included: a + randbelow(b - a + 1).
+    public static int RandInt(this IRandomSource random, int a, int b)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        return a + random.NextIndex(b - a + 1);
+    }
 }
