@@ -1,13 +1,19 @@
 # engine/ — GoonerApp on Godot 4.7 + C# (.NET 10)
 
-The rebuild of GoonerApp on a real engine. It lives next to the Python app on `main`, not on a
-branch of its own, for one reason: **both implementations sit in the same commit**, so the Python
-app can serve as the oracle the C# port is compared against (see `parity/` at the repo root).
-Nothing in here ships until the parity release; until then the Python app in `src/` is the
-product and keeps being released as before.
+The rebuild of GoonerApp on a real engine. It lives next to the Python app in the same tree for
+one reason: **both implementations sit in the same commit**, so the Python app can serve as the
+oracle the C# port is compared against (see `parity/` at the repo root). Nothing in here ships
+until the rebuild is complete; until then the Python app in `src/` is the product and keeps being
+released as before.
 
-Everything in the root `CLAUDE.md` about git, privacy, versioning and the user's review gate
-applies here unchanged. This file only adds what is specific to this side.
+**It stays local until it is finished.** The rebuild is meant as a surprise for the users, so the
+branch it lives on (`engine-rebuild`) is never pushed, never turned into a PR, and never mentioned
+in anything public - not in release notes, changelog entries, or the commits and PRs of ordinary
+Python fixes that do go out. `main` is merged *into* this branch to pick up those fixes; the
+other direction is the user's call, as every merge is.
+
+Everything else in the root `CLAUDE.md` about privacy, testing and the user's review gate applies
+here unchanged. This file only adds what is specific to this side.
 
 ## Layout
 
