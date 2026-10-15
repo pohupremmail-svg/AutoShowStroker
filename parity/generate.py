@@ -16,7 +16,8 @@ import time
 from pathlib import Path
 from unittest import mock
 
-from src import session_files, utils
+from src import achievements, session_files, utils
+from src.achievements import AchievementTracker
 from src.ScoreTracker import ScoreTracker
 from src.SessionScript import SessionScript
 from src.user_data import UserDataStore
@@ -428,6 +429,67 @@ def metric_format_cases():
             for metric, metric_values in values.items() for value in metric_values]
 
 
+# --- achievements ------------------------------------------------------------------------------
+
+
+def catalogue_cases():
+    return [{"id": a.id, "name": a.name, "description": a.description, "icon": a.icon,
+             "secret": a.secret, "track": a.track, "level": a.level, "has_progress": a.progress is not None}
+            for a in achievements.CATALOGUE]
+
+
+def _judged(played, history, stored):
+    """What a tracker with `stored` on disk makes of one session: newly unlocked, in order, and
+    the progress every rule reports."""
+    with tempfile.TemporaryDirectory() as tmp:
+        store = UserDataStore(base_dir=Path(tmp))
+        if stored is not None:
+            store.save("achievements", stored)
+        tracker = AchievementTracker(data_store=store)
+        newly = [a.id for a in tracker.evaluate(played, history)]
+        progress = {a.id: (lambda p: list(p) if p else None)(tracker.progress_for(a, played, history))
+                    for a in achievements.CATALOGUE}
+        return {"newly": newly, "progress": progress, "unlocked": sorted(tracker.unlocked)}
+
+
+def evaluation_cases():
+    def entry(**overrides):
+        return {"ended_at": "2026-09-17 20:00", "total_dur_sec": 600.0, "total_num_beat": 1200,
+                "average_beat_speed_active": 2.0, "fakeout_count": 0, "climax_outcome": None,
+                "reported_outcome": None, "fakeouts_fallen_for": 0, "edge_count": 0, **overrides}
+
+    long_quiet = entry(total_dur_sec=45 * 60)
+    obeyed = [entry(climax_outcome="denied", reported_outcome="stopped") for _ in range(6)] + \
+             [entry(climax_outcome="ruined", reported_outcome="ruined") for _ in range(4)]
+    answers = [("real", "came"), ("denied", "came"), ("ruined", "came"), ("denied", None),
+               (None, "stopped"), (5, "stopped"), ("denied", "ruined")]
+    mixed = [entry(climax_outcome=demanded, reported_outcome=reported) for demanded, reported in answers]
+    cases = {
+        "nothing_at_all": ({}, [], None),
+        "an_ordinary_session": (entry(), [entry()], None),
+        "a_long_quiet_session": (long_quiet, [long_quiet], None),
+        "edges_unrecorded": (entry(total_dur_sec=50 * 60, edge_count=None), [entry()], None),
+        "a_long_session_with_edges": (entry(total_dur_sec=200 * 60, edge_count=12), [entry()], None),
+        "obedience_adds_up": (entry(), obeyed, None),
+        "every_kind_of_answer": (entry(), mixed, None),
+        "a_hundred_sessions": (entry(total_num_beat=21_000), [entry(total_num_beat=21_000) for _ in range(100)], None),
+        "fooled_once": (entry(fakeout_count=5, fakeouts_fallen_for=1), [entry()], None),
+        "not_fooled": (entry(fakeout_count=4, fakeouts_fallen_for=0), [entry()], None),
+        "fractional_counts": (entry(fakeout_count=2.5, edge_count=9.99), [entry(total_num_beat=0.5)], None),
+        "booleans_where_numbers_go": (entry(total_num_beat=True, fakeout_count=True, fakeouts_fallen_for=False,
+                                            was_replay=True), [entry(total_num_beat=True)], None),
+        "text_where_numbers_go": (entry(total_dur_sec="long", fakeout_count="", edge_count="0"),
+                                  [entry(total_num_beat="many")], None),
+        "a_replay": (entry(was_replay=True), [entry()], None),
+        "a_replay_flag_of_zero": (entry(was_replay=0), [entry()], None),
+        "already_unlocked": (long_quiet, [long_quiet], {"endurance_45": "2026-01-01 00:00", "unknown_id": 3}),
+        "an_unlock_file_that_is_a_list": (long_quiet, [long_quiet], ["endurance_45"]),
+    }
+    return [{"name": name, "played": played, "history": history, "stored": stored,
+             "expected": _judged(copy.deepcopy(played), copy.deepcopy(history), copy.deepcopy(stored))}
+            for name, (played, history, stored) in cases.items()]
+
+
 # --- writing -----------------------------------------------------------------------------------
 
 
@@ -450,6 +512,11 @@ def write(out_dir: Path) -> None:
     })
     _write_module(out_dir, "session_script", {"drain": script_cases()})
     _write_module(out_dir, "score_tracker", {"run": tracker_cases(), "format_metric_value": metric_format_cases()})
+    _write_module(out_dir, "achievements", {
+        "catalogue": catalogue_cases(),
+        "grouped": [[a.id for a in tile] for tile in achievements.grouped()],
+        "evaluate": evaluation_cases(),
+    })
 
 
 if __name__ == "__main__":
