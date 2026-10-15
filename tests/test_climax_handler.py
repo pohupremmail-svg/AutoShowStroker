@@ -814,3 +814,37 @@ def test_postponing_a_session_without_a_climax_is_harmless(handler, beat_handler
     handler.postpone(20.0)
 
     assert handler.finale_at is None
+
+
+def test_session_start_clears_a_status_left_over_from_the_last_climax(handler):
+    """A new session must not open under the previous session's verdict.
+
+    Every other reset lives in session_started already - outcome, the timers, the planned
+    fakes - but the one thing the user can actually see was missing from it. The only
+    paths back to "neutral" were loading a folder, starting a replay, and revealing a
+    fake, so a session that ended in a real climax left CUM on the footer until one of
+    those happened to run. Starting an ordinary session did not.
+    """
+    seen = []
+    handler.status_changed_event.connect(seen.append)
+
+    handler.outcome = "real"
+    handler._trigger_real_climax()
+    assert seen[-1] == "cum", "precondition: a real climax puts a verdict on screen"
+
+    handler.session_started()
+
+    assert seen[-1] == "neutral"
+
+
+def test_session_start_clears_a_denied_status_too(handler):
+    seen = []
+    handler.status_changed_event.connect(seen.append)
+
+    handler.outcome = "denied"
+    handler._trigger_real_climax()
+    assert seen[-1] == "denied"
+
+    handler.session_started()
+
+    assert seen[-1] == "neutral"

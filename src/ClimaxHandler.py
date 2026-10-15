@@ -154,6 +154,13 @@ class ClimaxHandler(QObject):
         self._cancel_scripted_fakes()
         self._fake_climax_timer.stop()
         self._climax_timer.stop()
+        # The state above is invisible; this is the one piece of it the user can see, and
+        # it used to be the only piece left behind. A real climax emits its verdict and
+        # nothing takes it back - the reveal path exists for fakes only - so the footer
+        # still read CUM while the next session was already running. The other routes to
+        # neutral (loading a folder, starting a replay) covered their own cases and hid
+        # how narrow they were.
+        self.status_changed_event.emit("neutral")
 
     @property
     def scripted_fake_count(self) -> int:
