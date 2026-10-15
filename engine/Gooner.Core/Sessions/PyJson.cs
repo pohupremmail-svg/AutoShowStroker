@@ -110,7 +110,7 @@ internal static class PyJson
         return text.Contains('.', StringComparison.Ordinal) || text is "NaN" or "Infinity" or "-Infinity" ? text : text + ".0";
     }
 
-    private static string Quote(string s)
+    public static string Quote(string s)
     {
         // Python prefers single quotes, and switches to double ones when the text holds a single
         // quote but no double quote.
