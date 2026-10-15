@@ -10,15 +10,17 @@ Run from the repo root:  .venv/Scripts/python.exe -m parity.generate [out_dir]
 """
 import copy
 import json
+import random
 import sys
 import tempfile
 import time
+from contextlib import ExitStack
 from pathlib import Path
 from unittest import mock
 
 from src import achievements, session_files, utils
 from src.achievements import AchievementTracker
-from src.BeatHandler import Segment
+from src.BeatHandler import BeatHandler, Segment
 from src.CalloutHandler import TRIGGER_KEYS, CalloutHandler
 from src.ScoreTracker import ScoreTracker
 from src.SessionRecorder import SessionRecorder
@@ -670,6 +672,217 @@ def callout_custom_files():
     return out
 
 
+# --- BeatHandler -------------------------------------------------------------------------------
+#
+# Whole sessions, driven deterministically. The QTimers become timers on a fake clock that fire
+# exactly when due, time.time() reads that clock, and every draw from random is recorded - the C#
+# side replays the same draws and has to produce the same events at the same moments.
+
+
+class _Clock:
+    now = 0.0
+
+
+class _FakeTimer:
+    """A QTimer on _Clock: it fires when advance() reaches its due time, and repeats unless the
+    slot restarts or stops it, as a QTimer does."""
+
+    def __init__(self, *_args):
+        self.active = False
+        self.due = 0.0
+        self.interval_ms = 0
+        self.generation = 0
+        self._slots = []
+        self.timeout = self
+
+    def connect(self, slot):
+        self._slots.append(slot)
+
+    def setTimerType(self, *_args):
+        pass
+
+    def start(self, ms):
+        self.interval_ms = ms
+        self.due = _Clock.now + ms / 1000
+        self.active = True
+        self.generation += 1
+
+    def stop(self):
+        self.active = False
+        self.generation += 1
+
+    def isActive(self):
+        return self.active
+
+    def interval(self):
+        return self.interval_ms
+
+    def remainingTime(self):
+        return max(0.0, (self.due - _Clock.now) * 1000) if self.active else -1
+
+    def fire(self):
+        for slot in self._slots:
+            slot()
+
+
+class _Recorder:
+    """random.uniform/randint/choice/choices on a seeded generator, every draw written down in the
+    two primitives the C# side's IRandomSource has: a fraction, or an index below n."""
+
+    def __init__(self, seed):
+        self._rng = random.Random(seed)
+        self.draws = []
+
+    def fraction(self):
+        u = self._rng.random()
+        self.draws.append(["u", u])
+        return u
+
+    def below(self, n):
+        k = self._rng.randrange(n)
+        self.draws.append(["i", n, k])
+        return k
+
+    def patches(self):
+        def choices(population, weights=None, *, cum_weights=None, k=1):
+            # CPython's own algorithm, on the recorded fraction.
+            from bisect import bisect
+            from itertools import accumulate
+
+            cum = list(cum_weights) if cum_weights is not None else list(accumulate(weights))
+            total = cum[-1] + 0.0
+            hi = len(cum) - 1
+            return [population[bisect(cum, self.fraction() * total, 0, hi)] for _ in range(k)]
+
+        return [
+            mock.patch("random.uniform", lambda a, b: a + (b - a) * self.fraction()),
+            mock.patch("random.randint", lambda a, b: a + self.below(b - a + 1)),
+            mock.patch("random.choice", lambda seq: seq[self.below(len(seq))]),
+            mock.patch("random.choices", choices),
+        ]
+
+
+def _advance(handler, until):
+    timers = (handler.beat_meter_timer, handler.beat_meter_pause_timer)
+    while True:
+        due = [t for t in timers if t.active and t.due <= until]
+        if not due:
+            break
+        # The note timer wins a tie, as on the C# side.
+        timer = min(due, key=lambda t: (t.due, t is not handler.beat_meter_timer))
+        generation = timer.generation
+        _Clock.now = timer.due
+        timer.fire()
+        if timer.generation == generation and timer.active:
+            timer.due += timer.interval_ms / 1000
+    _Clock.now = until
+
+
+def _segment(s):
+    return None if s is None else [s.kind, s.duration_sec, s.freq, s.pattern_name, s.index]
+
+
+def _play_beat(config, steps, seed):
+    from src.SessionScript import SessionScript
+
+    recorder = _Recorder(seed)
+    log = []
+    with ExitStack() as stack:
+        for patch in [
+            mock.patch("src.BeatHandler.QTimer", _FakeTimer),
+            mock.patch("src.BeatHandler.time.time", lambda: _Clock.now),
+            mock.patch.object(BeatHandler, "init_beat_sound", lambda self, path: None),
+            *recorder.patches(),
+        ]:
+            stack.enter_context(patch)
+        _Clock.now = steps[0][1]
+        handler = BeatHandler()
+        handler.selected_beat_patterns = list(BeatHandler.BEAT_PATTERNS_MAP)
+        for key, value in config.items():
+            setattr(handler, key, value)
+
+        def note(name, *args):
+            log.append([_Clock.now, name, *args])
+
+        handler.beat_paused_event.connect(lambda: note("paused"))
+        handler.beat_resumed_event.connect(lambda: note("resumed"))
+        handler.beat_change_event.connect(lambda freq, name: note("changed", freq, name))
+        handler.beat_event.connect(lambda: note("hit"))
+        handler.beat_meter_update_event.connect(lambda state: note("meter", state))
+        handler.session_planned_event.connect(lambda start, script: note("planned", start, script is not None))
+        handler.plan_extended_event.connect(lambda added: note("extended", [_segment(s) for s in added]))
+        handler.segment_started_event.connect(lambda s: note("segment", _segment(s)))
+        handler.note_scheduled_event.connect(lambda: note("scheduled", handler.beat_meter_timer.interval_ms))
+
+        for call, at, *args in steps:
+            _advance(handler, at)
+            if call == "start":
+                handler.start_beat(script=SessionScript(args[0]) if args else None)
+            elif call == "edge":
+                note("edge_given", handler.edge_relief())
+            elif call == "finale":
+                handler.set_finale_at(args[0])
+            elif call == "hold":
+                handler.hold_final_segment()
+            elif call == "replan":
+                handler.replan_from_next_segment()
+            elif call == "set":
+                setattr(handler, args[0], args[1])
+            elif call == "stop":
+                handler.stop()
+            elif call == "probe":
+                note("probe", [list(b) for b in handler.upcoming_beats(args[0])], handler.pause_progress(),
+                     handler.is_paused(), _segment(handler.current_segment),
+                     [_segment(s) for s in handler.planned_segments], handler._finale_at, handler.ramp_complete_at)
+    return recorder.draws, log
+
+
+def beat_sessions():
+    plain = {"ramping_active": False, "pause_chance": 0.0}
+    probes = [["probe", t, 2.5] for t in (1000.3, 1007.77, 1031.0, 1059.9)]
+    replay = {
+        "format": 1, "duration_sec": 70.0, "custom_patterns": {"Borrowed": [1, -1, 3]},
+        "climax": None, "fake_climaxes": [], "media": [],
+        "segments": [
+            {"kind": "beat", "pattern": "Quick Swing", "freq": 2.3, "duration_sec": 20.0},
+            {"kind": "pause", "pattern": None, "freq": None, "duration_sec": 6.4},
+            {"kind": "beat", "pattern": "Borrowed", "freq": 3.1, "duration_sec": 15.0},
+            {"kind": "finale", "pattern": "Build Up", "freq": 4.6, "duration_sec": 28.6},
+        ],
+    }
+    runs = {
+        "defaults_with_ramp": ({}, [["start", 1000.0], *probes, ["advance", 1300.0], ["probe", 1300.0, 2.5]]),
+        "plain_rhythms": (plain, [["start", 1000.0], *probes, ["advance", 1240.0]]),
+        "pauses_everywhere": ({"pause_chance": 0.8, "min_pause_dur": 2, "max_pause_dur": 9},
+                              [["start", 1000.0], *probes, ["advance", 1400.0]]),
+        "a_finale": ({"min_ramp_duration": 120.0, "max_ramp_duration": 200.0},
+                     [["start", 1000.0], ["finale", 1000.0, 1150.0], *probes, ["advance", 1145.0],
+                      ["probe", 1145.0, 3.0], ["hold", 1150.0], ["advance", 1200.0], ["probe", 1200.0, 2.5]]),
+        "finale_set_late": (plain, [["start", 1000.0], ["advance", 1050.0], ["finale", 1050.0, 1090.5],
+                                    ["advance", 1110.0], ["probe", 1110.0, 2.5]]),
+        "edges": ({"pause_chance": 0.1, "edge_pause_dur": 7},
+                  [["start", 1000.0], ["finale", 1000.0, 1200.0], ["edge", 1033.3], ["probe", 1034.1, 2.5],
+                   ["edge", 1036.0], ["advance", 1090.0], ["edge", 1090.0], ["advance", 1250.0]]),
+        "settings_changed_mid_session": (plain, [
+            ["start", 1000.0], ["advance", 1020.0], ["set", 1020.0, "min_beat_freq", 3.0],
+            ["set", 1020.0, "max_beat_freq", 4.5],
+            ["set", 1020.0, "selected_beat_patterns", ["Double Tap", "Held Breath"]],
+            ["replan", 1020.0], ["advance", 1200.0]]),
+        "inverted_and_odd_ranges": ({"min_pause_dur": 9, "max_pause_dur": 3, "pause_chance": 0.5,
+                                     "min_beat_dur": 7.5, "max_beat_dur": 7.5, "selected_beat_patterns": []},
+                                    [["start", 1000.0], ["advance", 1150.0]]),
+        "a_replay": ({}, [["start", 1000.0, replay], *probes, ["edge", 1062.0], ["advance", 1200.0]]),
+        "a_replay_that_runs_out": (plain, [["start", 1000.0, replay], ["finale", 1000.0, 1100.0], ["advance", 1180.0]]),
+        "stopped_and_restarted": (plain, [["start", 1000.0], ["advance", 1012.4], ["stop", 1012.4],
+                                          ["probe", 1013.0, 2.5], ["start", 1020.0], ["advance", 1060.0]]),
+    }
+    out = []
+    for seed, (name, (config, steps)) in enumerate(runs.items()):
+        draws, log = _play_beat(config, steps, seed)
+        out.append({"name": name, "config": config, "steps": steps, "draws": draws, "expected": log})
+    return out
+
+
 # --- SessionRecorder ---------------------------------------------------------------------------
 
 
@@ -818,6 +1031,7 @@ def _modules() -> dict:
         "score_tracker": {"run": tracker_cases(), "format_metric_value": metric_format_cases()},
         "session_recorder": {"record": recorder_cases()},
         "settings": {"read": settings_cases()},
+        "beat_handler": {"sessions": beat_sessions()},
         "callouts": {
             "structure": callout_structure(),
             "draws": callout_draws(),
