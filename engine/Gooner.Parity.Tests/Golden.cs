@@ -58,6 +58,9 @@ internal static class Golden
         return string.IsNullOrEmpty(overridden) ? Path.Combine(RepoParityDir(), "out") : overridden;
     }
 
+    // A path under the repository root - for reading the same res/ files the Python side read.
+    public static string RepoPath(string relative) => Path.Combine(Path.GetDirectoryName(RepoParityDir())!, relative);
+
     private static string RepoParityDir()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)

@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Gooner.Core.Tests" />
+    <!-- The parity run reads the same internals the ported tests do, e.g. the merged phrase data. -->
+    <InternalsVisibleTo Include="Gooner.Parity.Tests" />
   </ItemGroup>
 
 </Project>

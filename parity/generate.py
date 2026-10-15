@@ -19,6 +19,7 @@ from unittest import mock
 from src import achievements, session_files, utils
 from src.achievements import AchievementTracker
 from src.BeatHandler import Segment
+from src.CalloutHandler import TRIGGER_KEYS, CalloutHandler
 from src.ScoreTracker import ScoreTracker
 from src.SessionRecorder import SessionRecorder
 from src.SessionScript import SessionScript
@@ -469,6 +470,206 @@ def settings_cases():
     return [{"name": name, "text": raw, "expected": _settings_read(raw)} for name, raw in SETTING_TEXTS.items()]
 
 
+# --- CalloutHandler ----------------------------------------------------------------------------
+
+
+def _qt_core():
+    """CalloutHandler is a QObject with a QTimer, which wants an application object to exist."""
+    from PyQt6.QtCore import QCoreApplication
+
+    return QCoreApplication.instance() or QCoreApplication([])
+
+
+def _write_synthetic_callouts(root: Path):
+    """Two languages, tones of different sizes, one tone only one language has, one tone file
+    that is broken. Lines name where they come from, so nothing explicit lands in a golden file."""
+    sizes = {("en", "flirty"): 3, ("en", "shy"): 1, ("en", "degrading"): 2, ("en", "zzz_extra"): 1,
+             ("de", "flirty"): 2, ("de", "shy"): 2}
+    for (lang, tone), size in sizes.items():
+        (root / lang).mkdir(parents=True, exist_ok=True)
+        data = {key: [f"{lang} {tone} {key} {i}" for i in range(size)] for key in TRIGGER_KEYS}
+        (root / lang / f"{tone}.json").write_text(json.dumps(data), encoding="utf-8")
+    (root / "de" / "degrading.json").write_text("{broken", encoding="utf-8")
+
+
+def _snapshot(handler):
+    return {
+        "lang": handler.lang,
+        "available_languages": list(handler.available_languages),
+        "available_tones": handler.available_tones,
+        "tones_for": {lang: handler.tones_for(lang) for lang in handler.available_languages},
+        "selected_tones": list(handler.selected_tones),
+        "usable_tones": handler._usable_tones(),
+    }
+
+
+def callout_structure():
+    """The shipped files, as numbers: which languages and tones exist, and how many lines each
+    category holds. Never the lines themselves."""
+    _qt_core()
+    handler = CalloutHandler()
+    counts = {lang: {tone: {key: len(phrases) for key, phrases in data.items()} for tone, data in tones.items()}
+              for lang, tones in handler.callout_data.items()}
+    labels = {tone: CalloutHandler.tone_label(tone)
+              for tone in [*CalloutHandler.TONE_LABELS, "my_new_tone", "o'neil", "2nd_wave", "ALL_CAPS", "x"]}
+    return {"snapshot": _snapshot(handler), "counts": counts, "labels": labels}
+
+
+def _scripted(uniforms, choices):
+    """random.uniform and random.choice answering from the given lists, as the C# side's scripted
+    source does: a choice index is taken modulo the length of what is chosen from."""
+    def uniform(_a, _b):
+        return uniforms.pop(0)
+
+    def choice(seq):
+        return seq[choices.pop(0) % len(seq)]
+
+    return mock.patch("random.uniform", uniform), mock.patch("random.choice", choice)
+
+
+def _talk(handler, steps):
+    said = []
+    handler.new_tease_event.connect(said.append)
+    for call, *args in steps:
+        if call == "hide":
+            handler._tease_timer_handler()
+        elif call == "set":
+            setattr(handler, args[0], args[1])
+        else:
+            getattr(handler, call)(*args)
+        said.append(["is_teasing", handler.is_teasing])
+    return said
+
+
+def callout_draws():
+    _qt_core()
+    runs = {
+        "gates": ([0.4, 0.6, 0.2], [0, 0, 1, 1, 2, 0], [
+            ["set", "active_callout", True], ["set", "talking_chance", 0.5],
+            ["select_and_output_sentence", "session_started"], ["hide"],
+            ["select_and_output_sentence", "session_started"],
+            ["select_and_output_sentence", "pause_start"], ["select_and_output_sentence", "pause_end"], ["hide"],
+            ["force_output_sentence", "climax_real"]]),
+        "inactive_and_forced": ([], [3, 5, 1, 1], [
+            ["select_and_output_sentence", "session_started"], ["force_output_sentence", "climax_denied"],
+            ["force_output_sentence", "fake_climax_reveal"]]),
+        "several_tones": ([0.0] * 6, [0, 0, 1, 0, 2, 1, 1, 2, 0, 1, 2, 2], [
+            ["set", "active_callout", True], ["set", "talking_chance", 1.0],
+            ["set_tones", ["flirty", "shy", "degrading"]],
+            ["select_and_output_sentence", "media_skipped"], ["hide"],
+            ["select_and_output_sentence", "media_skipped"], ["hide"],
+            ["select_and_output_sentence", "media_repeated"], ["hide"],
+            ["select_and_output_sentence", "media_repeated"], ["hide"],
+            ["select_and_output_sentence", "edge_reached"], ["hide"],
+            ["select_and_output_sentence", "edge_reached"]]),
+        "beat_changes": ([0.7, 0.0, 0.7, 0.0, 0.7, 0.0, 0.2, 0.0], [0, 0] * 4, [
+            ["set", "active_callout", True], ["set", "talking_chance", 1.0],
+            ["beat_change_general", 2.0, "Standard Beat"], ["hide"],
+            ["beat_change_general", 1.0, "Quick Swing"], ["hide"],
+            ["beat_change_general", 1.0, "Quick Swing"], ["hide"],
+            ["beat_change_general", 3.0, "Build Up"], ["hide"]]),
+        "other_language_and_fallback": ([0.0] * 3, [1, 1, 0, 1, 1, 0], [
+            ["set", "active_callout", True], ["set", "talking_chance", 1.0],
+            ["set_tones", ["zzz_extra"]], ["select_and_output_sentence", "session_started"], ["hide"],
+            ["set_lang", "de"], ["select_and_output_sentence", "session_started"], ["hide"],
+            ["set_tones", ["nonexistent"]], ["select_and_output_sentence", "session_started"]]),
+        # A draw exactly on the talking chance still speaks: the gate is "> chance", not ">=".
+        "a_draw_on_the_chance_itself": ([0.5, 1.0, 0.0], [0, 0, 1, 1, 0, 2], [
+            ["set", "active_callout", True], ["set", "talking_chance", 0.5],
+            ["select_and_output_sentence", "session_started"], ["hide"],
+            ["set", "talking_chance", 1.0], ["select_and_output_sentence", "pause_end"], ["hide"],
+            ["set", "talking_chance", 0.0], ["select_and_output_sentence", "pause_end"]]),
+        "an_unknown_category": ([0.0], [0, 0], [
+            ["set", "active_callout", True], ["set", "talking_chance", 1.0],
+            ["select_and_output_sentence", "does_not_exist"], ["force_output_sentence", "nor_this"]]),
+    }
+    out = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "callouts"
+        _write_synthetic_callouts(root)
+        for name, (uniforms, choices, steps) in runs.items():
+            uniforms, choices = list(uniforms), list(choices)
+            draws = {"uniforms": list(uniforms), "choices": list(choices)}
+            patch_uniform, patch_choice = _scripted(uniforms, choices)
+            with patch_uniform, patch_choice:
+                handler = CalloutHandler(callout_dir=root)
+                said = _talk(handler, steps)
+            out.append({"name": name, **draws, "steps": steps,
+                        "expected": {"said": said, "snapshot": _snapshot(handler),
+                                     "left": {"uniforms": len(uniforms), "choices": len(choices)}}})
+    return out
+
+
+def callout_custom_files():
+    """Loading and unloading phrase files. Paths in messages are written as <dir>, since the two
+    sides run in different temporary folders."""
+    _qt_core()
+    files = {
+        "plain.json": {"session_started": ["custom start"], "pause_start": ["custom pause"]},
+        "messy.json": {"session_started": ["messy start"], "not_a_real_key": ["x"], "pause_start": "not a list",
+                       "pause_end": [1, 2], "edge_reached": []},
+        "second.json": {"session_started": ["second start"]},
+        "a_list.json": [1, 2, 3],
+    }
+    runs = {
+        "any_tone": [["load", "plain.json", "en", None]],
+        "one_tone": [["load", "plain.json", "en", "shy"]],
+        "a_tone_the_language_lacks": [["load", "plain.json", "de", "zzz_extra"]],
+        "messy": [["load", "messy.json", "en", "flirty"]],
+        "two_then_unload_the_first": [["load", "plain.json", "en", None], ["load", "second.json", "en", None],
+                                      ["unload", "plain.json"]],
+        "unload_what_was_never_loaded": [["unload", "nowhere.json"]],
+        "refusals": [["load", "plain.json", "fr", None], ["load", "plain.json", "en", "nonexistent"],
+                     ["load", "plain.json", "en", ""], ["load", "missing.json", "en", None],
+                     ["load", "a_list.json", "en", None], ["load", "plain.json", "en", None],
+                     ["load", "plain.json", "en", None]],
+        "clear": [["load", "plain.json", "en", None], ["clear"]],
+        "reopened": [["load", "plain.json", "de", None], ["load", "second.json", "en", "shy"], ["reopen"]],
+    }
+    out = []
+    for name, steps in runs.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            _write_synthetic_callouts(base / "callouts")
+            for file_name, data in files.items():
+                (base / file_name).write_text(json.dumps(data), encoding="utf-8")
+            store = UserDataStore(base_dir=base / "appdata")
+            handler = CalloutHandler(data_store=store, callout_dir=base / "callouts")
+            results = []
+            for call, *args in steps:
+                try:
+                    if call == "load":
+                        handler.load_custom_file(str(base / args[0]), args[1], args[2])
+                    elif call == "unload":
+                        handler.unload_custom_file(str(base / args[0]))
+                    elif call == "clear":
+                        handler.clear_custom_phrase_files()
+                    elif call == "reopen":
+                        handler = CalloutHandler(data_store=store, callout_dir=base / "callouts")
+                    results.append("ok")
+                except ValueError as error:
+                    message = str(error).replace(str(base), "<dir>")
+                    # The reason after "Couldn't read" / "isn't valid JSON" is the OS's or the
+                    # parser's wording - only the shape of the message is the app's.
+                    for marker in ("Couldn't read", "isn't valid JSON"):
+                        if marker in message:
+                            message = message[:message.index(marker) + len(marker)]
+                    results.append(message)
+            saved = store.load("custom_phrase_files", None)
+
+            def anonymous(entries, base=base):
+                return [dict(e, path=e["path"].replace(str(base), "<dir>")) for e in entries]
+
+            out.append({"name": name, "steps": steps, "files": files, "expected": {
+                "results": results,
+                "data": handler.callout_data,
+                "snapshot": _snapshot(handler),
+                "custom_phrase_files": anonymous(handler.custom_phrase_files),
+                "saved": None if saved is None else anonymous(saved),
+            }})
+    return out
+
+
 # --- SessionRecorder ---------------------------------------------------------------------------
 
 
@@ -604,32 +805,47 @@ def evaluation_cases():
 # --- writing -----------------------------------------------------------------------------------
 
 
-def _write_module(out_dir: Path, module: str, golden: dict) -> None:
-    golden = {"generated_at": time.strftime("%Y-%m-%d %H:%M:%S"), **golden}
-    target = out_dir / f"{module}.json"
-    target.write_text(json.dumps(golden, ensure_ascii=False, indent=2), encoding="utf-8")
-    counts = {key: len(value) for key, value in golden.items() if isinstance(value, list)}
-    print(f"{target}: {counts}")
+def _modules() -> dict:
+    return {
+        "session_files": {
+            "validate": validation_cases(),
+            "to_saved_session": saving_cases(),
+            "describe": describe_cases(),
+            "read_session_file": reading_cases(),
+            **clock_cases(),
+        },
+        "session_script": {"drain": script_cases()},
+        "score_tracker": {"run": tracker_cases(), "format_metric_value": metric_format_cases()},
+        "session_recorder": {"record": recorder_cases()},
+        "settings": {"read": settings_cases()},
+        "callouts": {
+            "structure": callout_structure(),
+            "draws": callout_draws(),
+            "custom_files": callout_custom_files(),
+        },
+        "achievements": {
+            "catalogue": catalogue_cases(),
+            "grouped": [[a.id for a in tile] for tile in achievements.grouped()],
+            "evaluate": evaluation_cases(),
+        },
+    }
 
 
 def write(out_dir: Path) -> None:
+    """Every case is computed before anything is written, and the old golden files go first: a
+    generator that fails half way must never leave yesterday's answers behind for the C# side
+    to pass against."""
+    modules = _modules()
     out_dir.mkdir(parents=True, exist_ok=True)
-    _write_module(out_dir, "session_files", {
-        "validate": validation_cases(),
-        "to_saved_session": saving_cases(),
-        "describe": describe_cases(),
-        "read_session_file": reading_cases(),
-        **clock_cases(),
-    })
-    _write_module(out_dir, "session_script", {"drain": script_cases()})
-    _write_module(out_dir, "score_tracker", {"run": tracker_cases(), "format_metric_value": metric_format_cases()})
-    _write_module(out_dir, "session_recorder", {"record": recorder_cases()})
-    _write_module(out_dir, "settings", {"read": settings_cases()})
-    _write_module(out_dir, "achievements", {
-        "catalogue": catalogue_cases(),
-        "grouped": [[a.id for a in tile] for tile in achievements.grouped()],
-        "evaluate": evaluation_cases(),
-    })
+    for stale in out_dir.glob("*.json"):
+        stale.unlink()
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    for module, golden in modules.items():
+        golden = {"generated_at": stamp, **golden}
+        target = out_dir / f"{module}.json"
+        target.write_text(json.dumps(golden, ensure_ascii=False, indent=2), encoding="utf-8")
+        counts = {key: len(value) for key, value in golden.items() if isinstance(value, list)}
+        print(f"{target}: {counts}")
 
 
 if __name__ == "__main__":
