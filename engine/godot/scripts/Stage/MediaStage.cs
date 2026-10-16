@@ -8,12 +8,9 @@ using Godot;
 
 namespace Gooner.Engine.Stage;
 
-// What is on screen: the engine's side of Gooner.Core's PlaylistPlayer. A picture, a GIF, or a line
-// where the picture goes; each Show replaces whatever was up before it.
-//
-// Video is not part of this build yet: the FFmpeg extension it needs brings native libraries the
-// repo has no home for so far. A clip is reported as unplayable, which is the recovery path the
-// player already has for a file the backend cannot open - the session moves on a second later.
+// What is on screen: the engine's side of Gooner.Core's PlaylistPlayer. A picture, a GIF, a clip, or
+// a line where the picture goes; each Show replaces whatever was up before it. A clip's end and a
+// clip that will never play go back to the player, which decides what comes next.
 public partial class MediaStage : Control, IMediaStage
 {
     private const string Log = "MediaStage";
@@ -21,6 +18,7 @@ public partial class MediaStage : Control, IMediaStage
     private readonly Label _message;
     private Control? _shown;
     private ImageTexture? _picture;
+    private bool _muted;
 
     public MediaStage()
     {
@@ -48,7 +46,8 @@ public partial class MediaStage : Control, IMediaStage
     // Where a clip's end or failure is reported. Set once the player exists.
     public PlaylistPlayer? Player { get; set; }
 
-    // What is up right now, for a check of the running engine: "image", "gif", "message" or null.
+    // What is up right now, for a check of the running engine: "image", "gif", "video", "message" or
+    // null.
     public string? Showing { get; private set; } = "message";
 
     public void ShowImage(string path)
@@ -87,12 +86,18 @@ public partial class MediaStage : Control, IMediaStage
     public void PlayVideo(string path, double volume)
     {
         Clear();
-        ShowMessage("Video comes in a later build.");
-        // Deferred, as a real backend's error would arrive: after the player has finished loading.
-        Callable.From(() => Player?.VideoFailed("video playback is not part of this build yet")).CallDeferred();
+        var view = new VideoView(path, volume, _muted);
+        view.Ended += () => Player?.VideoEnded();
+        view.Failed += reason =>
+        {
+            // The reason only - the file's folder never reaches the log, and the player logs it.
+            if (_shown == view) ShowMessage("This clip could not be played.");
+            Player?.VideoFailed(reason);
+        };
+        Show(view, "video");
     }
 
-    public void ReplayVideo() { }
+    public void ReplayVideo() => (_shown as VideoView)?.Replay();
 
     public void ShowMessage(string text)
     {
@@ -107,9 +112,15 @@ public partial class MediaStage : Control, IMediaStage
     public void StopAll()
     {
         if (_shown is GifView gif) gif.Frozen = true;
+        if (_shown is VideoView video) video.Freeze();
     }
 
-    public void SetMuted(bool muted) { }
+    // The clip's sound; the click is muted separately.
+    public void SetMuted(bool muted)
+    {
+        _muted = muted;
+        if (_shown is VideoView video) video.Muted = muted;
+    }
 
     private void Show(Control control, string kind)
     {

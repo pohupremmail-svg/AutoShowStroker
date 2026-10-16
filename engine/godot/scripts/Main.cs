@@ -333,7 +333,7 @@ public partial class Main : Control
         var app = _app!;
         var shown = _stage!.Showing;
         var ok = click.ClicksLate == 0 && _hits > 10 && click.ClicksStarted - _hits is >= 0 and <= 2
-            && (_smoke != "session" || (app.IsRunning && shown is "image" or "gif"));
+            && (_smoke != "session" || (app.IsRunning && shown is "image" or "gif" or "video"));
         GD.Print($"smoke-{_smoke}: {_hits} notes, {click.ClicksStarted} clicks, {click.ClicksLate} late, " +
             $"{_audio!.Underruns} underruns, {_picture.Snaps} clock snaps, {click.SampleRate} Hz, lead {_audio.Lead * 1000:0} ms, " +
             $"showing {shown ?? "nothing"}");

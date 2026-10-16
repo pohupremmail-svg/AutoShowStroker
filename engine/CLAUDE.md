@@ -40,6 +40,16 @@ here unchanged. This file only adds what is specific to this side.
 - **Until the data migration (phase 4) the engine keeps its own data folder**,
   `%LOCALAPPDATA%\GoonerCock\GoonerApp.EnginePreview` (`-- --data-dir=` for another), so a
   preview run can never change what the installed Python app remembers.
+- **Video is the FFmpeg extension EIRTeam.FFmpeg**, in `godot/addons/ffmpeg/` and **deliberately
+  not in git yet** (the user's call, 2026-10-16: it ships with the app, its DLLs enter the repo
+  later). Copy it in by hand for a local run: `ffmpeg.gdextension` plus `win64/*.dll` from the
+  autobuild pinned in phase 0 (commit `84ea333`; release 1.1.4 never converts YUV on Godot 4.7),
+  then run `--import` once. A checkout without it builds and runs: the stage reaches the extension
+  by class name, reports every clip unplayable and the player moves on. Its FFmpeg is an **LGPL v3**
+  build (`--enable-version3`, no GPL, no nonfree; H.264, MPEG-4, VP8/9, AAC, MP3, Opus, Vorbis -
+  no HEVC); the wrapper is MIT. Every release package therefore carries the LGPLv3 and GPLv3 texts,
+  the wrapper's MIT licence, a note that the app uses FFmpeg, and the source archive of exactly that
+  FFmpeg version - phase 5 builds that in.
 - `res/` (callouts, click, icons) is read **from disk**, never through Godot's `res://`:
   `Gooner.Core.Data.ResourceRoot` finds the repo's own copy from a dev run and the one beside the
   executable once exported. The files never go through Godot's importer, so the engine reads
