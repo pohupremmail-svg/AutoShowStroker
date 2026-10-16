@@ -4,6 +4,7 @@ using Gooner.Core.Beat;
 using Gooner.Core.Callouts;
 using Gooner.Core.Climax;
 using Gooner.Core.Data;
+using Gooner.Core.Devices;
 using Gooner.Core.Formatting;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
@@ -34,6 +35,13 @@ public sealed record GoonerAppOptions
 
     // The entries What's New shows; null for the shipped ones.
     public IReadOnlyList<ChangelogEntry>? Changelog { get; init; }
+
+    // Device output over Intiface - optional, as the plugin folder was on the Python side. Off, the
+    // app has no Intiface at all.
+    public bool DeviceOutput { get; init; }
+
+    // How what the device connection reports reaches the window's thread; inline when not given.
+    public Action<Action>? Post { get; init; }
 }
 
 // The session's conductor: src/GoonerApp.py without its window. The lifecycle (Start, Stop, the
@@ -108,6 +116,9 @@ public sealed class GoonerApp : ISettingsOwner
         Hud = new SessionHud(Score, _settings, Scheduler);
         Banner = new ClimaxBanner(Scheduler);
 
+        if (options.DeviceOutput)
+            Intiface = new IntifacePlugin(this, new IntifaceController(_settings, options.Post));
+
         DeniedStopTimer = Scheduler.CreateTimer(Stop, singleShot: true);
         // Ticks once a second while the edge button cools down, so it can count down.
         EdgeCooldownTimer = Scheduler.CreateTimer(TickEdgeCooldown);
@@ -136,6 +147,7 @@ public sealed class GoonerApp : ISettingsOwner
     public PlaylistPlayer Player { get; }
     public SessionHud Hud { get; }
     public ClimaxBanner Banner { get; }
+    public IntifacePlugin? Intiface { get; }
     public ClockTimer DeniedStopTimer { get; }
     public ClockTimer EdgeCooldownTimer { get; }
 
@@ -329,11 +341,17 @@ public sealed class GoonerApp : ISettingsOwner
 
     // The window is going away: a session still in progress is recorded first - never asked about,
     // never recapped, which is the last thing someone who just hit the X wants to see.
+    //
+    // The device is stopped after that, and its connection shut down - Intiface.Shutdown says whether
+    // the host has to wait for the stop to go out before it ends the process.
     public void Close()
     {
-        if (!IsRunning && !HowItEndedPending) return;
-        HowItEndedPending = false;
-        EndSession(showStatistics: false);
+        if (IsRunning || HowItEndedPending)
+        {
+            HowItEndedPending = false;
+            EndSession(showStatistics: false);
+        }
+        Intiface?.Shutdown();
     }
 
     // Everything that has to fall silent, and nothing that writes anything down. Does nothing once

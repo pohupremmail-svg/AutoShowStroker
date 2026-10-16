@@ -78,6 +78,17 @@ public sealed class PrivacyData
         return dir;
     }
 
+    // The one thing in the app that opens a connection while it runs, disclosed here as well as in
+    // the settings: this is where the app says what it keeps and what it sends, and a promise that
+    // nothing leaves the machine has to name its own exception. The switch stays in the settings,
+    // beside the address and the test buttons it needs. Null without device output.
+    public string? DeviceOutputNote => _app.Intiface is null ? null :
+        "Device output (Settings > Device) is the one part of GoonerApp that opens a " +
+        "network connection. It is off every time the app starts and has to be turned " +
+        "on deliberately, it only ever goes to the address you type in yourself, and " +
+        "it sends movement and stop commands and nothing else - no media, no paths, no " +
+        "history. Deleting All settings below also disconnects it.";
+
     // --- the diagnostic log ---
 
     public bool DiagnosticLog => _app.DiagnosticLog;
@@ -174,6 +185,10 @@ public sealed class PrivacyData
                     if (_app.DataStore is { } store) AppLog.DeleteLogFiles(store.BaseDir);
                     break;
                 case "settings":
+                    // Before the wipe, because disconnecting writes the cleared-out address back. A
+                    // live connection outliving "delete all my settings" is not what deleting them
+                    // is supposed to mean.
+                    _app.Intiface?.ForgetSettings();
                     _app.Settings?.Clear();
                     break;
             }

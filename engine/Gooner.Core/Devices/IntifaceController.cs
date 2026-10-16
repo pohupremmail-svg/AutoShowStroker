@@ -10,7 +10,7 @@ namespace Gooner.Core.Devices;
 // Device output is never restored from the settings. It starts off at every launch and has to be
 // turned on deliberately, so a box ticked once months ago can never quietly open a connection on
 // some later start. The address and the stroke range are remembered.
-public sealed class IntifaceController : ISettingsOwner
+public sealed class IntifaceController : ISettingsOwner, IDeviceTarget
 {
     public static string SettingsGroup => "IntifaceController";
 
@@ -73,6 +73,9 @@ public sealed class IntifaceController : ISettingsOwner
 
     public bool HasWorker => _worker is not null;
 
+    // How often motion was cancelled - what a test reads to know a stop was asked for.
+    internal int Cancellations { get; private set; }
+
     public event Action? StateChanged;
 
     public event Action? ShutdownFinished;
@@ -127,6 +130,7 @@ public sealed class IntifaceController : ISettingsOwner
 
     public void CancelMotion()
     {
+        Cancellations++;
         _gate.Invalidate();
         if (_worker is { } worker) worker.Post(async () => await worker.Stop().ConfigureAwait(false));
     }

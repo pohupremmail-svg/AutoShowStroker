@@ -3,6 +3,7 @@ using Gooner.Core.App;
 using Gooner.Core.Beat;
 using Gooner.Core.Callouts;
 using Gooner.Core.Climax;
+using Gooner.Core.Devices;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 
@@ -107,6 +108,7 @@ public sealed record ManagePatternsRow : SettingsRow;
 public sealed record LanguageRow : SettingsRow;
 public sealed record TonesRow : SettingsRow;
 public sealed record ManagePhraseFilesRow : SettingsRow;
+public sealed record DeviceRow : SettingsRow;
 public sealed record ResetRow(string Tab) : SettingsRow;
 
 public sealed record SettingsTab(string Title, IReadOnlyList<SettingsRow> Rows);
@@ -248,6 +250,12 @@ public sealed class SettingsForm
             Language = callouts.Lang;
             _tones = callouts.AvailableTones.ToDictionary(t => t, t => callouts.SelectedTones.Contains(t));
         }
+        // The device's tab only when there is device output - the tab is its UI, not the form's.
+        if (app.Intiface is { } intiface)
+        {
+            Device = new DeviceSettings(intiface, app.Settings);
+            tabs.Add(new SettingsTab(IntifacePlugin.TabTitle, [new DeviceRow()]));
+        }
         Tabs = tabs;
         RefreshRhythms();
     }
@@ -257,6 +265,10 @@ public sealed class SettingsForm
     public IReadOnlyDictionary<string, NumberSetting> Numbers => _numbers;
 
     public IReadOnlyDictionary<string, ToggleSetting> Toggles => _toggles;
+
+    // The Device tab's draft; null without device output. Its connection settings are applied
+    // separately, after Apply, since a changed address may first need the user's consent.
+    public DeviceSettings? Device { get; }
 
     // --- rhythms ---
 
@@ -347,6 +359,7 @@ public sealed class SettingsForm
     // The first reason the draft cannot be saved, or null.
     public string? ValidationError()
     {
+        if (Device?.ValidationError() is { } deviceError) return deviceError;
         if (!_rhythms.Values.Any(ticked => ticked))
             return "At least one rhythm has to stay active under 'Active Rhythms'.";
         foreach (var (min, max, label) in MinMaxPairs)
