@@ -493,6 +493,19 @@ public sealed class GoonerApp : ISettingsOwner
         }
     }
 
+    // What saving the settings sets off beyond the values themselves: the edge button follows its
+    // switch at once - one that is still there but switched off would do nothing when pressed - the
+    // captions follow theirs, and a running session plans what is still queued again while the
+    // segment playing now plays out.
+    public void SettingsSaved()
+    {
+        ResetEdgeButton();
+        Hud.Refresh();
+        if (!IsRunning) return;
+        Climax.SettingsChanged();
+        Beat.ReplanFromNextSegment();
+    }
+
     // Back to a fresh session: there if the feature is on, live, off cooldown.
     private void ResetEdgeButton()
     {

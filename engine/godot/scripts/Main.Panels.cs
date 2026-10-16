@@ -19,7 +19,7 @@ public partial class Main
     {
         var bar = new MenuBar();
         AddMenu(bar, "Settings",
-            ("Change Settings", Ctrl(Key.S), () => NotYet("Settings", "3.8")),
+            ("Change Settings", Ctrl(Key.S), ShowSettings),
             ("Quit", Ctrl(Key.Q), () => Quit(0)));
         AddMenu(bar, "Help",
             ("What's New", Key.None, () => ShowWhatsNew(_app!.ChangelogEntries)),
@@ -63,6 +63,10 @@ public partial class Main
         ["guide"] = () => _panels.Show(new GuidePanel()),
         ["licenses"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses)),
         ["privacy"] = ShowPrivacy,
+        ["settings"] = ShowSettings,
+        ["settings-beat"] = () => ShowSettings("Beat & Rhythm"),
+        ["settings-callouts"] = () => ShowSettings("Callouts"),
+        ["phrasefiles"] = ShowPhraseFiles,
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
     };
 
@@ -124,6 +128,20 @@ public partial class Main
         System.IO.Path.GetDirectoryName(AppPaths.Resources!)!));
 
     private void ShowPrivacy() => _panels.Show(new PrivacyPanel(new PrivacyData(_app!), _panels));
+
+    private void ShowSettings() => ShowSettings(null);
+
+    private void ShowSettings(string? tab)
+    {
+        var panel = new SettingsPanel(new SettingsForm(_app!), _panels, refresh => NotYet("Pattern Editor", "3.9"), ShowPhraseFiles);
+        _panels.Show(panel);
+        if (tab is not null) panel.ShowTab(tab);
+    }
+
+    private void ShowPhraseFiles()
+    {
+        if (_app!.Callouts is { } callouts) _panels.Show(new PhraseFilesPanel(new CustomPhraseFiles(callouts)));
+    }
 
     // --- the recap ---
 
