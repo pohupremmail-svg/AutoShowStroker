@@ -6,6 +6,7 @@ using Gooner.Core.App;
 using Gooner.Core.Data;
 using Gooner.Core.Formatting;
 using Gooner.Core.Media;
+using Gooner.Core.Migration;
 using Gooner.Core.Panels;
 using Gooner.Core.Settings;
 using Gooner.Core.Timing;
@@ -97,11 +98,15 @@ public partial class Main : Control
         _clock = new FrameClock(_audio.Heard());
 
         var data = new UserDataStore(AppPaths.DataDir);
+        // Before the stores are built - a JsonSettingsStore reads its file once - whatever the Python
+        // app left is carried over (see AppPaths for when that is).
+        var migration = ProfileMigration.Run(data, AppPaths.LegacySettings(), AppPaths.LegacyDataDir);
         _stage = new MediaStage();
         _app = new GoonerApp(_stage, _clock, new GoonerAppOptions
         {
             Settings = new JsonSettingsStore(data),
             DataStore = data,
+            Migration = migration,
             CalloutDir = Path.Combine(res, "callouts"),
             Version = ReadVersion(res),
             DeviceOutput = true,

@@ -117,6 +117,16 @@ public sealed class UserDataStoreTests : IDisposable
         Assert.True(Path.IsPathRooted(UserDataStore.DefaultBaseDir));
     }
 
+    [Fact]
+    public void the_legacy_location_is_the_roaming_one()
+    {
+        // QStandardPaths' AppDataLocation for GoonerCock/GoonerApp - where the Python app kept its
+        // data before it moved it out.
+        var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        Assert.Equal(Path.Combine(roaming, "GoonerCock", "GoonerApp"), UserDataStore.LegacyBaseDir);
+        Assert.NotEqual(UserDataStore.DefaultBaseDir, UserDataStore.LegacyBaseDir);
+    }
+
     // --- write failures must not take the app down with them ---
 
     [Fact]

@@ -29,6 +29,11 @@ public sealed class UserDataStore
     public static string DefaultBaseDir { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GoonerCock", "GoonerApp");
 
+    // Where the Python app kept its data before it moved it to the local profile: the roaming one
+    // (QStandardPaths' AppDataLocation). MigrateLegacyLocation moves what is still there.
+    public static string LegacyBaseDir { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GoonerCock", "GoonerApp");
+
     public string BaseDir { get; }
 
     public UserDataStore(string? baseDir = null) => BaseDir = baseDir ?? DefaultBaseDir;
