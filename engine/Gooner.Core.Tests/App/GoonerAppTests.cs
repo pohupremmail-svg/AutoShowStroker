@@ -1109,6 +1109,55 @@ public sealed class GoonerAppTests : IDisposable
         Assert.False(App.ShowStartupSplash);
     }
 
+    // --- what's new ---
+
+    private GoonerApp WithChangelog(string version, params string[] versions) => new(_stage, _clock, new GoonerAppOptions
+    {
+        Settings = _settings,
+        DataStore = _data,
+        Version = version,
+        Changelog = [.. versions.Select(v => new ChangelogEntry(v, $"{v} stuff"))],
+    });
+
+    [Fact]
+    public void maybe_show_whats_new_shows_dialog_when_new_entries_exist()
+    {
+        _settings.SetValue("GoonerApp/last_seen_version", "0.1.0");
+        var app = WithChangelog("0.2.0", "0.1.0", "0.2.0");
+
+        var entries = app.WhatsNewOnStartup();
+
+        Assert.Equal(["0.2.0"], entries.Select(e => e.Version));
+        Assert.Equal("0.2.0", (string?)_settings.Value("GoonerApp/last_seen_version"));
+    }
+
+    [Fact]
+    public void maybe_show_whats_new_skips_dialog_when_no_new_entries()
+    {
+        _settings.SetValue("GoonerApp/last_seen_version", "0.2.0");
+        var app = WithChangelog("0.2.0", "0.1.0", "0.2.0");
+
+        Assert.Empty(app.WhatsNewOnStartup());
+        Assert.Equal("0.2.0", (string?)_settings.Value("GoonerApp/last_seen_version"));
+    }
+
+    [Fact]
+    public void show_whats_new_dialog_shows_full_changelog() =>
+        Assert.Same(Changelog.Entries, App.ChangelogEntries);
+
+    // The Python app cannot start without its VERSION file; the engine reads one beside it and says
+    // "unknown" when there is none. That is no reason to show every entry ever written, nor to
+    // forget which one was seen last.
+    [Fact]
+    public void a_version_that_does_not_parse_shows_nothing_and_remembers_nothing()
+    {
+        _settings.SetValue("GoonerApp/last_seen_version", "0.1.0");
+        var app = WithChangelog("unknown", "0.1.0", "0.2.0");
+
+        Assert.Empty(app.WhatsNewOnStartup());
+        Assert.Equal("0.1.0", (string?)_settings.Value("GoonerApp/last_seen_version"));
+    }
+
     [Fact]
     public void diagnostic_log_is_off_by_default()
     {

@@ -18,7 +18,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from unittest import mock
 
-from src import achievements, session_files, utils
+from src import achievements, changelog, session_files, utils
 from src.achievements import AchievementTracker
 from src.BeatHandler import BeatHandler, Segment
 from src.CalloutHandler import TRIGGER_KEYS, CalloutHandler
@@ -1150,6 +1150,14 @@ def evaluation_cases():
             for name, (played, history, stored) in cases.items()]
 
 
+# --- changelog ---------------------------------------------------------------------------------
+
+
+def changelog_entries():
+    """Every entry, word for word and in order: the port carries a copy until src/ is retired."""
+    return [{"name": version, "html": text} for version, text in changelog.CHANGELOG.items()]
+
+
 # --- writing -----------------------------------------------------------------------------------
 
 
@@ -1179,6 +1187,7 @@ def _modules() -> dict:
             "grouped": [[a.id for a in tile] for tile in achievements.grouped()],
             "evaluate": evaluation_cases(),
         },
+        "changelog": {"entries": changelog_entries()},
     }
 
 

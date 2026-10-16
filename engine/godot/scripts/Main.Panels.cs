@@ -21,7 +21,7 @@ public partial class Main
             ("Change Settings", Ctrl(Key.S), () => NotYet("Settings", "3.8")),
             ("Quit", Ctrl(Key.Q), () => Quit(0)));
         AddMenu(bar, "Help",
-            ("What's New", Key.None, () => NotYet("What's New", "3.2")),
+            ("What's New", Key.None, () => ShowWhatsNew(_app!.ChangelogEntries)),
             ("Guide", Key.F1, () => NotYet("Guide", "3.6")),
             ("Privacy & Data...", Key.None, () => NotYet("Privacy & Data", "3.7")),
             ("Third-Party Licenses...", Key.None, () => NotYet("Third-Party Licenses", "3.6")),
@@ -51,6 +51,21 @@ public partial class Main
         menu.IdPressed += id => items[id].Run?.Invoke();
         bar.AddChild(menu);
     }
+
+    // The panels a smoke run can open by name: -- --smoke-panel=<name> --screenshot=<png>.
+    private Dictionary<string, Action> SmokePanels() => new()
+    {
+        ["whatsnew"] = () => ShowWhatsNew(_app!.ChangelogEntries),
+    };
+
+    // Once, at startup: what has come since the version last seen.
+    private void ShowWhatsNewOnStartup()
+    {
+        var entries = _app!.WhatsNewOnStartup();
+        if (entries.Count > 0) ShowWhatsNew(entries);
+    }
+
+    private void ShowWhatsNew(IEnumerable<ChangelogEntry> entries) => _panels.Show(new WhatsNewPanel(entries));
 
     // Until the dialog behind a menu entry is ported, its entry says which step brings it.
     private void NotYet(string title, string step)

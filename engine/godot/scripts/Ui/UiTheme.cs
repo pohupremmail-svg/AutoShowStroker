@@ -99,6 +99,29 @@ public static class UiTheme
         var separator = new StyleBoxLine { Color = Of(Palette.Secondary), Thickness = 1 };
         theme.SetStylebox("separator", "PopupMenu", separator);
 
+        // Scroll bars: a secondary handle that lights up in the accent, on no track of its own.
+        foreach (var bar in new[] { "VScrollBar", "HScrollBar" })
+        {
+            // The track's margins are what makes the bar as thick as it is.
+            var track = new StyleBoxEmpty();
+            track.SetContentMarginAll(5);
+            theme.SetStylebox("scroll", bar, track);
+            theme.SetStylebox("scroll_focus", bar, track);
+            var grabber = Box(Of(Palette.Secondary), 4);
+            grabber.SetContentMarginAll(4);
+            theme.SetStylebox("grabber", bar, grabber);
+            var lit = Box(Of(Palette.Accent), 4);
+            lit.SetContentMarginAll(4);
+            theme.SetStylebox("grabber_highlight", bar, lit);
+            theme.SetStylebox("grabber_pressed", bar, lit);
+        }
+
+        // Rich text: the app's texts are written with bold, italics and the odd bit of code.
+        theme.SetColor("default_color", "RichTextLabel", Of(Palette.Text));
+        theme.SetFont("bold_font", "RichTextLabel", Bold);
+        theme.SetFont("italics_font", "RichTextLabel", Italic);
+        theme.SetFont("mono_font", "RichTextLabel", Mono);
+
         var tooltip = Box(Of(Palette.Surface), 4, 6);
         tooltip.SetBorderWidthAll(1);
         tooltip.BorderColor = Of(Palette.Secondary);
@@ -111,4 +134,8 @@ public static class UiTheme
     public static readonly SystemFont Regular = new() { FontNames = ["Segoe UI", "sans-serif"] };
 
     public static readonly SystemFont Bold = new() { FontNames = ["Segoe UI", "sans-serif"], FontWeight = 700 };
+
+    public static readonly SystemFont Italic = new() { FontNames = ["Segoe UI", "sans-serif"], FontItalic = true };
+
+    public static readonly SystemFont Mono = new() { FontNames = ["Consolas", "monospace"] };
 }

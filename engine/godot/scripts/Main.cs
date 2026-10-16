@@ -33,6 +33,7 @@ namespace Gooner.Engine;
 //                         --climax-at=<s> brings the climax that many seconds in; --stop presses
 //                         Stop at the end, so the question is in the screenshot, and
 //                         --answer=came|ruined|stopped|none answers it, so the recap is.
+//   -- --smoke-panel=<n>  opens one panel by name (see SmokePanels) and quits; with --screenshot.
 //   -- --data-dir=<path>  where the history, settings and saved sessions go (see AppPaths).
 public partial class Main : Control
 {
@@ -107,6 +108,10 @@ public partial class Main : Control
             // Started on the first frame, as a button press would start it: before that the clock has
             // not run, and the first note would be due before it was ever predicted.
             _smokeUntil = double.MaxValue;
+        else if (AppPaths.UserArg("smoke-panel") is { } panel)
+            Callable.From(() => SmokePanel(panel)).CallDeferred();
+        else
+            Callable.From(ShowWhatsNewOnStartup).CallDeferred();
     }
 
     private static string ReadVersion(string res)
@@ -320,6 +325,24 @@ public partial class Main : Control
         }
     }
 
+    // Opens one panel, waits for it to fade in, saves the window and quits: 0 when the name was known.
+    private async void SmokePanel(string name)
+    {
+        var known = SmokePanels().TryGetValue(name, out var open);
+        open?.Invoke();
+        await Screenshot();
+        Quit(known ? 0 : 1);
+    }
+
+    private async System.Threading.Tasks.Task Screenshot()
+    {
+        if (AppPaths.UserArg("screenshot") is not { } shot) return;
+        // Once whatever the last lines opened has faded in.
+        await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
+        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+        GetViewport().GetTexture().GetImage().SavePng(shot);
+    }
+
     private async void EndSmoke(Gooner.Core.Audio.ClickTrack click)
     {
         _smokeUntil = 0;
@@ -338,13 +361,7 @@ public partial class Main : Control
                 app.AnswerHowItEnded(answer == "none" ? null : answer);
             Sync();
         }
-        if (AppPaths.UserArg("screenshot") is { } shot)
-        {
-            // Once whatever the last lines opened has faded in.
-            await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
-            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-            GetViewport().GetTexture().GetImage().SavePng(shot);
-        }
+        await Screenshot();
         Quit(ok ? 0 : 1);
     }
 

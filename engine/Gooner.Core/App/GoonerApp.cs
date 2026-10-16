@@ -29,8 +29,11 @@ public sealed record GoonerAppOptions
     // One stream of dice for every handler, so a seed replays a whole session.
     public IRandomSource? Random { get; init; }
 
-    // What a saved session says it was saved with.
+    // What a saved session says it was saved with, and what What's New compares against.
     public string Version { get; init; } = "unknown";
+
+    // The entries What's New shows; null for the shipped ones.
+    public IReadOnlyList<ChangelogEntry>? Changelog { get; init; }
 }
 
 // The session's conductor: src/GoonerApp.py without its window. The lifecycle (Start, Stop, the
@@ -81,6 +84,7 @@ public sealed class GoonerApp : ISettingsOwner
         _data = options.DataStore;
         _random = options.Random ?? new SystemRandomSource();
         _version = options.Version;
+        ChangelogEntries = options.Changelog ?? App.Changelog.Entries;
         Clock = clock;
         Scheduler = new ClockScheduler(clock);
 
@@ -546,6 +550,29 @@ public sealed class GoonerApp : ISettingsOwner
         if (!SessionFiles.StoreSession(_data, saved)) return false;
         AppLog.Info(Log, "Session saved for replay: {0} segments", ((JsonArray)saved["segments"]!).Count);
         return true;
+    }
+
+    // --- what's new ---
+
+    public IReadOnlyList<ChangelogEntry> ChangelogEntries { get; }
+
+    // What has come since the version the user last saw - shown once, at startup - and that version
+    // moves up to this one. A version that does not parse shows nothing and moves nothing.
+    public IReadOnlyList<ChangelogEntry> WhatsNewOnStartup()
+    {
+        var lastSeen = _settings?.GetString(Key("last_seen_version"), "") ?? "";
+        IReadOnlyList<ChangelogEntry> entries;
+        try
+        {
+            entries = App.Changelog.EntriesSince(lastSeen, _version, ChangelogEntries);
+        }
+        catch (FormatException)
+        {
+            AppLog.Warning(Log, "Not checking for what is new: version {0} does not parse", _version);
+            return [];
+        }
+        _settings?.SetValue(Key("last_seen_version"), _version);
+        return entries;
     }
 
     // --- the diagnostic log ---
