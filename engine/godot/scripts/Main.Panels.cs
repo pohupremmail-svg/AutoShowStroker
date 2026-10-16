@@ -74,6 +74,7 @@ public partial class Main
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,
         ["updates"] = CheckForUpdates,
+        ["splash"] = () => ShowSplash(() => { }),
         // An exception nobody catches, thrown from a deferred call as a real one would be.
         ["crash"] = () => Callable.From(() => throw new InvalidOperationException("a smoke-run crash")).CallDeferred(),
         ["picker"] = () => OpenFolder(AppPaths.UserArg("media") is { } media ? [media] : null),
@@ -89,15 +90,6 @@ public partial class Main
     }
 
     private void ShowWhatsNew(IEnumerable<ChangelogEntry> entries) => _panels.Show(new WhatsNewPanel(entries));
-
-    // Until the dialog behind a menu entry is ported, its entry says which step brings it.
-    private void NotYet(string title, string step)
-    {
-        var panel = new AppPanel(title, new Vector2(420, 0));
-        panel.AddText($"Comes with phase 3, step {step}.");
-        panel.AddButton("Close", panel.Close, primary: true);
-        _panels.Show(panel);
-    }
 
     // --- Stop's question ---
 
