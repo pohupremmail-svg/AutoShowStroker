@@ -29,9 +29,9 @@ public readonly record struct UpcomingBeat(double Offset, bool Audible, int Weig
 // due - so a late frame never shifts the rhythm. A note
 // gap stays the whole milliseconds Python schedules (int(step * 1000)); at 48 kHz that is exact,
 // and it keeps the two implementations comparable note for note.
-public sealed class BeatHandler : IFinalePlanner
+public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
 {
-    public const string SettingsGroup = "BeatHandler";
+    public static string SettingsGroup => "BeatHandler";
     private const string Log = "BeatHandler";
     private const string CustomPatternsName = "custom_patterns";
 
@@ -47,7 +47,7 @@ public sealed class BeatHandler : IFinalePlanner
     public static IReadOnlyDictionary<string, int[]> BeatPatternsMap => BeatPatterns.BuiltIn;
 
     // Single source of truth: the constructor starts from these, and "Reset to defaults" reads them.
-    public static readonly IReadOnlyDictionary<string, object> Defaults = new Dictionary<string, object>
+    public static IReadOnlyDictionary<string, object> Defaults { get; } = new Dictionary<string, object>
     {
         ["max_beat_dur"] = 45.0,
         ["min_beat_dur"] = 15.0,

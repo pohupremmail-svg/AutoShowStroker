@@ -16,12 +16,12 @@ namespace Gooner.Core.Climax;
 //
 // Its timers are ClockTimers on the scheduler it shares with the beat, so a climax and the notes
 // around it fire in the order they were due.
-public sealed class ClimaxHandler
+public sealed class ClimaxHandler : ISettingsOwner
 {
-    public const string SettingsGroup = "ClimaxHandler";
+    public static string SettingsGroup => "ClimaxHandler";
 
     // Single source of truth: the constructor starts from these, and "Reset to defaults" reads them.
-    public static readonly IReadOnlyDictionary<string, object> Defaults = new Dictionary<string, object>
+    public static IReadOnlyDictionary<string, object> Defaults { get; } = new Dictionary<string, object>
     {
         ["climax_active"] = true,
         // Seconds into the session. Measured from the start, deliberately not from the end of the

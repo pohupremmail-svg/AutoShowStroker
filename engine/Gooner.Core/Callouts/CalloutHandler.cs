@@ -36,9 +36,9 @@ public sealed record CustomPhraseFile(string Path, string Lang, string? Tone);
 // No timer in here: a shown tease ends TeaseTime later on the TimeProvider, and the host calls
 // Tick() every frame to let that happen. Python's QTimer repeats and resends the hide every
 // 7 seconds; only the first of those ever did anything.
-public sealed class CalloutHandler : ICalloutVoice
+public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
 {
-    public const string SettingsGroup = "CalloutHandler";
+    public static string SettingsGroup => "CalloutHandler";
     private const string Log = "CalloutHandler";
     private const string CustomFilesName = "custom_phrase_files";
 
@@ -84,7 +84,7 @@ public sealed class CalloutHandler : ICalloutVoice
     public const string DefaultTone = "flirty";
 
     // Single source of truth for the fallbacks, and for "Reset to defaults".
-    public static readonly IReadOnlyDictionary<string, object> Defaults = new Dictionary<string, object>
+    public static IReadOnlyDictionary<string, object> Defaults { get; } = new Dictionary<string, object>
     {
         ["active_callout"] = false,
         ["talking_chance"] = 0.5,
