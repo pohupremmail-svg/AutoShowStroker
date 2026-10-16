@@ -12,15 +12,6 @@ using Gooner.Core.Timing;
 
 namespace Gooner.Core.Simulation;
 
-// A clock that stands wherever it is put, in seconds since the Unix epoch - for everything that
-// reads the time, the session clock and the TimeProviders alike.
-public sealed class SimulatedClock(double start) : TimeProvider, ISessionClock
-{
-    public double Now { get; set; } = start;
-
-    public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch.AddSeconds(Now);
-}
-
 public sealed record HeadlessOptions
 {
     public const double DefaultLingerAfterClimax = 15.0;
@@ -69,7 +60,7 @@ public sealed class HeadlessSession
     {
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
-        Clock = new SimulatedClock(options.StartAt ?? (DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch).TotalSeconds);
+        Clock = new FrameClock(options.StartAt ?? (DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch).TotalSeconds);
         Scheduler = new ClockScheduler(Clock);
         var random = new SystemRandomSource(new Random(options.Seed));
 
@@ -88,7 +79,7 @@ public sealed class HeadlessSession
         Wire();
     }
 
-    public SimulatedClock Clock { get; }
+    public FrameClock Clock { get; }
     public ClockScheduler Scheduler { get; }
     public BeatHandler Beat { get; }
     public CalloutHandler? Callouts { get; }
