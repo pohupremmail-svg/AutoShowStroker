@@ -191,4 +191,56 @@ public class ClickTrackTests
     [Fact]
     public void stereo_interleaves_a_mono_click() =>
         Assert.Equal([1.0f, 1.0f, 0.5f, 0.5f, 0.25f, 0.25f], ClickTrack.Stereo(Click));
+
+    // --- a click on its own: the pattern editor's preview ---
+
+    // play_beat_sound on the Python side: one click, now, outside any rhythm.
+    [Fact]
+    public void a_click_played_now_starts_on_the_next_frame_written()
+    {
+        var track = Track();
+        Left(track, 5);
+
+        track.PlayNow();
+
+        Assert.Equal([1.0f, 0.5f, 0.25f, 0f], Left(track, 4));
+    }
+
+    // The rhythm's schedule is replaced every frame; a preview click must not be replaced with it.
+    [Fact]
+    public void scheduling_the_rhythm_does_not_take_a_click_played_now_back()
+    {
+        var track = Track();
+
+        track.PlayNow();
+        track.Schedule([]);
+
+        Assert.Equal(1.0f, Left(track, 3)[0]);
+    }
+
+    [Fact]
+    public void a_click_played_now_is_silent_while_muted_and_follows_the_volume()
+    {
+        var muted = Track();
+        muted.Muted = true;
+        muted.PlayNow();
+        Assert.All(Left(muted, 3), s => Assert.Equal(0f, s));
+
+        var quiet = Track();
+        quiet.Volume = 0.5f;
+        quiet.PlayNow();
+        Assert.Equal(0.5f, Left(quiet, 1)[0]);
+    }
+
+    // What the session check counts are the rhythm's notes.
+    [Fact]
+    public void a_click_played_now_is_not_a_note()
+    {
+        var track = Track();
+
+        track.PlayNow();
+        Left(track, 3);
+
+        Assert.Equal(0, track.ClicksStarted);
+    }
 }

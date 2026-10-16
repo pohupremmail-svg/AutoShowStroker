@@ -120,6 +120,14 @@ public sealed class ClickTrack
         }
     }
 
+    // One click outside any rhythm - the pattern editor's preview, play_beat_sound on the Python
+    // side. It starts on the next frame written, and no schedule takes it back.
+    public void PlayNow()
+    {
+        lock (_lock)
+            if (!_muted) _sounding.Add(_framesWritten);
+    }
+
     // Writes the next block: interleaved stereo, overwritten rather than added to.
     public void Mix(Span<float> block)
     {

@@ -67,6 +67,7 @@ public partial class Main
         ["settings-beat"] = () => ShowSettings("Beat & Rhythm"),
         ["settings-callouts"] = () => ShowSettings("Callouts"),
         ["phrasefiles"] = ShowPhraseFiles,
+        ["patterns"] = () => ShowPatternEditor(() => { }),
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
     };
 
@@ -133,9 +134,17 @@ public partial class Main
 
     private void ShowSettings(string? tab)
     {
-        var panel = new SettingsPanel(new SettingsForm(_app!), _panels, refresh => NotYet("Pattern Editor", "3.9"), ShowPhraseFiles);
+        var panel = new SettingsPanel(new SettingsForm(_app!), _panels, ShowPatternEditor, ShowPhraseFiles);
         _panels.Show(panel);
         if (tab is not null) panel.ShowTab(tab);
+    }
+
+    // The rhythms the editor saved or deleted show in Settings once it closes.
+    private void ShowPatternEditor(Action closed)
+    {
+        var panel = new PatternEditorPanel(new PatternEditor(_app!.Beat), () => _audio?.Click?.PlayNow());
+        panel.Closed += closed;
+        _panels.Show(panel);
     }
 
     private void ShowPhraseFiles()
