@@ -77,7 +77,7 @@ dotnet build engine/GoonerEngine.sln
 dotnet test engine/GoonerEngine.sln
 .venv/Scripts/python.exe -m parity.generate      # from the repo root
 dotnet test engine/Gooner.Parity.Tests
-dotnet run --project engine/Gooner.Harness -- --help-is-the-comment-in-Program.cs
+dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240   # options: top of Program.cs
 ```
 
 Both test projects run their tests in sequence (`AssemblyInfo.cs`): the log is one sink for the
