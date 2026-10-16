@@ -9,6 +9,7 @@ using Gooner.Core.Media;
 using Gooner.Core.Settings;
 using Gooner.Core.Timing;
 using Gooner.Engine.Audio;
+using Gooner.Engine.Panels;
 using Gooner.Engine.Stage;
 using Gooner.Engine.Track;
 using Gooner.Engine.Ui;
@@ -30,7 +31,8 @@ namespace Gooner.Engine;
 //                         ran, showed something and clicked on time. --screenshot=<png> saves the
 //                         window at the end (not headless: there is nothing to grab there).
 //                         --climax-at=<s> brings the climax that many seconds in; --stop presses
-//                         Stop at the end, so the question is in the screenshot.
+//                         Stop at the end, so the question is in the screenshot, and
+//                         --answer=came|ruined|stopped|none answers it, so the recap is.
 //   -- --data-dir=<path>  where the history, settings and saved sessions go (see AppPaths).
 public partial class Main : Control
 {
@@ -56,10 +58,9 @@ public partial class Main : Control
     private Control _controlsRow = null!, _footer = null!;
     private PanelContainer _banner = null!, _callout = null!, _chase = null!, _clockCaption = null!;
     private Label _bannerText = null!, _calloutText = null!, _chaseText = null!, _clockText = null!;
-    private Control _question = null!, _recap = null!;
-    private Label _recapText = null!;
-    private Button _recapSave = null!;
     private FileDialog _folderDialog = null!;
+    private MenuBar _menu = null!;
+    private PanelHost _panels = null!;
 
     public override void _Ready()
     {
@@ -167,7 +168,9 @@ public partial class Main : Control
         Caption(_callout, _calloutText, app.Hud.CalloutText);
         Caption(_chase, _chaseText, app.Hud.RecordChaseText);
         Caption(_clockCaption, _clockText, app.Hud.SessionTimerText);
-        _question.Visible = app.HowItEndedPending;
+        SyncQuestion();
+        // A modal dialog blocked the window's menu shortcuts too.
+        _menu.SetDisableShortcuts(_panels.AnyOpen);
     }
 
     // As wide as its text, up to nine tenths of the picture, then wrapped - what the QLabel in its
@@ -191,11 +194,30 @@ public partial class Main : Control
 
     // --- input ---
 
-    // The keys of the Python window: F/F11 fullscreen, Esc out of it, Space panic, M mute, and the
-    // buttons' own shortcuts - each only while its button could be pressed.
+    // Panic comes first, before any control could take Space for itself: a focused button in a
+    // panel would press itself instead. Only a field being typed in keeps it - there a space is
+    // a space.
+    public override void _Input(InputEvent @event)
+    {
+        if (_app is null || @event is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space } key) return;
+        if (key.CtrlPressed || key.ShiftPressed || key.AltPressed) return;
+        if (GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit) return;
+        _app.Panic();
+        GetViewport().SetInputAsHandled();
+    }
+
+    // The keys of the Python window: F/F11 fullscreen, Esc out of it, M mute, and the buttons' own
+    // shortcuts - each only while its button could be pressed. While a panel is open the window
+    // behind it is as unreachable as it was behind a modal dialog, and Esc dismisses the panel.
     public override void _UnhandledKeyInput(InputEvent @event)
     {
         if (_app is null || @event is not InputEventKey { Pressed: true, Echo: false } key) return;
+        if (_panels.AnyOpen)
+        {
+            if (key.Keycode == Key.Escape) _panels.RejectTop();
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         var ctrl = key.CtrlPressed;
         switch (key.Keycode)
         {
@@ -208,9 +230,6 @@ public partial class Main : Control
             case Key.Space when ctrl:
                 if (!_stop.Disabled) _app.Stop();
                 break;
-            case Key.Space:
-                _app.Panic();
-                break;
             case Key.M:
                 _app.ToggleMute();
                 break;
@@ -222,9 +241,6 @@ public partial class Main : Control
                 break;
             case Key.O when ctrl:
                 OpenFolder();
-                break;
-            case Key.Q when ctrl:
-                Quit(0);
                 break;
             case Key.E when _edge.Visible && !_edge.Disabled:
                 _app.EdgeReached();
@@ -276,29 +292,6 @@ public partial class Main : Control
         GetTree().Quit(exitCode);
     }
 
-    // --- the recap ---
-
-    // A stand-in for the statistics dialog, which comes with the other dialogs in phase 3: the
-    // headline numbers and the way to save the session.
-    private void ShowRecap()
-    {
-        var app = _app!;
-        var info = app.Score.DeliverInfos();
-        var lines = new List<string>
-        {
-            $"{Clock.FormatClock((double?)info["total_dur_sec"] ?? 0)} played, {info["total_num_beat"]} beats, {info["total_num_pauses"]} pauses",
-            $"Climax: {info["climax_outcome"]?.ToString() ?? "none"}   Reported: {info["reported_outcome"]?.ToString() ?? "-"}",
-        };
-        if (app.Score.LastSessionNewRecords.Count > 0)
-            lines.Add("New records: " + string.Join(", ", app.Score.LastSessionNewRecords.Keys));
-        if (app.NewAchievements is { Count: > 0 } earned)
-            lines.Add("Achievements: " + string.Join(", ", earned.Select(a => a.Name)));
-        _recapText.Text = string.Join("\n", lines);
-        _recapSave.Text = "Save this session";
-        _recapSave.Disabled = false;
-        _recap.Visible = true;
-    }
-
     // --- smoke runs ---
 
     private void BeginSmoke()
@@ -340,11 +333,15 @@ public partial class Main : Control
         if (AppPaths.UserFlag("stop"))
         {
             app.Stop();
+            // --answer=came|ruined|stopped|none answers its question, so the recap is on screen.
+            if (AppPaths.UserArg("answer") is { } answer)
+                app.AnswerHowItEnded(answer == "none" ? null : answer);
             Sync();
         }
         if (AppPaths.UserArg("screenshot") is { } shot)
         {
-            // A frame later, so whatever the last line changed is on screen.
+            // Once whatever the last lines opened has faded in.
+            await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
             await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
             GetViewport().GetTexture().GetImage().SavePng(shot);
         }
@@ -363,6 +360,8 @@ public partial class Main : Control
         var root = new VBoxContainer { AnchorRight = 1, AnchorBottom = 1 };
         root.AddThemeConstantOverride("separation", 0);
         AddChild(root);
+        _menu = BuildMenu();
+        root.AddChild(_menu);
 
         // The picture, with the captions laid over it.
         var media = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -432,8 +431,6 @@ public partial class Main : Control
         _footer.AddChild(_outcomeRow);
         _footer.AddChild(_track);
 
-        _question = BuildQuestion();
-        _recap = BuildRecap();
         _folderDialog = new FileDialog
         {
             FileMode = FileDialog.FileModeEnum.OpenDir,
@@ -443,58 +440,10 @@ public partial class Main : Control
         };
         _folderDialog.DirSelected += FolderChosen;
         AddChild(_folderDialog);
+        // Over everything, the menu bar included.
+        _panels = new PanelHost();
+        AddChild(_panels);
         Sync();
-    }
-
-    // Stop's question, as a panel over everything rather than a modal box.
-    private Control BuildQuestion()
-    {
-        var app = _app!;
-        var (overlay, box) = Overlay();
-        box.AddChild(Text("How did that end?", 20));
-        box.AddChild(Text("Before the recap - what actually happened?", 15));
-        var note = Text("Without an answer this session counts as one that never finished, which drags every average you are tracking.", 13);
-        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        note.CustomMinimumSize = new Vector2(420, 0);
-        box.AddChild(note);
-        var row = new HBoxContainer();
-        foreach (var (label, answer) in new (string, string?)[] { ("I Came", "came"), ("I Ruined It", "ruined"), ("I Stopped", "stopped"), ("Rather not say", null) })
-            row.AddChild(Button(label, () => app.AnswerHowItEnded(answer)));
-        box.AddChild(row);
-        return overlay;
-    }
-
-    private Control BuildRecap()
-    {
-        var (overlay, box) = Overlay();
-        box.AddChild(Text("Session over", 20));
-        _recapText = Text("", 15);
-        box.AddChild(_recapText);
-        var row = new HBoxContainer();
-        _recapSave = Button("Save this session", () =>
-        {
-            _recapSave.Text = _app!.SaveCurrentSession() ? "Saved" : "Could not save it";
-            _recapSave.Disabled = true;
-        });
-        row.AddChild(_recapSave);
-        row.AddChild(Button("Close", () => _recap.Visible = false));
-        box.AddChild(row);
-        return overlay;
-    }
-
-    // A dimmed layer over the window with a panel in its middle.
-    private (Control Overlay, VBoxContainer Box) Overlay()
-    {
-        var overlay = new ColorRect { Color = new Color(0, 0, 0, 0.55f), AnchorRight = 1, AnchorBottom = 1, Visible = false };
-        var center = new CenterContainer { AnchorRight = 1, AnchorBottom = 1 };
-        var panel = new PanelContainer();
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 12);
-        panel.AddChild(box);
-        center.AddChild(panel);
-        overlay.AddChild(center);
-        AddChild(overlay);
-        return (overlay, box);
     }
 
     private static (PanelContainer Panel, Label Text) CaptionPanel(int fontSize, float alpha, int radius, int margin)
@@ -518,13 +467,6 @@ public partial class Main : Control
         var button = new Button { Text = text, FocusMode = FocusModeEnum.None, TooltipText = tooltip ?? "" };
         button.Pressed += pressed;
         return button;
-    }
-
-    private static Label Text(string text, int size)
-    {
-        var label = new Label { Text = text };
-        label.AddThemeFontSizeOverride("font_size", size);
-        return label;
     }
 
     private static Label Caption(string text) => new()

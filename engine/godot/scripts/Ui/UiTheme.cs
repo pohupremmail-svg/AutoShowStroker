@@ -26,7 +26,7 @@ public static class UiTheme
 
     public static Theme Build()
     {
-        var theme = new Theme { DefaultFontSize = 15 };
+        var theme = new Theme { DefaultFontSize = 15, DefaultFont = Regular };
 
         StyleBoxFlat Button(string background)
         {
@@ -60,9 +60,55 @@ public static class UiTheme
         theme.SetStylebox("pressed", "PrimaryButton", Primary(Palette.Accent));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
             theme.SetColor(state, "PrimaryButton", Of(Palette.Background));
+        theme.SetFont("font", "PrimaryButton", Bold);
 
         theme.SetColor("font_color", "Label", Of(Palette.Text));
         theme.SetStylebox("panel", "PanelContainer", Box(Of(Palette.Surface), 12, 18));
+
+        // A panel's heading: the title WhatsNewDialog and its siblings drew in their own body.
+        theme.SetTypeVariation("PanelTitle", "Label");
+        theme.SetFont("font", "PanelTitle", Bold);
+        theme.SetFontSize("font_size", "PanelTitle", 22);
+        theme.SetColor("font_color", "PanelTitle", Of(Palette.Accent));
+
+        // The menu bar and its menus, in the palette's Highlight and HighlightedText.
+        StyleBoxFlat MenuItem(Color background)
+        {
+            var box = Box(background, 4);
+            box.ContentMarginLeft = box.ContentMarginRight = 10;
+            box.ContentMarginTop = box.ContentMarginBottom = 4;
+            return box;
+        }
+        theme.SetStylebox("normal", "MenuBar", MenuItem(Colors.Transparent));
+        theme.SetStylebox("hover", "MenuBar", MenuItem(Of(Palette.Secondary)));
+        theme.SetStylebox("pressed", "MenuBar", MenuItem(Of(Palette.Accent)));
+        theme.SetStylebox("disabled", "MenuBar", MenuItem(Colors.Transparent));
+        theme.SetColor("font_color", "MenuBar", Of(Palette.Text));
+        theme.SetColor("font_hover_color", "MenuBar", Of(Palette.Text));
+        theme.SetColor("font_pressed_color", "MenuBar", Of(Palette.Background));
+        theme.SetColor("font_hover_pressed_color", "MenuBar", Of(Palette.Background));
+        var popup = Box(Of(Palette.Surface), 6, 4);
+        popup.SetBorderWidthAll(1);
+        popup.BorderColor = Of(Palette.Secondary);
+        theme.SetStylebox("panel", "PopupMenu", popup);
+        theme.SetStylebox("hover", "PopupMenu", Box(Of(Palette.Accent), 4));
+        theme.SetColor("font_color", "PopupMenu", Of(Palette.Text));
+        theme.SetColor("font_hover_color", "PopupMenu", Of(Palette.Background));
+        theme.SetColor("font_accelerator_color", "PopupMenu", Of(Palette.DisabledText));
+        theme.SetColor("font_separator_color", "PopupMenu", Of(Palette.Secondary));
+        var separator = new StyleBoxLine { Color = Of(Palette.Secondary), Thickness = 1 };
+        theme.SetStylebox("separator", "PopupMenu", separator);
+
+        var tooltip = Box(Of(Palette.Surface), 4, 6);
+        tooltip.SetBorderWidthAll(1);
+        tooltip.BorderColor = Of(Palette.Secondary);
+        theme.SetStylebox("panel", "TooltipPanel", tooltip);
+        theme.SetColor("font_color", "TooltipLabel", Of(Palette.Text));
         return theme;
     }
+
+    // Segoe UI, the family the Qt stylesheet names; another sans-serif where it is missing.
+    public static readonly SystemFont Regular = new() { FontNames = ["Segoe UI", "sans-serif"] };
+
+    public static readonly SystemFont Bold = new() { FontNames = ["Segoe UI", "sans-serif"], FontWeight = 700 };
 }

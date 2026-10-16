@@ -56,6 +56,9 @@ public sealed class GoonerApp : ISettingsOwner
 
     public const string EdgeButtonDefaultText = "I reached my Edge";
 
+    // Socials > Join Discord.
+    public const string DiscordInviteUrl = "https://discord.gg/qqkcxvq37Z";
+
     public static IReadOnlyDictionary<string, object> Defaults { get; } = new Dictionary<string, object>
     {
         ["show_startup_splash"] = true,
