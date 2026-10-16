@@ -31,3 +31,5 @@ project/assembly_name="Gooner.Engine"
 
 renderer/rendering_method="forward_plus"
 anti_aliasing/quality/msaa_2d=2
+shader_compiler/shader_cache/enabled=false
+rendering_device/pipeline_cache/enable=false

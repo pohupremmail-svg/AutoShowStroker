@@ -5,6 +5,7 @@ using System.Linq;
 using Gooner.Core.App;
 using Gooner.Core.Data;
 using Gooner.Core.Formatting;
+using Gooner.Core.Logging;
 using Gooner.Core.Media;
 using Gooner.Core.Migration;
 using Gooner.Core.Panels;
@@ -75,6 +76,8 @@ public partial class Main : Control
         // shown, and the app carries on (see CrashLogger).
         _crashes = new CrashReporter(ShowCrash);
         OS.AddLogger(new CrashLogger(_crashes));
+        // Gone again at once, so not even a crash leaves it behind.
+        RemoveGodotUserDir();
         // Closing the window goes through Quit, like every other way out.
         GetTree().AutoAcceptQuit = false;
         var res = AppPaths.Resources;
@@ -114,6 +117,7 @@ public partial class Main : Control
             Post = action => Callable.From(action).CallDeferred(),
         });
         _stage.Player = _app.Player;
+        ApplyWindowIcon(res);
         _app.Beat.BeatHit += () => _hits++;
         _app.Panicked += () => DisplayServer.WindowSetMode(DisplayServer.WindowMode.Minimized);
         _app.StatisticsRequested += ShowRecap;
@@ -139,6 +143,15 @@ public partial class Main : Control
         var splash = new Splash(AppPaths.Resources);
         splash.Finished += then;
         AddChild(splash);
+    }
+
+    // GoonerApp._apply_window_icon: the window and the taskbar show the app's icon, not Godot's.
+    private static void ApplyWindowIcon(string res)
+    {
+        var icon = Path.Combine(res, "icons", "favicon.ico");
+        if (!OperatingSystem.IsWindows()) return;
+        if (File.Exists(icon)) DisplayServer.SetNativeIcon(icon);
+        else AppLog.Warning("GoonerApp", "Window icon not found at {0}", icon);
     }
 
     private static string ReadVersion(string res)
@@ -348,8 +361,14 @@ public partial class Main : Control
             }
         }
         await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
+        RemoveGodotUserDir();
         GetTree().Quit(exitCode);
     }
+
+    // Godot makes %APPDATA%\Godot\app_userdata\GoonerApp at every start, before any of this code
+    // runs; nothing is written there (no file log, no shader or pipeline cache - project.godot), so
+    // it goes again, with Godot\app_userdata and Godot themselves when they hold nothing else.
+    private static void RemoveGodotUserDir() => EmptyFolders.RemoveWithParents(OS.GetUserDataDir(), parents: 2);
 
     // --- smoke runs ---
 
