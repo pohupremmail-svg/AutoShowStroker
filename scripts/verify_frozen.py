@@ -44,6 +44,7 @@ REQUIRED_BINARIES = (
 BUNDLED_TREES = (
     ("res/callouts", "*.json", "callout files"),
     ("res/icons/achievements", "*.svg", "achievement marks"),
+    ("res/licenses", "*.txt", "third-party license texts"),
 )
 
 

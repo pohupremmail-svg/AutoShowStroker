@@ -1,0 +1,86 @@
+GoonerApp - third-party software
+================================
+
+GoonerApp is free software under the GNU General Public License version 3 (GPL-3.0.txt).
+The packaged program, GoonerApp.exe, also contains software written by others. Each piece is
+listed below with the license it comes under; the full license texts are in this folder, and
+in the app Help > Third-Party Licenses shows every one of them.
+
+Source code. Qt, FFmpeg and PyQt6 are passed on under the GNU GPL and LGPL. They are bundled
+exactly as their projects publish them, unmodified, as dynamically linked libraries that can be
+replaced. Their complete source code is available from the projects themselves under the
+version numbers given here, and we will provide it on request as well: open an issue in this
+project's repository. That offer stands for three years from the date of each release.
+GoonerApp's own source code is in the same repository.
+
+
+== Python 3.13 ==
+The interpreter and its standard library, together with the libraries its Windows build comes
+with (bzip2, libffi, OpenSSL and the others named in the text).
+License: Python Software Foundation License Version 2, with the notices of its bundled libraries
+License text: Python-PSF.txt
+
+== Qt 6.10.0 ==
+Package: PyQt6-Qt6==6.10.0
+The Qt libraries and plugins the app is built on. Copyright (C) The Qt Company Ltd. and other
+contributors. Qt incorporates further third-party code (image format libraries, PDFium and
+others), which Qt documents under "Licenses Used in Qt" for this version.
+License: GNU Lesser General Public License version 3 (a few Qt modules come under the GNU GPL
+instead, which GoonerApp's own GPLv3 satisfies)
+License text: LGPL-3.0.txt, GPL-3.0.txt
+
+== FFmpeg 7.1.1 ==
+Bundled with Qt Multimedia, which plays video through it: avcodec-61.dll, avformat-61.dll,
+avutil-59.dll, swresample-5.dll, swscale-8.dll. This software uses libraries from the FFmpeg
+project under the LGPLv2.1. The build contains no GPL or nonfree parts.
+License: GNU Lesser General Public License version 2.1 or later
+License text: LGPL-2.1.txt
+
+== PyQt6 6.10.0 ==
+Package: PyQt6==6.10.0
+The Python bindings for Qt. Copyright (c) Riverbank Computing Limited.
+License: GNU General Public License version 3
+License text: GPL-3.0.txt
+
+== PyQt6-sip 13.10.2 ==
+Package: PyQt6_sip==13.10.2
+License: BSD 2-Clause License
+License text: PyQt6-sip-BSD-2-Clause.txt
+
+== pyqtgraph 0.14.0 ==
+Package: pyqtgraph==0.14.0
+License: MIT License
+License text: pyqtgraph-MIT.txt
+
+== NumPy 2.5.1 ==
+Package: numpy==2.5.1
+Together with the libraries its Windows build comes with (OpenBLAS, LAPACK, the GCC runtime
+and the others named in the text).
+License: BSD 3-Clause License, with the notices of its bundled libraries
+License text: numpy.txt
+
+== PyInstaller 6.21.0 ==
+Package: pyinstaller==6.21.0
+Packs the app into a single program; its bootloader is part of GoonerApp.exe.
+License: GNU General Public License version 2 or later, with the PyInstaller bootloader
+exception, which allows the bootloader to be passed on with programs under any license.
+
+== charset-normalizer ==
+A small package present where the program is built, picked up by the bundler.
+License: MIT License
+License text: charset-normalizer-MIT.txt
+
+== colorama ==
+A small package present where the program is built, picked up by the bundler.
+License: BSD 3-Clause License
+License text: colorama-BSD-3-Clause.txt
+
+== typing-extensions ==
+A small package present where the program is built, picked up by the bundler.
+License: Python Software Foundation License Version 2
+License text: typing-extensions-PSF-2.0.txt
+
+== Microsoft Visual C++ Runtime ==
+VCRUNTIME140.dll, MSVCP140.dll and their siblings, passed on under Microsoft's terms for
+Distributable Code - see "Additional Conditions for this Windows binary build" in
+Python-PSF.txt.

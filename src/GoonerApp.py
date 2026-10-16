@@ -503,6 +503,10 @@ class GoonerApp(QMainWindow):
         privacy_data_action.triggered.connect(self.show_privacy_data_dialog)
         help_menu.addAction(privacy_data_action)
 
+        licenses_action = QAction("Third-Party Licenses...", self)
+        licenses_action.triggered.connect(self.show_third_party_licenses)
+        help_menu.addAction(licenses_action)
+
         help_menu.addSeparator()
         check_updates_action = QAction("Check for Updates...", self)
         check_updates_action.triggered.connect(self.check_for_updates)
@@ -570,6 +574,14 @@ class GoonerApp(QMainWindow):
 
     def show_privacy_data_dialog(self):
         dialog = PrivacyDataDialog(self, parent=self)
+        dialog.exec()
+        dialog.deleteLater()
+
+    def show_third_party_licenses(self):
+        # Imported here like the other on-demand dialogs: most runs never open it.
+        from src.ThirdPartyLicensesDialog import ThirdPartyLicensesDialog
+
+        dialog = ThirdPartyLicensesDialog(parent=self)
         dialog.exec()
         dialog.deleteLater()
 
