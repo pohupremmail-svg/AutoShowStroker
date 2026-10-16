@@ -30,5 +30,4 @@ project/assembly_name="Gooner.Engine"
 [rendering]
 
 renderer/rendering_method="forward_plus"
-viewport/hdr_2d=true
 anti_aliasing/quality/msaa_2d=2

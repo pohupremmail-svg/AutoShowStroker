@@ -34,6 +34,12 @@ here unchanged. This file only adds what is specific to this side.
   belongs in the core instead. It has its own `Gooner.Engine.sln` because Godot's build and
   export look for `<assembly name>.sln` beside `project.godot`; `GoonerEngine.sln` holds it too,
   so one build compiles everything.
+- The window (`godot/scripts/Main.cs`) draws `Gooner.Core.App.GoonerApp`'s state and calls into
+  it; the lifecycle, the wiring and every rule about what may happen when live in the core, with
+  the ported tests of `test_gooner_app.py`. A widget here holds no state the core does not.
+- **Until the data migration (phase 4) the engine keeps its own data folder**,
+  `%LOCALAPPDATA%\GoonerCock\GoonerApp.EnginePreview` (`-- --data-dir=` for another), so a
+  preview run can never change what the installed Python app remembers.
 - `res/` (callouts, click, icons) is read **from disk**, never through Godot's `res://`:
   `Gooner.Core.Data.ResourceRoot` finds the repo's own copy from a dev run and the one beside the
   executable once exported. The files never go through Godot's importer, so the engine reads
@@ -97,7 +103,12 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop] [--screenshot=PNG]
 ```
+
+The smoke runs never touch a real data folder when given `--data-dir`; give them one. HDR 2D is
+off until the effect layer (phase 7) needs it: with it on, a screenshot of the viewport comes out
+in linear colour and every check of the palette reads too dark.
 
 `$GODOT` is the Godot 4.7.2 .NET *console* binary (`Godot_v4.7.2-stable_mono_win64_console.exe`);
 the plain one detaches from the terminal and its exit code is lost. Godot's own packages restore
