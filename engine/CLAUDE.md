@@ -50,6 +50,40 @@ here unchanged. This file only adds what is specific to this side.
   no HEVC); the wrapper is MIT. Every release package therefore carries the LGPLv3 and GPLv3 texts,
   the wrapper's MIT licence, a note that the app uses FFmpeg, and the source archive of exactly that
   FFmpeg version - phase 5 builds that in.
+- **Every dialog of the Python app is a panel** (`godot/scripts/Panels/`), shown by the `PanelHost`
+  over the whole window - menu bar included, as a modal dialog blocked that too - while the session
+  plays on behind it. Panels stack; Esc and the corner cross run the panel's own answer to being
+  dismissed (`OnReject`; a question's escape button). Nothing waits on a panel the way
+  `QDialog.exec()` did: a question calls back. `Confirm.Ask`/`Confirm.Tell` are `QMessageBox`.
+  The pattern for each dialog: its logic is a model in `Gooner.Core.Panels` (`SettingsForm`,
+  `StatisticsReport`, `PrivacyData`, `SavedSessionsShelf`, `SessionExplorer`, `MediaFolderPicker`,
+  ...) carrying the ported tests of the dialog's Python test file; the panel only draws it and
+  writes into it. Python tests about Qt itself (fixed dialog sizes, nested event loops, widget
+  focus) are not ported.
+- **Panic is read in `_Input`, before any control**, so a focused button in a panel cannot take
+  Space for itself; only a text field keeps its spaces.
+- **Texts copied from the Python side stay word for word.** `Changelog.Entries` and
+  `Guide.PythonTopics` are generated from the Python source and compared by the parity run - an
+  entry added on `main` and merged in fails there until it is copied over. Where the engine works
+  differently, the Guide gets an edit on top (`Guide.EngineEdits`, naming the exact sentence it
+  replaces), never a change inside the copy.
+- **Device output (Intiface) is `Gooner.Core.Devices`.** The connection is an actor
+  (`IntifaceWorker`: one loop, one step at a time, as the Qt thread was), reporting to the window
+  through `GoonerAppOptions.Post` (`CallDeferred`). The user's rules stand: **no address ships with
+  the app**, and output is **off at every launch** until switched on, after a consent that names
+  the address. Tests run against a Buttplug server faked on loopback
+  (`Gooner.Core.Tests/Support/FakeIntifaceServer`); a test that switches output on uses a closed
+  loopback port, so nothing is resolved or contacted. A development run can drive a server of its
+  own: `-- --smoke-session ... --device=ws://127.0.0.1:<port>` (no consent question - never for a
+  user).
+- **An exception nobody catches** is caught by Godot and reported as an engine error;
+  `CrashLogger` (registered with `OS.AddLogger` first thing in `_Ready`) picks out the .NET ones
+  and hands them to `Gooner.Core.App.CrashReporter`: logged first, shown second, once per fault.
+  The app carries on.
+- **The engine's own licenses** are in `engine/licenses/` (its notices, GPLv3/LGPLv3, the .NET
+  runtime's), beside the executable once exported; Godot's are read from the engine itself.
+  `LicenseShelfTests` keep the notices in step with the Godot SDK, the .NET version and the
+  FFmpeg DLLs, as `test_third_party_licenses.py` does on the Python side.
 - `res/` (callouts, click, icons) is read **from disk**, never through Godot's `res://`:
   `Gooner.Core.Data.ResourceRoot` finds the repo's own copy from a dev run and the one beside the
   executable once exported. The files never go through Godot's importer, so the engine reads
@@ -113,8 +147,13 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
-"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop] [--screenshot=PNG]
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--screenshot=PNG]
+"$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S]
 ```
+
+`--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
+`settings`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`, `crash`, `splash`,
+...), waits for it to fade in and saves the window - how every panel was checked by eye.
 
 The smoke runs never touch a real data folder when given `--data-dir`; give them one. HDR 2D is
 off until the effect layer (phase 7) needs it: with it on, a screenshot of the viewport comes out
