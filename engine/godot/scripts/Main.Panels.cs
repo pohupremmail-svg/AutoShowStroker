@@ -24,7 +24,7 @@ public partial class Main
         AddMenu(bar, "Help",
             ("What's New", Key.None, () => ShowWhatsNew(_app!.ChangelogEntries)),
             ("Guide", Key.F1, () => _panels.Show(new GuidePanel())),
-            ("Privacy & Data...", Key.None, () => NotYet("Privacy & Data", "3.7")),
+            ("Privacy & Data...", Key.None, ShowPrivacy),
             ("Third-Party Licenses...", Key.None, () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
             (null, Key.None, null),
             ("Check for Updates...", Key.None, () => NotYet("Check for Updates", "3.12")));
@@ -62,6 +62,7 @@ public partial class Main
         ["achievements"] = ShowAchievements,
         ["guide"] = () => _panels.Show(new GuidePanel()),
         ["licenses"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses)),
+        ["privacy"] = ShowPrivacy,
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
     };
 
@@ -121,6 +122,8 @@ public partial class Main
     private void ShowAchievements() => _panels.Show(new AchievementsPanel(
         new AchievementsOverview(_app!.Achievements, _app.Score.GetHistory()),
         System.IO.Path.GetDirectoryName(AppPaths.Resources!)!));
+
+    private void ShowPrivacy() => _panels.Show(new PrivacyPanel(new PrivacyData(_app!), _panels));
 
     // --- the recap ---
 

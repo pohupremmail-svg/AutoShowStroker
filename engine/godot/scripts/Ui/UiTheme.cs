@@ -147,6 +147,23 @@ public static class UiTheme
         theme.SetConstant("side_margin", "TabContainer", 0);
         theme.SetConstant("tab_separation", "TabContainer", 2);
 
+        // Check boxes, as the stylesheet drew QCheckBox: a rounded surface square with a secondary rim,
+        // filled with the accent once ticked; muted, tick kept, while disabled.
+        theme.SetIcon("unchecked", "CheckBox", CheckIcon(Of(Palette.Surface), Of(Palette.Secondary)));
+        theme.SetIcon("checked", "CheckBox", CheckIcon(Of(Palette.Accent), Of(Palette.Accent)));
+        theme.SetIcon("unchecked_disabled", "CheckBox", CheckIcon(Of(Palette.DisabledBg), Of(Palette.DisabledText)));
+        theme.SetIcon("checked_disabled", "CheckBox", CheckIcon(Of(Palette.DisabledText), Of(Palette.DisabledText)));
+        foreach (var state in new[] { "normal", "hover", "pressed", "hover_pressed", "focus", "disabled" })
+        {
+            var plain = new StyleBoxEmpty();
+            plain.SetContentMarginAll(2);
+            theme.SetStylebox(state, "CheckBox", plain);
+        }
+        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" })
+            theme.SetColor(state, "CheckBox", Of(Palette.Text));
+        theme.SetColor("font_disabled_color", "CheckBox", Of(Palette.DisabledText));
+        theme.SetConstant("h_separation", "CheckBox", 8);
+
         // Text fields, as the QLineEdit/QPlainTextEdit of the stylesheet: a surface field with a
         // secondary rim, the accent once it has the focus.
         foreach (var field in new[] { "LineEdit", "TextEdit" })
@@ -190,6 +207,30 @@ public static class UiTheme
         theme.SetStylebox("panel", "TooltipPanel", tooltip);
         theme.SetColor("font_color", "TooltipLabel", Of(Palette.Text));
         return theme;
+    }
+
+    // A 16 px rounded square, 1 px rim, drawn by hand: a CheckBox takes its box as an icon.
+    private static ImageTexture CheckIcon(Color fill, Color rim)
+    {
+        const int size = 16;
+        const float half = size / 2f, radius = 4f;
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        for (var y = 0; y < size; y++)
+        {
+            for (var x = 0; x < size; x++)
+            {
+                // Signed distance from the pixel's centre to the rounded square's edge.
+                var dx = System.Math.Max(System.Math.Abs(x + 0.5f - half) - (half - radius), 0);
+                var dy = System.Math.Max(System.Math.Abs(y + 0.5f - half) - (half - radius), 0);
+                var distance = System.MathF.Sqrt(dx * dx + dy * dy) - radius;
+                var coverage = System.Math.Clamp(0.5f - distance, 0f, 1f);
+                var inner = System.Math.Clamp(0.5f - (distance + 1f), 0f, 1f);
+                var colour = rim.Lerp(fill, inner);
+                colour.A *= coverage;
+                image.SetPixel(x, y, colour);
+            }
+        }
+        return ImageTexture.CreateFromImage(image);
     }
 
     // Segoe UI, the family the Qt stylesheet names; another sans-serif where it is missing.

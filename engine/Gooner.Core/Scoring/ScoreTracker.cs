@@ -93,7 +93,7 @@ public sealed class ScoreTracker : App.IRecordChaseSource
     // The records the session just ended broke, each with the best it beat.
     public IReadOnlyDictionary<string, double> LastSessionNewRecords { get; private set; } = new Dictionary<string, double>();
 
-    internal List<JsonObject> History { get; private set; }
+    internal List<JsonObject> History { get; set; }
 
     private double Now => (_time.GetUtcNow() - DateTimeOffset.UnixEpoch).TotalSeconds;
 

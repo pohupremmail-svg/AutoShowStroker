@@ -17,6 +17,40 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
     private JsonSettingsStore Store() => new(Data());
 
+    // --- Privacy & Data ---
+
+    // What QSettings.fileName() named on the Python side: where the settings are, to be shown.
+    [Fact]
+    public void the_store_says_where_its_file_is() =>
+        Assert.Equal(Path.Combine(_tmp.FullName, "appdata", "settings.json"), Store().Location);
+
+    // "All settings" under Delete my data: every key gone, and the file with them.
+    [Fact]
+    public void clearing_removes_every_key_and_the_file()
+    {
+        var store = Store();
+        store.SetValue("GoonerApp/min_dur", 2.5);
+        store.SetValue("BeatHandler/max_beat_dur", 50.0);
+
+        store.Clear();
+
+        Assert.Empty(store.Keys);
+        Assert.False(File.Exists(store.Location));
+        Assert.Empty(Store().Keys);
+    }
+
+    [Fact]
+    public void a_setting_written_after_clearing_is_kept()
+    {
+        var store = Store();
+        store.SetValue("GoonerApp/min_dur", 2.5);
+        store.Clear();
+
+        store.SetValue("GoonerApp/max_dur", 9.0);
+
+        Assert.Equal(["GoonerApp/max_dur"], Store().Keys);
+    }
+
     // --- storing ---
 
     [Fact]

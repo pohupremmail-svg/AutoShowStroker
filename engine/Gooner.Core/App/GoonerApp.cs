@@ -123,6 +123,10 @@ public sealed class GoonerApp : ISettingsOwner
 
     public FrameClock Clock { get; }
     public ClockScheduler Scheduler { get; }
+    // Where everything is kept - null for a run that keeps nothing. Privacy & Data shows and
+    // deletes it.
+    public ISettingsStore? Settings => _settings;
+    public UserDataStore? DataStore => _data;
     public BeatHandler Beat { get; }
     public CalloutHandler? Callouts { get; }
     public ClimaxHandler Climax { get; }

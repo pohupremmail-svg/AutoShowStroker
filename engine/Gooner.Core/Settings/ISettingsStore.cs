@@ -20,4 +20,10 @@ public interface ISettingsStore
     bool Remove(string key);
 
     IReadOnlyList<string> Keys { get; }
+
+    // Where the settings are, as Privacy & Data names it (QSettings.fileName()).
+    string Location { get; }
+
+    // Every setting gone - Delete my data > All settings.
+    void Clear();
 }

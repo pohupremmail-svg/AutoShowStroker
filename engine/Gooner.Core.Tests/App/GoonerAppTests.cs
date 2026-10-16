@@ -1208,23 +1208,4 @@ public sealed class GoonerAppTests : IDisposable
         Assert.Equal("ERROR", App.DiagnosticLogLevel);
         Assert.True(AppLog.IsFileLoggingActive);
     }
-
-    private sealed class FakeStage : IMediaStage
-    {
-        public List<string> Calls { get; } = [];
-
-        public void ShowImage(string path) => Calls.Add("image " + path);
-
-        public void ShowGif(string path) => Calls.Add("gif " + path);
-
-        public void PlayVideo(string path, double volume) => Calls.Add("video " + path);
-
-        public void ReplayVideo() => Calls.Add("replay");
-
-        public void ShowMessage(string text) => Calls.Add("message " + text);
-
-        public void StopAll() => Calls.Add("stop");
-
-        public void SetMuted(bool muted) => Calls.Add("muted " + muted);
-    }
 }

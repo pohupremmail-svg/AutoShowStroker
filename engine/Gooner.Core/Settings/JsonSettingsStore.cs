@@ -49,6 +49,16 @@ public sealed class JsonSettingsStore : ISettingsStore
         _data.Save(FileName, _values);
     }
 
+    public string Location => _data.PathFor(FileName);
+
+    // The file goes with the keys, its .corrupt and .tmp siblings too; the next SetValue starts a
+    // new one.
+    public void Clear()
+    {
+        _values.Clear();
+        _data.Delete(FileName);
+    }
+
     public bool Remove(string key)
     {
         if (!_values.Remove(key)) return false;
