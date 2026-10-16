@@ -14,7 +14,7 @@ namespace Gooner.Core.Scoring;
 // dicts in Python: achievements read both the same way, and an entry written by an older build
 // simply lacks the newer keys. Time comes from the TimeProvider, so a test moves a clock where
 // Python monkeypatches time.time.
-public sealed class ScoreTracker
+public sealed class ScoreTracker : App.IRecordChaseSource
 {
     private const string Log = "ScoreTracker";
     private const string HistoryName = "session_history";
