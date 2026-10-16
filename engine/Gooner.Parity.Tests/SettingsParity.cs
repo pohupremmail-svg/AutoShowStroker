@@ -48,6 +48,31 @@ public class SettingsParity
         Assert.True(errors > 0, $"'{Unreadable}' is allowlisted but no case raises any more.");
     }
 
+    // Every setting the Python app keeps is one the engine reads, under the same name - or the import
+    // would carry it into a key nothing looks at. Read means an owner's default, or one of the few
+    // read by name, as the Python side reads them.
+    [Fact]
+    public void every_setting_the_python_app_keeps_is_read_here()
+    {
+        var owners = typeof(ISettingsOwner).Assembly.GetTypes().Where(t => t.IsClass && typeof(ISettingsOwner).IsAssignableFrom(t));
+        var read = owners.SelectMany(owner =>
+        {
+            var group = (string)owner.GetProperty(nameof(ISettingsOwner.SettingsGroup))!.GetValue(null)!;
+            var defaults = (IReadOnlyDictionary<string, object>)owner.GetProperty(nameof(ISettingsOwner.Defaults))!.GetValue(null)!;
+            return defaults.Keys.Select(name => $"{group}/{name}");
+        }).Concat(ReadByName).ToHashSet();
+
+        var missing = Golden.Load(Module)["keys"]!.AsArray().Select(k => (string)k!).Where(k => !read.Contains(k)).ToList();
+
+        Assert.True(missing.Count == 0, "Kept by the Python app, read nowhere here: " + string.Join(", ", missing));
+    }
+
+    private static readonly string[] ReadByName =
+        [
+            "GoonerApp/last_seen_version", "BeatHandler/selected_beat_patterns", "CalloutHandler/selected_lang",
+            Gooner.Core.Devices.IntifaceConsent.Key,
+        ];
+
     private static void Number(string name, JsonNode? expected, double actual)
     {
         if (expected is JsonValue v && v.GetValueKind() == System.Text.Json.JsonValueKind.String)

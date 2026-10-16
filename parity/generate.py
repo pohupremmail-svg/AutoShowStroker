@@ -8,9 +8,11 @@ drift.
 
 Run from the repo root:  .venv/Scripts/python.exe -m parity.generate [out_dir]
 """
+import base64
 import copy
 import json
 import random
+import re
 import sys
 import tempfile
 import time
@@ -25,7 +27,7 @@ from src.CalloutHandler import TRIGGER_KEYS, CalloutHandler
 from src.ScoreTracker import ScoreTracker
 from src.SessionRecorder import SessionRecorder
 from src.SessionScript import SessionScript
-from src.user_data import UserDataStore
+from src.user_data import LEGACY_DEAD_KEYS, UserDataStore
 
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
@@ -470,6 +472,152 @@ def _settings_read(raw):
 
 def settings_cases():
     return [{"name": name, "text": raw, "expected": _settings_read(raw)} for name, raw in SETTING_TEXTS.items()]
+
+
+def settings_keys():
+    """Every setting the app keeps, as "Group/name": what an owner reads with a default, and what
+    is written by literal name outside those. The engine imports each one under that name, so it
+    has to read every one of them by it."""
+    from src.ClimaxHandler import ClimaxHandler
+    from src.GoonerApp import GoonerApp
+    from src.PlaylistPlayer import PlaylistPlayer
+    from src.plugins.intiface.consent import CONSENT_KEY
+    from src.plugins.intiface.controller import SETTINGS_PREFIX, IntifaceController
+    from src.SessionHudWidget import SessionHudWidget
+
+    keys = {CONSENT_KEY}
+    for owner in (BeatHandler, CalloutHandler, ClimaxHandler, GoonerApp, PlaylistPlayer, SessionHudWidget):
+        keys.update(f"{owner.SETTINGS_GROUP}/{name}" for name in owner.DEFAULTS)
+    keys.update(f"{SETTINGS_PREFIX}/{name}" for name in IntifaceController.DEFAULTS)
+    for path in sorted((utils.get_project_root() / "src").rglob("*.py")):
+        keys.update(re.findall(r'setValue\(\s*"([A-Za-z]+/[a-z_]+)"', path.read_text(encoding="utf-8")))
+    return sorted(keys)
+
+
+# --- the registry the engine imports the settings from ---------------------------------------------
+
+# What the app hands QSettings, by type - SettingsDialog's spin boxes floats and ints, its check
+# boxes bools, the language box a str, the tone and rhythm choices a list of str - and the corners
+# QSettings' native format escapes or stores differently.
+REGISTRY_VALUES = {
+    "float": 0.25, "float_whole": 2.0, "float_small": 1e-05, "float_inexact": 0.1 + 0.2,
+    "float_negative": -2.5, "int": 7, "int_negative": -3, "int_large": 2**40,
+    "true": True, "false": False, "text": "en", "empty_text": "", "version": "0.7.1",
+    "number_text": "45.5", "at_text": "@home", "double_at_text": "@@home", "unicode": "Süß 日本語",
+    "newline": "a\nb", "path_like": "C:/somewhere", "json_text": json.dumps([{"total_num_beat": 1}]),
+    "list": ["flirty", "teasing"], "list_of_one": ["flirty"], "list_empty": [],
+    "list_with_empty_text": ["", "x"], "list_with_at": ["@a", "b"], "none": None,
+}
+
+_REGISTRY_KINDS = {0: "None", 1: "Sz", 2: "ExpandSz", 3: "Binary", 4: "DWord", 7: "MultiSz", 11: "QWord"}
+
+
+def _raw_values(key):
+    """Every value of an open key as the bytes the registry holds - what Qt wrote, before anything
+    decodes it - and its kind. winreg only hands values back decoded."""
+    import ctypes
+    import winreg
+    from ctypes import wintypes
+
+    query = ctypes.windll.advapi32.RegQueryValueExW
+    query.argtypes = [wintypes.HKEY, wintypes.LPCWSTR, wintypes.LPDWORD, wintypes.LPDWORD,
+                      ctypes.c_void_p, wintypes.LPDWORD]
+    index = 0
+    while True:
+        try:
+            name = winreg.EnumValue(key, index)[0]
+        except OSError:
+            return
+        index += 1
+        kind, size = wintypes.DWORD(), wintypes.DWORD()
+        query(key.handle, name, None, ctypes.byref(kind), None, ctypes.byref(size))
+        data = (ctypes.c_ubyte * size.value)()
+        query(key.handle, name, None, ctypes.byref(kind), data, ctypes.byref(size))
+        yield name, kind.value, bytes(data[: size.value])
+
+
+def _registry_dump(key, prefix=""):
+    import winreg
+
+    found = [{"key": prefix + name, "kind": _REGISTRY_KINDS.get(kind, "Unknown"),
+              "bytes": base64.b64encode(data).decode("ascii")} for name, kind, data in _raw_values(key)]
+    index = 0
+    while True:
+        try:
+            group = winreg.EnumKey(key, index)
+        except OSError:
+            return found
+        index += 1
+        with winreg.OpenKey(key, group) as child:
+            found.extend(_registry_dump(child, prefix + group + "/"))
+
+
+def _delete_tree(root, path):
+    import winreg
+
+    with winreg.OpenKey(root, path) as key:
+        groups = []
+        while True:
+            try:
+                groups.append(winreg.EnumKey(key, len(groups)))
+            except OSError:
+                break
+    for group in groups:
+        _delete_tree(root, f"{path}\\{group}")
+    winreg.DeleteKey(root, path)
+
+
+def _typed_reads(settings, key):
+    """The read sides on a scalar: float(), int(float()), type=bool, str()."""
+    def attempt(read):
+        try:
+            return read()
+        except (ValueError, OverflowError, TypeError):
+            return "error"
+
+    return {
+        "double": attempt(lambda: float(settings.value(key, 0.0))),
+        "int": attempt(lambda: int(float(settings.value(key, 0)))),
+        "bool_default_false": bool(settings.value(key, False, type=bool)),
+        "bool_default_true": bool(settings.value(key, True, type=bool)),
+        "string": attempt(lambda: str(settings.value(key, ""))),
+    }
+
+
+def registry_cases():
+    """REGISTRY_VALUES written by a real QSettings in its native format, into a throwaway key of
+    its own - never the app's - then dumped byte for byte and read back by QSettings, the way the
+    app would read them. The key goes again however this ends."""
+    import uuid
+    import winreg
+
+    from PyQt6.QtCore import QSettings
+
+    parent = f"Software\\Gooner.Parity-{uuid.uuid4().hex}"
+    path = f"{parent}\\GoonerApp"
+    try:
+        settings = QSettings(f"HKEY_CURRENT_USER\\{path}", QSettings.Format.NativeFormat)
+        for name, value in REGISTRY_VALUES.items():
+            settings.setValue(f"Values/{name}", value)
+        settings.setValue("top", "at the root")
+        settings.setValue("Outer/Inner/deep", "two groups down")
+        settings.sync()
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path) as key:
+            dump = _registry_dump(key)
+        cases = []
+        for entry in dump:
+            value = settings.value(entry["key"])
+            case = {"name": entry["key"], **entry, "value": value}
+            if isinstance(value, (str, int)):
+                case["reads"] = _typed_reads(settings, entry["key"])
+            cases.append(case)
+        del settings
+        return cases
+    finally:
+        try:
+            _delete_tree(winreg.HKEY_CURRENT_USER, parent)
+        except OSError:
+            pass
 
 
 # --- CalloutHandler ----------------------------------------------------------------------------
@@ -1183,7 +1331,8 @@ def _modules() -> dict:
         "session_script": {"drain": script_cases()},
         "score_tracker": {"run": tracker_cases(), "format_metric_value": metric_format_cases()},
         "session_recorder": {"record": recorder_cases()},
-        "settings": {"read": settings_cases()},
+        "settings": {"read": settings_cases(), "keys": settings_keys()},
+        "registry": {"values": registry_cases(), "dead_keys": list(LEGACY_DEAD_KEYS)},
         "applog": {"files": applog_cases()},
         "beat_handler": {"sessions": beat_sessions()},
         "climax_handler": {"sessions": climax_sessions()},

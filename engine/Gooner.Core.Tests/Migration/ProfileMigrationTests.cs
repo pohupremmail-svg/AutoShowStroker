@@ -237,14 +237,6 @@ public sealed class ProfileMigrationTests : IDisposable
         Assert.DoesNotContain("ScoreTracker/session_history", ProfileMigration.LegacyDeadKeys);
     }
 
-    [Fact]
-    public void the_dead_keys_are_the_python_apps()
-    {
-        // src/user_data.py LEGACY_DEAD_KEYS, in its order.
-        Assert.Equal(["BeatHandler/beat_change_chance", "ClimaxHandler/climax_chance", "TTSHandler", "GoonerApp/loudness"],
-            ProfileMigration.LegacyDeadKeys);
-    }
-
     // --- the settings themselves ---
 
     [Fact]
