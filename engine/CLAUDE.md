@@ -151,6 +151,31 @@ here unchanged. This file only adds what is specific to this side.
 - **Settings are `settings.json`, never the registry** - only Windows has one, and a portable app
   has no uninstaller to clean it up. The Python app's key is read once, by the import.
 
+## Build and release
+
+- **The package is a folder, zipped**: `GoonerApp.exe` with the `.pck` embedded, the .NET runtime
+  and assemblies in `data_Gooner.Engine_windows_x86_64/`, the FFmpeg libraries, and beside them
+  what the engine reads from disk - `res/` (without `res/licenses`, which is the Python app's),
+  `licenses/` (`engine/licenses`) and `VERSION`. About 200 MB unpacked, 84 MB zipped.
+- **`engine/Gooner.Build`** builds and checks it (`Package`, `ExportCheck`, `RunCheck`): every part
+  present and byte-identical to the repository's, the release FFmpeg libraries, **no file holding
+  the builder's home folder** (a build path carries a name), and a headless smoke start of the
+  result that finds `res/` and leaves no Godot folder behind. Do not publish a package it refuses.
+  Like `scripts/build.py`, it only ever builds and never talks to a server.
+- **Godot writes nothing on the user's machine**: its file log and its shader and pipeline caches
+  are off in `project.godot` (measured: 5 MB in `%APPDATA%\Godot\app_userdata\GoonerApp` after one
+  start; the caches save about 0.8 s per start), and the empty folder Godot makes at every start
+  regardless is removed again at once (`Main.RemoveGodotUserDir`). `Gooner.Build.Tests` holds these
+  settings, the export preset (no console wrapper, no debug symbols) and `godot/icon.ico` - a copy
+  of `res/icons/favicon.ico` the export embeds as the executable's icon.
+- **An exported build has no `res://` on disk**: `GlobalizePath("res://")` is empty there, so
+  anything found relative to the Godot project needs a fallback beside the executable (`AppPaths`).
+- **The release check** (`.github/workflows/release-check.yml`, on a version tag) installs Godot and
+  its export templates pinned by SHA-512, runs the build tool and attaches the zip to a draft
+  release. Godot's export templates are 1.2 GB, which is why packages are not built on every PR.
+- The first export after a change compiles the C# project and can take minutes; later ones take
+  seconds.
+
 ## Commands
 
 ```
@@ -166,6 +191,8 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--screenshot=PNG]
 "$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S]
 "$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
+dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)
+dotnet run --project engine/Gooner.Build -- verify [--dir DIR]
 ```
 
 The registry tests (`WindowsLegacySettingsTests`, `RegistryParity`, the generator's `registry`
