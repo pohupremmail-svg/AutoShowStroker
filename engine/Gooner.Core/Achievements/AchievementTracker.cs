@@ -93,6 +93,9 @@ public sealed class AchievementTracker
         return newly;
     }
 
+    // As a test writes tracker.unlocked[id] on the Python side: earned at that moment, not saved.
+    internal void MarkUnlocked(string achievementId, string at) => _unlocked[achievementId] = at;
+
     public void Clear()
     {
         _unlocked = [];

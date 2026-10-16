@@ -32,7 +32,7 @@ public partial class Main
             ("Saved Sessions...", Key.None, () => NotYet("Saved Sessions", "3.10")));
         AddMenu(bar, "Statistics",
             ("Long-term Statistics", Key.None, ShowLongTermStatistics),
-            ("Achievements", Key.None, () => NotYet("Achievements", "3.5")));
+            ("Achievements", Key.None, ShowAchievements));
         AddMenu(bar, "Socials",
             ("Join Discord", Key.None, () => ExternalUrl.Open(GoonerApp.DiscordInviteUrl, url => OS.ShellOpen(url))));
         return bar;
@@ -59,6 +59,7 @@ public partial class Main
         ["whatsnew"] = () => ShowWhatsNew(_app!.ChangelogEntries),
         ["statistics"] = ShowSampleRecap,
         ["longterm"] = ShowLongTermStatistics,
+        ["achievements"] = ShowAchievements,
     };
 
     // Once, at startup: what has come since the version last seen.
@@ -113,6 +114,10 @@ public partial class Main
 
     private void ShowLongTermStatistics() =>
         _panels.Show(new LongTermStatisticsPanel(new LongTermStatistics(_app!.Score.GetHistory(), _app.Score.GetAllTimeBests())));
+
+    private void ShowAchievements() => _panels.Show(new AchievementsPanel(
+        new AchievementsOverview(_app!.Achievements, _app.Score.GetHistory()),
+        System.IO.Path.GetDirectoryName(AppPaths.Resources!)!));
 
     // --- the recap ---
 
