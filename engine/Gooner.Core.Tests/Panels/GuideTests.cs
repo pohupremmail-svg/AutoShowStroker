@@ -106,6 +106,15 @@ public sealed class GuideTests
         Assert.Contains("settings.json", text);
     }
 
+    // The engine ships as a folder, not one .exe - and its data is one place now, not two.
+    [Fact]
+    public void the_engine_speaks_of_the_folder_it_ships_as()
+    {
+        var text = Text("Privacy");
+        Assert.DoesNotContain(".exe", text);
+        Assert.Contains("deleting its folder", text);
+    }
+
     [Fact]
     public void only_the_edits_differ_from_the_python_text()
     {

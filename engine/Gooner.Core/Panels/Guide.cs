@@ -294,6 +294,13 @@ public static class Guide
             "<b>HKEY_CURRENT_USER\\Software\\GoonerCock\\GoonerApp</b>.</p>",
             "Your settings - sliders, toggles, " +
             "language - sit right next to them, in <b>settings.json</b>.</p>"),
+        // The engine ships as a folder rather than one .exe, and after the edit above its data is
+        // one place, not two.
+        new("Privacy",
+            "<p>GoonerApp is portable, so deleting the .exe does <i>not</i> remove either of " +
+            "those.",
+            "<p>GoonerApp is portable, so deleting its folder does <i>not</i> remove any of " +
+            "that."),
     ];
 
     // The topics as the engine shows them: the edits applied, a tab title with one ampersand where
