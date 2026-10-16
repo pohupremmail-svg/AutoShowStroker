@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Gooner.Core.Media;
 using Gooner.Core.Panels;
 using Gooner.Core.Sessions;
+using Gooner.Core.Updates;
 using Gooner.Engine.Panels;
 using Godot;
 
@@ -29,7 +30,7 @@ public partial class Main
             ("Privacy & Data...", Key.None, ShowPrivacy),
             ("Third-Party Licenses...", Key.None, () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
             (null, Key.None, null),
-            ("Check for Updates...", Key.None, () => NotYet("Check for Updates", "3.12")));
+            ("Check for Updates...", Key.None, CheckForUpdates));
         AddMenu(bar, "Sessions",
             ("Saved Sessions...", Key.None, ShowSavedSessions));
         AddMenu(bar, "Statistics",
@@ -71,6 +72,7 @@ public partial class Main
         ["phrasefiles"] = ShowPhraseFiles,
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,
+        ["updates"] = CheckForUpdates,
         ["picker"] = () => OpenFolder(AppPaths.UserArg("media") is { } media ? [media] : null),
         ["explorer"] = ShowSampleExplorer,
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
@@ -155,6 +157,38 @@ public partial class Main
     private void ShowPhraseFiles()
     {
         if (_app!.Callouts is { } callouts) _panels.Show(new PhraseFilesPanel(new CustomPhraseFiles(callouts)));
+    }
+
+    // --- updates ---
+
+    // The question first, defaulting to No; then the one request, and what came of it.
+    private void CheckForUpdates() =>
+        Confirm.Ask(_panels, "Check for Updates?", UpdateTexts.Consent, RunUpdateCheck);
+
+    private async void RunUpdateCheck()
+    {
+        var version = _app!.Version;
+        var result = await new UpdateChecker(version).CheckNowAsync();
+        switch (result)
+        {
+            case UpdateAvailable available:
+                var panel = new AppPanel("Update Available", new Vector2(460, 0));
+                panel.AddText(UpdateTexts.Available(available.Tag, version), 14, wrap: true);
+                panel.AddButton("Open Releases Page", () =>
+                {
+                    panel.Close();
+                    ExternalUrl.Open(available.Url, url => OS.ShellOpen(url));
+                }, primary: true);
+                panel.AddButton("Close", panel.Close);
+                _panels.Show(panel);
+                break;
+            case UpToDate:
+                Confirm.Tell(_panels, "Up to Date", UpdateTexts.UpToDate(version));
+                break;
+            case CheckFailed failed:
+                Confirm.Tell(_panels, "Update Check Failed", UpdateTexts.Failed(failed.Message));
+                break;
+        }
     }
 
     // --- the recap ---

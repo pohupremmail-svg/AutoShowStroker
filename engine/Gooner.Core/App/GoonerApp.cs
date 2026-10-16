@@ -571,6 +571,9 @@ public sealed class GoonerApp : ISettingsOwner
 
     // --- what's new ---
 
+    // The running version, as VERSION gives it.
+    public string Version => _version;
+
     public IReadOnlyList<ChangelogEntry> ChangelogEntries { get; }
 
     // What has come since the version the user last saw - shown once, at startup - and that version
