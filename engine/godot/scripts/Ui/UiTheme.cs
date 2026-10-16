@@ -99,6 +99,26 @@ public static class UiTheme
         var separator = new StyleBoxLine { Color = Of(Palette.Secondary), Thickness = 1 };
         theme.SetStylebox("separator", "PopupMenu", separator);
 
+        // Drop-downs, as QComboBox: a surface field with a secondary rim that lights up on hover.
+        StyleBoxFlat Field(string border)
+        {
+            var box = Box(Of(Palette.Surface), 6);
+            box.SetBorderWidthAll(1);
+            box.BorderColor = Of(border);
+            box.ContentMarginLeft = 8;
+            box.ContentMarginRight = 8;
+            box.ContentMarginTop = box.ContentMarginBottom = 4;
+            return box;
+        }
+        theme.SetStylebox("normal", "OptionButton", Field(Palette.Secondary));
+        theme.SetStylebox("hover", "OptionButton", Field(Palette.Accent));
+        theme.SetStylebox("pressed", "OptionButton", Field(Palette.Accent));
+        theme.SetStylebox("focus", "OptionButton", new StyleBoxEmpty());
+        theme.SetStylebox("disabled", "OptionButton", Field(Palette.DisabledBg));
+        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
+            theme.SetColor(state, "OptionButton", Of(Palette.Text));
+        theme.SetColor("font_disabled_color", "OptionButton", Of(Palette.DisabledText));
+
         // Scroll bars: a secondary handle that lights up in the accent, on no track of its own.
         foreach (var bar in new[] { "VScrollBar", "HScrollBar" })
         {
