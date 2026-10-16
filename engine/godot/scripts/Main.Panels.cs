@@ -74,6 +74,8 @@ public partial class Main
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,
         ["updates"] = CheckForUpdates,
+        // An exception nobody catches, thrown from a deferred call as a real one would be.
+        ["crash"] = () => Callable.From(() => throw new InvalidOperationException("a smoke-run crash")).CallDeferred(),
         ["picker"] = () => OpenFolder(AppPaths.UserArg("media") is { } media ? [media] : null),
         ["explorer"] = ShowSampleExplorer,
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
@@ -158,6 +160,17 @@ public partial class Main
     private void ShowPhraseFiles()
     {
         if (_app!.Callouts is { } callouts) _panels.Show(new PhraseFilesPanel(new CustomPhraseFiles(callouts)));
+    }
+
+    // --- crashes ---
+
+    // Nothing to show it on before the window is built; the report has been logged regardless.
+    private void ShowCrash(string details)
+    {
+        if (_panels is null) return;
+        var panel = new CrashPanel(details);
+        panel.Closed += () => _crashes?.Dismissed();
+        _panels.Show(panel);
     }
 
     // --- updates ---

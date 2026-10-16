@@ -66,9 +66,14 @@ public partial class Main : Control
     private Label _bannerText = null!, _calloutText = null!, _chaseText = null!, _clockText = null!;
     private MenuBar _menu = null!;
     private PanelHost _panels = null!;
+    private CrashReporter? _crashes;
 
     public override void _Ready()
     {
+        // Before anything that could fail: an exception nobody catches from here on is logged and
+        // shown, and the app carries on (see CrashLogger).
+        _crashes = new CrashReporter(ShowCrash);
+        OS.AddLogger(new CrashLogger(_crashes));
         // Closing the window goes through Quit, like every other way out.
         GetTree().AutoAcceptQuit = false;
         var res = AppPaths.Resources;
