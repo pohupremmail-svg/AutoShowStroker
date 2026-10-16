@@ -13,6 +13,9 @@ namespace Gooner.Core.Beat;
 // One note the rhythm is about to play: seconds from now, whether it is heard, and its weight.
 public readonly record struct UpcomingBeat(double Offset, bool Audible, int Weight);
 
+// One note the rhythm is about to play, at the session-clock moment it will fire.
+public readonly record struct ScheduledNote(double At, bool Audible, int Weight);
+
 // The rhythm engine. Port of src/BeatHandler.py.
 //
 // The session is *planned*, not improvised: StartBeat builds a rolling buffer of Segments (a
@@ -534,6 +537,70 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
             position = 1 % pattern.Length;
         }
         return upcoming;
+    }
+
+    // When the coming notes will fire, exactly: session-clock moments worked out the way the
+    // scheduler will work them out, gap by whole-millisecond gap, segment end by segment end. What
+    // the click is mixed against - it goes into the audio a fraction of a second before its note
+    // comes due, so it needs the moment itself, and UpcomingBeats (the Python side's, for the note
+    // track) adds up unrounded gaps and drifts by up to a millisecond a note. Predicts the same
+    // stretch UpcomingBeats does: through a running pause, up to a pause still to come, never past
+    // the plan. Exact while the plan holds; anything that re-plans changes it, and the next frame's
+    // prediction says so.
+    public IReadOnlyList<ScheduledNote> UpcomingNotes(double horizonSec)
+    {
+        var until = Now + horizonSec;
+        var notes = new List<ScheduledNote>();
+        var queued = new Queue<Segment>(Plan);
+        Run run;
+        if (IsPaused())
+        {
+            // The pause ends on its last whole-second tick, and the segment behind it starts there.
+            var end = PauseTimer.Due;
+            for (var tick = 1; tick < (CurPauseDur ?? 0); tick++)
+                end += 1000 / 1000.0;
+            if (BeginRun(queued, end) is not { } next) return notes;
+            run = next;
+        }
+        else
+        {
+            if (!NoteTimer.Active || CurFreq <= 0 || CurrentBeatPattern is not { Length: > 0 }) return notes;
+            var segmentEnd = CurrentSegment is null || _holding ? double.PositiveInfinity : CurrentSegmentEnd;
+            run = new Run(NoteTimer.Due, CurrentBeatPattern, CurrentBeatPosition, BaseStepSec(), segmentEnd);
+        }
+
+        while (run.Due <= until && notes.Count < MaxLookaheadNotes)
+        {
+            var step = run.Pattern[run.Position];
+            notes.Add(new ScheduledNote(run.Due, step > 0, Math.Abs(step)));
+            // ResetBeatTimer, as it will run when this note fires.
+            if (run.Due >= run.SegmentEnd)
+            {
+                if (BeginRun(queued, run.Due) is not { } next) break;
+                run = next;
+                continue;
+            }
+            var gapMs = (int)(run.BaseStepSec * 1000 / Math.Abs(step));
+            run = run with { Due = run.Due + gapMs / 1000.0, Position = (run.Position + 1) % run.Pattern.Length };
+        }
+        return notes;
+    }
+
+    // A rhythm as UpcomingNotes walks it: the next note's moment, and what sets the ones after.
+    private readonly record struct Run(double Due, int[] Pattern, int Position, double BaseStepSec, double SegmentEnd);
+
+    // The next queued segment, begun at `start` the way BeginNextSegment and ApplyBeatSegment will
+    // begin it - or null where the prediction stops: a pause, the end of the plan, a pattern gone.
+    private Run? BeginRun(Queue<Segment> queued, double start)
+    {
+        if (queued.Count == 0) return null;
+        var segment = queued.Dequeue();
+        if (segment.Kind == "pause" || segment.Freq is not { } freq || freq == 0) return null;
+        if (segment.PatternName is null || !AvailableBeatPatterns.TryGetValue(segment.PatternName, out var pattern) || pattern.Length == 0)
+            return null;
+        var baseStepSec = BaseStepSecFor(pattern, freq);
+        var gapMs = (int)(baseStepSec * 1000 / Math.Abs(pattern[0]));
+        return new Run(start + gapMs / 1000.0, pattern, 1 % pattern.Length, baseStepSec, start + segment.DurationSec);
     }
 
     // How much of the running pause is still to go, 1.0 down to 0.0; 0.0 when nothing is paused.
