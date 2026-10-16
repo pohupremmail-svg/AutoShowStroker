@@ -1189,6 +1189,27 @@ public sealed class GoonerAppTests : IDisposable
         Assert.DoesNotContain("dropped", contents);
     }
 
+    // The import runs before there is a log to write to - the switch for it is one of the settings
+    // being imported - so what it did is written once the app has configured the log from them.
+    [Fact]
+    public void the_profile_import_is_logged_once_the_log_is_configured()
+    {
+        var registry = new FakeLegacySettings().Set("GoonerApp/diagnostic_log", true).Set("BeatHandler/min_beat_freq", 2.0);
+        var report = Gooner.Core.Migration.ProfileMigration.Run(_data, registry, roamingDir: null);
+
+        _app = new GoonerApp(_stage, _clock, new GoonerAppOptions
+        {
+            Settings = new JsonSettingsStore(_data),
+            DataStore = _data,
+            Migration = report,
+        });
+
+        Assert.True(_app.DiagnosticLog);
+        var contents = File.ReadAllText(AppLog.LogFilePath(_data.BaseDir));
+        Assert.Contains("Imported 2 setting(s) from the registry", contents);
+        Assert.True(contents.IndexOf("starting", StringComparison.Ordinal) < contents.IndexOf("Imported", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void the_diagnostic_log_setting_is_persisted()
     {

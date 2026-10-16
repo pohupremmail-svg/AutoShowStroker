@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Callouts;
 using Gooner.Core.Data;
+using Gooner.Core.Migration;
 using Gooner.Core.Settings;
 using Gooner.Core.Tests.Support;
 
@@ -8,7 +9,8 @@ namespace Gooner.Core.Tests.Callouts;
 
 // Port of tests/test_callout_handler.py. Where Python waits on a Qt signal, these listen to the
 // event; where it monkeypatches random, they script the source; the tease timer is a clock the
-// host ticks. custom_phrase_files_migrate_out_of_settings comes with the data migration (phase 4).
+// host ticks. custom_phrase_files_migrate_out_of_settings runs the startup import
+// (ProfileMigration) where Python's handler migrated on its first load.
 public sealed class CalloutHandlerTests : IDisposable
 {
     private readonly DirectoryInfo _tmp = Directory.CreateTempSubdirectory("gooner-callouts-");
@@ -365,6 +367,22 @@ public sealed class CalloutHandlerTests : IDisposable
         var second = Handler(_calloutDir, settings, store);
 
         Assert.Equal(["en session_started phrase", "persisted phrase"], second.CalloutData["en"]["flirty"]["session_started"]);
+    }
+
+    [Fact]
+    public void custom_phrase_files_migrate_out_of_settings()
+    {
+        var customPath = WriteCustomFile("legacy.json", new JsonObject { ["session_started"] = new JsonArray("legacy phrase") });
+        var registry = new FakeLegacySettings().Set("CalloutHandler/custom_phrase_files",
+            new JsonArray(new JsonObject { ["path"] = customPath, ["lang"] = "en" }).ToJsonString());
+        var store = new UserDataStore(TmpPath("appdata"));
+
+        ProfileMigration.Run(store, registry, roamingDir: null);
+        var handler = Handler(_calloutDir, new JsonSettingsStore(store), store);
+
+        Assert.Equal(["en session_started phrase", "legacy phrase"], handler.CalloutData["en"]["flirty"]["session_started"]);
+        Assert.True(File.Exists(store.PathFor("custom_phrase_files")));
+        Assert.False(registry.Contains("CalloutHandler/custom_phrase_files"));
     }
 
     // --- a fresh install must not silently disable callouts ---

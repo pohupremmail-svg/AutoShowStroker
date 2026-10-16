@@ -8,6 +8,7 @@ using Gooner.Core.Devices;
 using Gooner.Core.Formatting;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
+using Gooner.Core.Migration;
 using Gooner.Core.Randomness;
 using Gooner.Core.Scoring;
 using Gooner.Core.Sessions;
@@ -42,6 +43,11 @@ public sealed record GoonerAppOptions
 
     // How what the device connection reports reaches the window's thread; inline when not given.
     public Action<Action>? Post { get; init; }
+
+    // What the import of the Python app's profile did before the stores were built. It ran before
+    // there was a log - the switch for one is among the settings it imports - so it is written
+    // down here, once the log is configured.
+    public MigrationReport? Migration { get; init; }
 }
 
 // The session's conductor: src/GoonerApp.py without its window. The lifecycle (Start, Stop, the
@@ -102,6 +108,7 @@ public sealed class GoonerApp : ISettingsOwner
             ?? (string)Defaults["diagnostic_log_level"];
         AppLog.Configure(DiagnosticLog, _data?.BaseDir, DiagnosticLogLevel);
         AppLog.Info(Log, "GoonerApp {0} starting", _version);
+        options.Migration?.WriteToLog();
         ShowStartupSplash = ReadBool("show_startup_splash");
         AskForOutcome = ReadBool("ask_for_outcome");
 

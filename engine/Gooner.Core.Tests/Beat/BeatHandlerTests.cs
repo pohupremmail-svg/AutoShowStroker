@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Gooner.Core.Beat;
 using Gooner.Core.Data;
+using Gooner.Core.Migration;
 using Gooner.Core.Settings;
 using Gooner.Core.Tests.Support;
 
@@ -10,9 +11,9 @@ namespace Gooner.Core.Tests.Beat;
 // Port of tests/test_beat_handler.py. The Qt timers are clock timers the host advances, and the
 // clock is a FakeTime, so where Python allows a millisecond of slack for a real timer these are
 // exact. Not ported, because what they guard does not exist here: the QMutex release tests (no
-// mutex - the core is driven from one thread), the PreciseTimer type, the QSoundEffect and its
-// wav path (sound is the host's), and custom_patterns_migrate_out_of_settings_on_first_load,
-// which comes with the data migration (phase 4).
+// mutex - the core is driven from one thread), the PreciseTimer type, and the QSoundEffect and its
+// wav path (sound is the host's). custom_patterns_migrate_out_of_settings_on_first_load runs the
+// startup import (ProfileMigration) where Python's handler migrated on its first load.
 public sealed class BeatHandlerTests : IDisposable
 {
     private readonly DirectoryInfo _tmp = Directory.CreateTempSubdirectory("gooner-beat-");
@@ -370,6 +371,21 @@ public sealed class BeatHandlerTests : IDisposable
         var handler = Handler(dataStore: store);
 
         Assert.Equal([1, -1], handler.AvailableBeatPatterns["Loaded"]);
+    }
+
+    [Fact]
+    public void custom_patterns_migrate_out_of_settings_on_first_load()
+    {
+        var registry = new FakeLegacySettings().Set("BeatHandler/custom_patterns", """{"Legacy": [1, -1]}""");
+        var store = Store();
+
+        ProfileMigration.Run(store, registry, roamingDir: null);
+        var handler = Handler(dataStore: store);
+
+        Assert.Equal([1, -1], handler.AvailableBeatPatterns["Legacy"]);
+        Assert.True(File.Exists(store.PathFor("custom_patterns")));
+        Assert.False(registry.Contains("BeatHandler/custom_patterns"));
+        handler.Stop();
     }
 
     [Fact]

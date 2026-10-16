@@ -1,13 +1,14 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Data;
+using Gooner.Core.Migration;
 using Gooner.Core.Scoring;
 using Gooner.Core.Tests.Support;
 
 namespace Gooner.Core.Tests.Scoring;
 
 // Port of tests/test_score_tracker.py. Where Python monkeypatches time.time, these move a
-// FakeTime. The two QSettings-migration tests (history_migrates_out_of_settings_on_first_load,
-// history_survives_a_migration_then_a_new_session) come with the data migration in phase 4.
+// FakeTime. The two QSettings-migration tests run the startup import (ProfileMigration) where
+// Python's tracker migrated on its first load.
 public sealed class ScoreTrackerTests : IDisposable
 {
     private readonly DirectoryInfo _tmp = Directory.CreateTempSubdirectory("gooner-score-");
@@ -255,6 +256,41 @@ public sealed class ScoreTrackerTests : IDisposable
 
         var entry = Assert.Single(tracker.GetHistory());
         Assert.Equal(42.0, (double)entry["total_dur_sec"]!);
+    }
+
+    [Fact]
+    public void history_migrates_out_of_settings_on_first_load()
+    {
+        // Existing installs keep their history: it is copied into the data file and the registry
+        // value is dropped only afterwards.
+        var registry = new FakeLegacySettings()
+            .Set("ScoreTracker/session_history", new JsonArray(HistoryEntry(e => e["total_dur_sec"] = 42.0)).ToJsonString());
+        var store = Store();
+
+        ProfileMigration.Run(store, registry, roamingDir: null);
+        var tracker = Tracker(store);
+
+        var entry = Assert.Single(tracker.GetHistory());
+        Assert.Equal(42.0, (double)entry["total_dur_sec"]!);
+        Assert.True(File.Exists(store.PathFor("session_history")));
+        Assert.False(registry.Contains("ScoreTracker/session_history"));
+    }
+
+    [Fact]
+    public void history_survives_a_migration_then_a_new_session()
+    {
+        var registry = new FakeLegacySettings()
+            .Set("ScoreTracker/session_history", new JsonArray(HistoryEntry(e => e["total_dur_sec"] = 42.0)).ToJsonString());
+        var store = Store();
+
+        ProfileMigration.Run(store, registry, roamingDir: null);  // migrates
+        ProfileMigration.Run(store, registry, roamingDir: null);  // the next start: nothing left to do
+        var second = Tracker(store);
+        second.SessionStartTime = 0.0;
+        _time.Now = 5.0;
+        second.SessionEnded();
+
+        Assert.Equal(2, Tracker(store).GetHistory().Count);
     }
 
     [Fact]

@@ -1,8 +1,10 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Data;
 using Gooner.Core.Media;
+using Gooner.Core.Migration;
 using Gooner.Core.Panels;
 using Gooner.Core.Randomness;
+using Gooner.Core.Tests.Support;
 
 namespace Gooner.Core.Tests.Panels;
 
@@ -10,7 +12,7 @@ namespace Gooner.Core.Tests.Panels;
 // preview grid of what is in them. What the Qt tests held about its nested event loops - the
 // rebuild guard, the busy cursor, the frame-grab budget - has nothing to hold here: the engine
 // grabs video stills in the background (VideoThumbnailer). The registry migration of the stored
-// folders comes with the data migration (phase 4).
+// folders runs the startup import (ProfileMigration) where Python's dialog migrated on its first read.
 public sealed class MediaFolderPickerTests : IDisposable
 {
     private readonly DirectoryInfo _tmp = Directory.CreateTempSubdirectory("gooner-picker-");
@@ -119,6 +121,19 @@ public sealed class MediaFolderPickerTests : IDisposable
         _store.Save(MediaFolderPicker.StoreKey, new JsonArray(a));
 
         Assert.Equal([a], Picker().Folders);
+    }
+
+    [Fact]
+    public void persisted_folders_migrate_out_of_the_registry()
+    {
+        var a = Folder("a", 1);
+        var registry = new FakeLegacySettings().Set("GoonerApp/last_selected_folders", new JsonArray(a).ToJsonString());
+
+        ProfileMigration.Run(_store, registry, roamingDir: null);
+
+        Assert.Equal([a], Picker().Folders);
+        Assert.Equal([a], ((JsonArray)_store.Load(MediaFolderPicker.StoreKey)!).Select(f => (string)f!));
+        Assert.False(registry.Contains("GoonerApp/last_selected_folders"));
     }
 
     [Fact]

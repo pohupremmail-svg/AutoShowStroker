@@ -98,6 +98,47 @@ public sealed class UserDataStore
         return removed;
     }
 
+    // The Python app's data directory used to be the roaming profile; this moves its data files out
+    // of `legacyDir`, never over a local file - that one is the newer. Idempotent, so it can run at
+    // every start, and a no-op for null: only the host knows the legacy location, and names it only
+    // for the real data directory, so a store a test injects never goes looking in the developer's
+    // AppData. Stops at the first file that cannot move. Logs nothing itself - it runs before the
+    // log is configured, and MigrationReport writes it down afterwards.
+    public RoamingMove MigrateLegacyLocation(string? legacyDir)
+    {
+        if (legacyDir is null || !Directory.Exists(legacyDir)
+            || string.Equals(Path.GetFullPath(legacyDir), Path.GetFullPath(BaseDir), StringComparison.OrdinalIgnoreCase))
+            return new RoamingMove(legacyDir, 0, null, null);
+
+        var moved = 0;
+        var files = Directory.GetFiles(legacyDir).Where(f => f.EndsWith(".json", StringComparison.Ordinal)).Order(StringComparer.Ordinal);
+        foreach (var path in files)
+        {
+            var target = Path.Combine(BaseDir, Path.GetFileName(path));
+            if (File.Exists(target)) continue;  // a local file is the newer one - never clobber it
+            try
+            {
+                Directory.CreateDirectory(BaseDir);
+                File.Move(path, target);
+                moved++;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                return new RoamingMove(legacyDir, moved, Path.GetFileName(path), e.Message);
+            }
+        }
+        try
+        {
+            if (!Directory.EnumerateFileSystemEntries(legacyDir).Any())
+                Directory.Delete(legacyDir);  // only once it is genuinely empty
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Left for the next start.
+        }
+        return new RoamingMove(legacyDir, moved, null, null);
+    }
+
     private static void Quarantine(string path)
     {
         try
@@ -110,3 +151,6 @@ public sealed class UserDataStore
         }
     }
 }
+
+// What MigrateLegacyLocation did: how many files moved, and the one that would not, if any.
+public readonly record struct RoamingMove(string? From, int Moved, string? FailedFile, string? Error);

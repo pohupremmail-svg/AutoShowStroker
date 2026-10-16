@@ -3,9 +3,8 @@ using Gooner.Core.Data;
 
 namespace Gooner.Core.Tests.Data;
 
-// Port of tests/test_user_data.py. The QSettings/registry migration and the roaming-profile
-// move are not here: importing an existing install is phase 4 of the migration, and the
-// Python app keeps doing both until then.
+// Port of tests/test_user_data.py. Its QSettings tests - the data that once lived in the registry,
+// the dead keys - are in Migration/ProfileMigrationTests, where the registry import is.
 public sealed class UserDataStoreTests : IDisposable
 {
     private readonly DirectoryInfo _tmp = Directory.CreateTempSubdirectory("gooner-data-");
@@ -179,5 +178,100 @@ public sealed class UserDataStoreTests : IDisposable
         _store.Delete("history");
 
         Assert.True(File.Exists(_store.PathFor("patterns")));
+    }
+
+    // --- the data directory moved from Roaming to Local ---
+
+    private string Roaming(params (string Name, string Content)[] files)
+    {
+        var roaming = Directory.CreateDirectory(Path.Combine(_tmp.FullName, "Roaming", "GoonerApp")).FullName;
+        foreach (var (name, content) in files)
+            File.WriteAllText(Path.Combine(roaming, name), content);
+        return roaming;
+    }
+
+    [Fact]
+    public void data_files_move_out_of_roaming()
+    {
+        var roaming = Roaming(("session_history.json", """[{"total_dur_sec": 12}]"""));
+
+        _store.MigrateLegacyLocation(roaming);
+
+        Assert.True(Same(JsonNode.Parse("""[{"total_dur_sec": 12}]"""), _store.Load("session_history")));
+        Assert.False(File.Exists(Path.Combine(roaming, "session_history.json")));
+    }
+
+    [Fact]
+    public void roaming_migration_is_idempotent()
+    {
+        var roaming = Roaming(("session_history.json", "[1]"));
+
+        _store.MigrateLegacyLocation(roaming);
+        _store.MigrateLegacyLocation(roaming);
+
+        Assert.True(Same(JsonNode.Parse("[1]"), _store.Load("session_history")));
+    }
+
+    [Fact]
+    public void roaming_migration_never_clobbers_a_newer_local_file()
+    {
+        var roaming = Roaming(("session_history.json", """["old"]"""));
+        _store.Save("session_history", JsonNode.Parse("""["current"]"""));
+
+        _store.MigrateLegacyLocation(roaming);
+
+        Assert.True(Same(JsonNode.Parse("""["current"]"""), _store.Load("session_history")));
+    }
+
+    [Fact]
+    public void roaming_migration_is_a_noop_for_an_injected_store()
+    {
+        // A store a test injects has no legacy location - the host names one only for the real
+        // data directory - and must never go hunting for one in the developer's real AppData.
+        var moved = _store.MigrateLegacyLocation(null);
+
+        Assert.Equal(0, moved.Moved);
+        Assert.False(Directory.Exists(_store.BaseDir));
+    }
+
+    [Fact]
+    public void the_roaming_folder_goes_once_it_is_empty()
+    {
+        var roaming = Roaming(("session_history.json", "[1]"), ("custom_patterns.json", "{}"));
+
+        var moved = _store.MigrateLegacyLocation(roaming);
+
+        Assert.Equal(2, moved.Moved);
+        Assert.False(Directory.Exists(roaming));
+    }
+
+    [Fact]
+    public void only_data_files_leave_the_roaming_folder()
+    {
+        // *.json, as Python globs it: a log or a quarantined file stays, and with it the folder.
+        var roaming = Roaming(("session_history.json", "[1]"), ("gooner.log", "x"), ("custom_patterns.json.corrupt", "x"));
+
+        _store.MigrateLegacyLocation(roaming);
+
+        Assert.True(File.Exists(Path.Combine(roaming, "gooner.log")));
+        Assert.True(File.Exists(Path.Combine(roaming, "custom_patterns.json.corrupt")));
+        Assert.False(File.Exists(Path.Combine(_store.BaseDir, "gooner.log")));
+    }
+
+    [Fact]
+    public void a_file_that_cannot_move_stops_the_move_and_is_named()
+    {
+        // A file held open by something else cannot move; nothing after it is attempted - Python
+        // returns at the first failure.
+        var roaming = Roaming(("a.json", "[1]"), ("b.json", "[2]"));
+        using (File.Open(Path.Combine(roaming, "a.json"), FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            var moved = _store.MigrateLegacyLocation(roaming);
+
+            Assert.Equal(0, moved.Moved);
+            Assert.Equal("a.json", moved.FailedFile);
+            Assert.NotNull(moved.Error);
+        }
+        Assert.True(File.Exists(Path.Combine(roaming, "b.json")));
     }
 }
