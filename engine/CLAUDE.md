@@ -37,9 +37,21 @@ here unchanged. This file only adds what is specific to this side.
 - The window (`godot/scripts/Main.cs`) draws `Gooner.Core.App.GoonerApp`'s state and calls into
   it; the lifecycle, the wiring and every rule about what may happen when live in the core, with
   the ported tests of `test_gooner_app.py`. A widget here holds no state the core does not.
-- **Until the data migration (phase 4) the engine keeps its own data folder**,
-  `%LOCALAPPDATA%\GoonerCock\GoonerApp.EnginePreview` (`-- --data-dir=` for another), so a
-  preview run can never change what the installed Python app remembers.
+- **An existing install is carried over at startup** (`Gooner.Core.Migration.ProfileMigration`,
+  before the stores are built): what is left in the old roaming folder moves out, as
+  `user_data.py` moves it; every value in the Python app's registry key
+  (`HKCU\Software\GoonerCock\GoonerApp`) goes into `settings.json`; the four data files that once
+  lived in the registry go into their files; the keys of removed features are dropped. A value
+  leaves the registry only once its copy reads back from the file, and what cannot be read stays
+  there - the `user_data.py` rule. The key goes once it is empty. `QSettingsRegistry` reads values
+  as QSettings does, and the parity run holds it against bytes a real PyQt6 QSettings wrote.
+  The import runs before there is a log, so `GoonerApp` logs its report.
+- **Until the parity release the engine does not take the profile over**:
+  `AppPaths.TakesOverThePythonProfile` is false, so a run without `--data-dir` keeps its own folder,
+  `%LOCALAPPDATA%\GoonerCock\GoonerApp.EnginePreview`, and imports nothing - the import deletes
+  what it carries over, and the installed Python app is still in use. A test against a copy of a
+  real profile names its sources: `--legacy-registry=<key under HKCU>` and
+  `--legacy-data-dir=<folder>`. Never point `--legacy-registry` at the app's own key.
 - **Video is the FFmpeg extension EIRTeam.FFmpeg**, in `godot/addons/ffmpeg/` and **deliberately
   not in git yet** (the user's call, 2026-10-16: it ships with the app, its DLLs enter the repo
   later). Copy it in by hand for a local run: `ffmpeg.gdextension` plus `win64/*.dll` from the
@@ -133,7 +145,11 @@ here unchanged. This file only adds what is specific to this side.
   reads. The saved-session format is a public contract (`skills/gooner-session-builder/`), so its
   validator messages are compared word for word.
 - Tests never touch the real data directory: every store takes its base directory as a
-  parameter, exactly like `UserDataStore(base_dir=...)` on the Python side.
+  parameter, exactly like `UserDataStore(base_dir=...)` on the Python side. Nor the real registry
+  key: the import takes an `ILegacySettings` (`FakeLegacySettings` in tests), and the reader is
+  tested against a throwaway key.
+- **Settings are `settings.json`, never the registry** - only Windows has one, and a portable app
+  has no uninstaller to clean it up. The Python app's key is read once, by the import.
 
 ## Commands
 
@@ -149,7 +165,12 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
 "$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--screenshot=PNG]
 "$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S]
+"$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
 ```
+
+The registry tests (`WindowsLegacySettingsTests`, `RegistryParity`, the generator's `registry`
+module) write throwaway keys of their own under `HKCU\Software` and delete them again - never the
+app's key.
 
 `--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
 `settings`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`, `crash`, `splash`,
