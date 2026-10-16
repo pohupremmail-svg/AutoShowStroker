@@ -19,6 +19,9 @@ on:
     paths:
       - "requirements.txt"
       - "requirements-dev.txt"
+      - "engine/**/*.csproj"
+      - "engine/Directory.Build.props"
+      - "engine/global.json"
       - ".github/workflows/audit.yml"
   workflow_dispatch:
 
@@ -42,3 +45,33 @@ jobs:
       # is most likely to sit, since those are the ones nobody pinned on purpose.
       - name: Audit pinned dependencies
         run: pip-audit --strict --requirement requirements-dev.txt
+
+  # The engine's NuGet packages, transitive ones included - pip-audit's counterpart. The listing
+  # itself exits 0 whatever it finds, so the JSON is read: a project with anything vulnerable is
+  # the only kind that lists packages at all.
+  nuget-audit:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: engine/global.json
+
+      - run: dotnet restore engine/GoonerEngine.sln
+
+      - name: Audit NuGet packages
+        run: |
+          dotnet list engine/GoonerEngine.sln package --vulnerable --include-transitive --format json > vulnerable.json
+          python3 - <<'EOF'
+          import json, sys
+          listing = json.load(open("vulnerable.json", encoding="utf-8-sig"))
+          found = [project["path"] for project in listing["projects"] if project.get("frameworks")]
+          for path in found:
+              print(f"Vulnerable packages in {path}")
+          print("No vulnerable packages." if not found else "")
+          sys.exit(1 if found else 0)
+          EOF
