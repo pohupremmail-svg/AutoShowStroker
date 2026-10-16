@@ -25,11 +25,13 @@ public static class AppPaths
     ]);
 
     // The license texts the program carries: licenses/ beside the executable once exported, the
-    // repo's engine/licenses from a dev run.
+    // repo's engine/licenses from a dev run. An exported build has no res:// on disk.
     public static string? Licenses { get; } = new[]
     {
         Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath()) ?? "", "licenses"),
-        Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "licenses")),
+        ProjectSettings.GlobalizePath("res://") is { Length: > 0 } project
+            ? Path.GetFullPath(Path.Combine(project, "..", "licenses"))
+            : "",
     }.FirstOrDefault(Directory.Exists);
 
     // -- --data-dir=<path> puts it anywhere else.

@@ -8,11 +8,12 @@ namespace Gooner.Core.Data;
 public static class ResourceRoot
 {
     // The first res/ found walking up from each start in turn. It has to hold callouts/ to count,
-    // so an unrelated res/ further up the tree is never mistaken for this one.
+    // so an unrelated res/ further up the tree is never mistaken for this one. An empty start names
+    // nothing - an exported build globalizes res:// to "" - and is skipped.
     public static string? Find(IEnumerable<string> starts)
     {
         ArgumentNullException.ThrowIfNull(starts);
-        foreach (var start in starts)
+        foreach (var start in starts.Where(s => s.Length > 0))
             for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
             {
                 var res = Path.Combine(dir.FullName, "res");

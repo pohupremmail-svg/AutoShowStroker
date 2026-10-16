@@ -52,6 +52,17 @@ public sealed class ResourceRootTests : IDisposable
         Assert.Null(ResourceRoot.Find([stranger]));
     }
 
+    // An exported build has no res:// on disk, so Godot globalizes it to "" - a start that names
+    // nothing, not the working directory.
+    [Fact]
+    public void an_empty_start_is_skipped()
+    {
+        var app = MakeRes("app");
+
+        Assert.Equal(Path.Combine(app, "res"), ResourceRoot.Find(["", app]));
+        Assert.Null(ResourceRoot.Find([""]));
+    }
+
     [Fact]
     public void nothing_found_is_null() =>
         Assert.Null(ResourceRoot.Find([Directory.CreateDirectory(Path.Combine(_root, "empty")).FullName]));
