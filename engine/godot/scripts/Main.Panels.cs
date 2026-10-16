@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Gooner.Core.App;
-using Gooner.Core.Formatting;
+using System.Text.Json.Nodes;
+using Gooner.Core.Panels;
+using Gooner.Core.Sessions;
 using Gooner.Engine.Panels;
 using Godot;
 
@@ -56,6 +57,7 @@ public partial class Main
     private Dictionary<string, Action> SmokePanels() => new()
     {
         ["whatsnew"] = () => ShowWhatsNew(_app!.ChangelogEntries),
+        ["statistics"] = ShowSampleRecap,
     };
 
     // Once, at startup: what has come since the version last seen.
@@ -110,31 +112,28 @@ public partial class Main
 
     // --- the recap ---
 
-    // A stand-in for the statistics dialog until step 3.3: the headline numbers and the way to save
-    // the session.
     private void ShowRecap()
     {
         var app = _app!;
-        var info = app.Score.DeliverInfos();
-        var lines = new List<string>
-        {
-            $"{Clock.FormatClock((double?)info["total_dur_sec"] ?? 0)} played, {info["total_num_beat"]} beats, {info["total_num_pauses"]} pauses",
-            $"Climax: {info["climax_outcome"]?.ToString() ?? "none"}   Reported: {info["reported_outcome"]?.ToString() ?? "-"}",
-        };
-        if (app.Score.LastSessionNewRecords.Count > 0)
-            lines.Add("New records: " + string.Join(", ", app.Score.LastSessionNewRecords.Keys));
-        if (app.NewAchievements is { Count: > 0 } earned)
-            lines.Add("Achievements: " + string.Join(", ", earned.Select(a => a.Name)));
+        var report = new StatisticsReport(app.Score.DeliverInfos(), app.Score.LastSessionNewRecords,
+            app.Recorder.Timeline(), app.NewAchievements);
+        _panels.Show(new StatisticsPanel(report, () => NotYet("Session Explorer", "3.10")));
+    }
 
-        var panel = new AppPanel("Session over", new Vector2(520, 0));
-        panel.AddText(string.Join("\n", lines));
-        Button save = null!;
-        save = panel.AddButton("Save this session", () =>
+    // A recap with something in every part of it, for --smoke-panel=statistics.
+    private void ShowSampleRecap()
+    {
+        var stats = new JsonObject
         {
-            save.Text = app.SaveCurrentSession() ? "Saved" : "Could not save it";
-            save.Disabled = true;
-        });
-        panel.AddButton("Close", panel.Close, primary: true);
-        _panels.Show(panel);
+            ["total_dur_sec"] = 1325.0, ["pause_dur_sec"] = 140.0, ["average_pause_dur_sec"] = 20.0,
+            ["total_num_pauses"] = 7, ["total_num_beat"] = 2150, ["total_num_beat_change"] = 31,
+            ["average_beat_speed"] = 1.62, ["average_beat_speed_active"] = 1.81,
+            ["most_used_pattern"] = "Standard Beat", ["skips"] = 4, ["repeats"] = 1,
+            ["climax_outcome"] = "ruined", ["fakeout_count"] = 2,
+        };
+        var timeline = new SessionTimeline(0, 1325, 1300, "ruined", [], [new RecordedSegment("beat", "Standard Beat", 2.0, 0, 1325, [])]);
+        var report = new StatisticsReport(stats, new Dictionary<string, double> { ["total_dur_sec"] = 1100.0 }, timeline,
+            [Gooner.Core.Achievements.AchievementCatalogue.All[0]]);
+        _panels.Show(new StatisticsPanel(report, () => NotYet("Session Explorer", "3.10")));
     }
 }
