@@ -6,6 +6,7 @@ using Gooner.Core.App;
 using Gooner.Core.Data;
 using Gooner.Core.Formatting;
 using Gooner.Core.Media;
+using Gooner.Core.Panels;
 using Gooner.Core.Settings;
 using Gooner.Core.Timing;
 using Gooner.Engine.Audio;
@@ -35,7 +36,7 @@ namespace Gooner.Engine;
 //                         --answer=came|ruined|stopped|none answers it, so the recap is.
 //   -- --smoke-panel=<n>  opens one panel by name (see SmokePanels) and quits; with --screenshot.
 //                         The explorer's sample is built over --media=<folder>, scrubbed to
-//                         --scrub=<s>.
+//                         --scrub=<s>. --wait=<s> waits that long before the screenshot (0.4).
 //   -- --data-dir=<path>  where the history, settings and saved sessions go (see AppPaths).
 public partial class Main : Control
 {
@@ -61,7 +62,6 @@ public partial class Main : Control
     private Control _controlsRow = null!, _footer = null!;
     private PanelContainer _banner = null!, _callout = null!, _chase = null!, _clockCaption = null!;
     private Label _bannerText = null!, _calloutText = null!, _chaseText = null!, _clockText = null!;
-    private FileDialog _folderDialog = null!;
     private MenuBar _menu = null!;
     private PanelHost _panels = null!;
 
@@ -279,10 +279,13 @@ public partial class Main : Control
         DisplayServer.WindowSetMode(_wasMaximized ? DisplayServer.WindowMode.Maximized : DisplayServer.WindowMode.Windowed);
     }
 
-    private void OpenFolder() => _folderDialog.PopupCentered(new Vector2I(900, 600));
-
-    // Counts only from here on: the folder is never logged.
-    private void FolderChosen(string folder) => _app!.LoadPlaylist(MediaKinds.FindSupportedFiles(folder));
+    // The folder picker; what it starts with goes to the playlist, counted - a folder is never logged.
+    private void OpenFolder(IReadOnlyList<string>? folders = null)
+    {
+        var random = new Gooner.Core.Randomness.SystemRandomSource();
+        var picker = new MediaFolderPicker(_app!.DataStore, random, folders);
+        _panels.Show(new FolderPickerPanel(picker, files => _app.LoadPlaylist(files), random, _app.Scheduler));
+    }
 
     public override void _Notification(int what)
     {
@@ -340,7 +343,8 @@ public partial class Main : Control
     {
         if (AppPaths.UserArg("screenshot") is not { } shot) return;
         // Once whatever the last lines opened has faded in.
-        await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
+        var wait = AppPaths.UserArg("wait") is { } seconds ? double.Parse(seconds, System.Globalization.CultureInfo.InvariantCulture) : 0.4;
+        await ToSignal(GetTree().CreateTimer(wait), SceneTreeTimer.SignalName.Timeout);
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         GetViewport().GetTexture().GetImage().SavePng(shot);
     }
@@ -416,7 +420,7 @@ public partial class Main : Control
         root.AddChild(controlsMargin);
         _controlsRow = controlsMargin;
         _prev = Button("<< Previous", app.Previous, "Left Arrow Key");
-        _load = Button("Set Gooning Folder and Start.", OpenFolder, "Ctrl+O");
+        _load = Button("Set Gooning Folder and Start.", () => OpenFolder(), "Ctrl+O");
         _load.ThemeTypeVariation = "PrimaryButton";
         _stop = Button("Stop", app.Stop, "Ctrl+Space");
         _next = Button("Skip >>", app.Next, "Right Arrow Key");
@@ -450,15 +454,6 @@ public partial class Main : Control
         _footer.AddChild(_outcomeRow);
         _footer.AddChild(_track);
 
-        _folderDialog = new FileDialog
-        {
-            FileMode = FileDialog.FileModeEnum.OpenDir,
-            Access = FileDialog.AccessEnum.Filesystem,
-            UseNativeDialog = true,
-            Title = "Set Gooning Folder",
-        };
-        _folderDialog.DirSelected += FolderChosen;
-        AddChild(_folderDialog);
         // Over everything, the menu bar included.
         _panels = new PanelHost();
         AddChild(_panels);

@@ -71,6 +71,7 @@ public partial class Main
         ["phrasefiles"] = ShowPhraseFiles,
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,
+        ["picker"] = () => OpenFolder(AppPaths.UserArg("media") is { } media ? [media] : null),
         ["explorer"] = ShowSampleExplorer,
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
     };
