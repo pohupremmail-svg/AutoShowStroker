@@ -1158,6 +1158,16 @@ def changelog_entries():
     return [{"name": version, "html": text} for version, text in changelog.CHANGELOG.items()]
 
 
+# --- guide -------------------------------------------------------------------------------------
+
+
+def guide_topics():
+    """The Guide's tabs, word for word; the engine's own differences are edits on top of them."""
+    from src.HelpDialog import HELP_TOPICS
+
+    return [{"name": title, "html": body} for title, body in HELP_TOPICS]
+
+
 # --- writing -----------------------------------------------------------------------------------
 
 
@@ -1188,6 +1198,7 @@ def _modules() -> dict:
             "evaluate": evaluation_cases(),
         },
         "changelog": {"entries": changelog_entries()},
+        "guide": {"topics": guide_topics()},
     }
 
 

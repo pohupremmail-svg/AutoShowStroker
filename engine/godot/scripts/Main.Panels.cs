@@ -23,9 +23,9 @@ public partial class Main
             ("Quit", Ctrl(Key.Q), () => Quit(0)));
         AddMenu(bar, "Help",
             ("What's New", Key.None, () => ShowWhatsNew(_app!.ChangelogEntries)),
-            ("Guide", Key.F1, () => NotYet("Guide", "3.6")),
+            ("Guide", Key.F1, () => _panels.Show(new GuidePanel())),
             ("Privacy & Data...", Key.None, () => NotYet("Privacy & Data", "3.7")),
-            ("Third-Party Licenses...", Key.None, () => NotYet("Third-Party Licenses", "3.6")),
+            ("Third-Party Licenses...", Key.None, () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
             (null, Key.None, null),
             ("Check for Updates...", Key.None, () => NotYet("Check for Updates", "3.12")));
         AddMenu(bar, "Sessions",
@@ -60,6 +60,9 @@ public partial class Main
         ["statistics"] = ShowSampleRecap,
         ["longterm"] = ShowLongTermStatistics,
         ["achievements"] = ShowAchievements,
+        ["guide"] = () => _panels.Show(new GuidePanel()),
+        ["licenses"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses)),
+        ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
     };
 
     // Once, at startup: what has come since the version last seen.

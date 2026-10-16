@@ -16,6 +16,14 @@ public static class AppPaths
         ProjectSettings.GlobalizePath("res://"),
     ]);
 
+    // The license texts the program carries: licenses/ beside the executable once exported, the
+    // repo's engine/licenses from a dev run.
+    public static string? Licenses { get; } = new[]
+    {
+        Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath()) ?? "", "licenses"),
+        Path.GetFullPath(Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", "licenses")),
+    }.FirstOrDefault(Directory.Exists);
+
     // Until the data migration (phase 4) is tested against a copy of a real profile, the engine
     // keeps a folder of its own beside the Python app's, so a preview run can never change what the
     // installed app remembers. -- --data-dir=<path> puts it anywhere else.

@@ -119,6 +119,48 @@ public static class UiTheme
             theme.SetColor(state, "OptionButton", Of(Palette.Text));
         theme.SetColor("font_disabled_color", "OptionButton", Of(Palette.DisabledText));
 
+        // Tabs, as QTabBar/QTabWidget: surface tabs, the selected one in the accent, the pages in a
+        // rounded secondary frame.
+        StyleBoxFlat Tab(string background)
+        {
+            var box = Box(Of(background), 0);
+            box.CornerRadiusTopLeft = box.CornerRadiusTopRight = 8;
+            box.ContentMarginLeft = box.ContentMarginRight = 16;
+            box.ContentMarginTop = box.ContentMarginBottom = 8;
+            box.ExpandMarginRight = 0;
+            return box;
+        }
+        theme.SetStylebox("tab_unselected", "TabContainer", Tab(Palette.Surface));
+        theme.SetStylebox("tab_hovered", "TabContainer", Tab(Palette.SecondaryHover));
+        theme.SetStylebox("tab_selected", "TabContainer", Tab(Palette.Accent));
+        theme.SetStylebox("tab_disabled", "TabContainer", Tab(Palette.DisabledBg));
+        theme.SetStylebox("tab_focus", "TabContainer", new StyleBoxEmpty());
+        var page = Box(Of(Palette.Background), 8);
+        page.SetBorderWidthAll(1);
+        page.BorderColor = Of(Palette.Secondary);
+        page.CornerRadiusTopLeft = 0;
+        theme.SetStylebox("panel", "TabContainer", page);
+        theme.SetStylebox("tabbar_background", "TabContainer", new StyleBoxEmpty());
+        theme.SetColor("font_unselected_color", "TabContainer", Of(Palette.Text));
+        theme.SetColor("font_hovered_color", "TabContainer", Of(Palette.Text));
+        theme.SetColor("font_selected_color", "TabContainer", Of(Palette.Background));
+        theme.SetConstant("side_margin", "TabContainer", 0);
+        theme.SetConstant("tab_separation", "TabContainer", 2);
+
+        // Text fields, as the QLineEdit/QPlainTextEdit of the stylesheet: a surface field with a
+        // secondary rim, the accent once it has the focus.
+        foreach (var field in new[] { "LineEdit", "TextEdit" })
+        {
+            theme.SetStylebox("normal", field, Field(Palette.Secondary));
+            theme.SetStylebox("focus", field, Field(Palette.Accent));
+            theme.SetStylebox("read_only", field, Field(Palette.Secondary));
+            theme.SetColor("font_color", field, Of(Palette.Text));
+            theme.SetColor("font_readonly_color", field, Of(Palette.Text));
+            theme.SetColor("font_placeholder_color", field, Of(Palette.DisabledText));
+            theme.SetColor("caret_color", field, Of(Palette.Accent));
+            theme.SetColor("selection_color", field, Of(Palette.Accent, 0.45f));
+        }
+
         // Scroll bars: a secondary handle that lights up in the accent, on no track of its own.
         foreach (var bar in new[] { "VScrollBar", "HScrollBar" })
         {

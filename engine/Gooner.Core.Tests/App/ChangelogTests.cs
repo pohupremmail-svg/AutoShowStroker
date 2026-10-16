@@ -93,6 +93,20 @@ public sealed class ChangelogTests
         Assert.Equal("[lb]1[rb] and [b]x[/b]", RichText.ToBbcode("[1] and <b>x</b>"));
     }
 
+    // The Guide's blocks: a heading and every paragraph start on a line of their own.
+    [Fact]
+    public void headings_and_paragraphs_are_blocks_of_their_own()
+    {
+        Assert.Equal("[font_size=16][b]Title[/b][/font_size]\nOne.\nTwo.\n[ul]a[/ul]\nThree.",
+            RichText.ToBbcode("<h3>Title</h3><p>One.</p><p>Two.</p><ul><li>a</li></ul><p>Three.</p>", headingSize: 16));
+    }
+
+    [Fact]
+    public void a_numbered_list_is_numbered()
+    {
+        Assert.Equal("Steps:\n[ol type=1]first\nsecond[/ol]", RichText.ToBbcode("<p>Steps:</p><ol><li>first</li><li>second</li></ol>"));
+    }
+
     [Fact]
     public void every_shipped_entry_converts_without_a_tag_left_over()
     {
