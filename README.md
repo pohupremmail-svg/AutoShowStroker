@@ -178,7 +178,7 @@ pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --add-data "VE
 * `--icon "res/icons/favicon.ico"`: Sets the `.exe`'s icon.
 * `--name "GoonerApp"`: Renames the final output file.
 
-After a successful build, you will find the finished file **`GoonerApp.exe`** in the newly created **`dist/`** directory. You can now move and distribute this file as you wish!
+After a successful build, you will find the finished file **`GoonerApp.exe`** in the newly created **`dist/`** directory. You can now move and pass on this file - it carries the license texts of the third-party software inside it (see below).
 
 ## 📂 Project Structure
 
@@ -187,6 +187,14 @@ After a successful build, you will find the finished file **`GoonerApp.exe`** in
 * `src/CalloutHandler.py` - Management and selection of text instructions, across both language and tone.
 * `src/ScoreTracker.py` - Recording of session statistics.
 * `res/callouts/` - phrase files, one folder per language and one file per tone (`en/flirty.json`, `de/dominant.json`, ...).
+
+## 📜 License & Third-Party Software
+
+GoonerApp is free software under the GNU General Public License v3 ([LICENSE.txt](LICENSE.txt)).
+The packaged `.exe` also contains software by others - Python, Qt and the FFmpeg libraries Qt
+plays video with, PyQt6, NumPy, pyqtgraph and a few more. Each is listed with its license in
+[res/licenses/THIRD_PARTY_NOTICES.txt](res/licenses/THIRD_PARTY_NOTICES.txt), next to the full
+license texts; inside the app, **Help > Third-Party Licenses** shows the same.
 
 ## 🌍 Contributing (New Languages, Tones & Phrases)
 
