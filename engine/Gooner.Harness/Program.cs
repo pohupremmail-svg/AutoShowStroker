@@ -70,7 +70,7 @@ foreach (var at in options.EdgesAt.Order())
     Print();
     if (session.Ended) break;
     if (session.EdgeRelief() == 0)
-        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{Clock(at),8}  edge     refused (mid-pause or after the climax)"));
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{Clock(at),8}  edge     refused (cooling down, mid-pause or after the climax)"));
 }
 session.RunFor(options.Minutes * 60);
 Print();
