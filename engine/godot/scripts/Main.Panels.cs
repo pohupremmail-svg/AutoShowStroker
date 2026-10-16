@@ -69,6 +69,7 @@ public partial class Main
         ["settings"] = ShowSettings,
         ["settings-beat"] = () => ShowSettings("Beat & Rhythm"),
         ["settings-callouts"] = () => ShowSettings("Callouts"),
+        ["settings-device"] = () => ShowSettings(Gooner.Core.Devices.IntifacePlugin.TabTitle),
         ["phrasefiles"] = ShowPhraseFiles,
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,

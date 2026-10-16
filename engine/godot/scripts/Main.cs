@@ -34,6 +34,8 @@ namespace Gooner.Engine;
 //                         --climax-at=<s> brings the climax that many seconds in; --stop presses
 //                         Stop at the end, so the question is in the screenshot, and
 //                         --answer=came|ruined|stopped|none answers it, so the recap is.
+//                         --device=<ws://...> switches device output on against a server of your
+//                         own (no consent question - a development run only).
 //   -- --smoke-panel=<n>  opens one panel by name (see SmokePanels) and quits; with --screenshot.
 //                         The explorer's sample is built over --media=<folder>, scrubbed to
 //                         --scrub=<s>. --wait=<s> waits that long before the screenshot (0.4).
@@ -57,7 +59,7 @@ public partial class Main : Control
     private string? _smoke;
 
     // Widgets synced from the app's state every frame.
-    private Button _prev = null!, _load = null!, _stop = null!, _next = null!, _edge = null!, _mute = null!;
+    private Button _prev = null!, _load = null!, _stop = null!, _next = null!, _edge = null!, _mute = null!, _device = null!;
     private HBoxContainer _controls = null!, _outcomeRow = null!;
     private Control _controlsRow = null!, _footer = null!;
     private PanelContainer _banner = null!, _callout = null!, _chase = null!, _clockCaption = null!;
@@ -97,6 +99,9 @@ public partial class Main : Control
             DataStore = data,
             CalloutDir = Path.Combine(res, "callouts"),
             Version = ReadVersion(res),
+            DeviceOutput = true,
+            // The device connection reports from its own thread; the window hears it on its own.
+            Post = action => Callable.From(action).CallDeferred(),
         });
         _stage.Player = _app.Player;
         _app.Beat.BeatHit += () => _hits++;
@@ -158,6 +163,16 @@ public partial class Main : Control
         _edge.Disabled = !app.EdgeButtonEnabled;
         _edge.Text = app.EdgeButtonText;
         _mute.Text = app.IsMuted ? "Unmute" : "Mute";
+        if (app.Intiface is { } intiface)
+        {
+            // Only while device output is on - it doubles as the disclosure that a connection is open.
+            var device = intiface.Button;
+            _device.Visible = device.Visible;
+            _device.Text = device.Text;
+            _device.Disabled = !device.Enabled;
+            _device.TooltipText = device.Tooltip;
+            _device.ThemeTypeVariation = device.Primary ? "PrimaryButton" : "";
+        }
 
         _banner.Visible = app.Banner.Text is not null;
         if (app.Banner.Text is { } text)
@@ -294,10 +309,24 @@ public partial class Main : Control
 
     // The one way out: a session still running is recorded, the stream is stopped, and the engine
     // goes down once the audio server has had a mix cycle to let go of it.
+    //
+    // With a device connected the window goes first and the device's stop goes out behind it: in an
+    // app with a panic key, off the screen is the part that has to be instant. The wait for the
+    // connection to close is bounded - a server that never answers must not keep the app alive.
     private async void Quit(int exitCode)
     {
         _app?.Close();
         _audio?.Shutdown();
+        if (_app?.Intiface?.Controller is { HasWorker: true } controller)
+        {
+            DisplayServer.WindowSetMode(DisplayServer.WindowMode.Minimized);
+            var waited = 0.0;
+            while (controller.HasWorker && waited < 2.0)
+            {
+                await ToSignal(GetTree().CreateTimer(0.05), SceneTreeTimer.SignalName.Timeout);
+                waited += 0.05;
+            }
+        }
         await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
         GetTree().Quit(exitCode);
     }
@@ -319,6 +348,10 @@ public partial class Main : Control
             app.Climax.MinClimaxAfter = app.Climax.MaxClimaxAfter = double.Parse(climaxAt, System.Globalization.CultureInfo.InvariantCulture);
             app.Climax.ClimaxOnlyAfterRamp = false;
         }
+        // A development run against a server of one's own - straight in, without the consent question
+        // a user is always asked. Never reached without --device on the command line.
+        if (AppPaths.UserArg("device") is { } device)
+            app.Intiface?.Controller.Configure(true, device, 0.25, 0.75);
         if (_smoke == "session" && AppPaths.UserArg("media") is { } media)
         {
             app.Player.MinDur = app.Player.MaxDur = 1.5;
@@ -359,6 +392,9 @@ public partial class Main : Control
         GD.Print($"smoke-{_smoke}: {_hits} notes, {click.ClicksStarted} clicks, {click.ClicksLate} late, " +
             $"{_audio!.Underruns} underruns, {_picture.Snaps} clock snaps, {click.SampleRate} Hz, lead {_audio.Lead * 1000:0} ms, " +
             $"showing {shown ?? "nothing"}");
+        if (app.Intiface is { Controller.Enabled: true } intiface)
+            GD.Print($"smoke-device: {intiface.Controller.Status}; device {(intiface.Controller.DeviceName.Length > 0 ? "found" : "none")}, " +
+                $"sync {(intiface.Armed ? "armed" : "off")}");
         if (AppPaths.UserFlag("stop"))
         {
             app.Stop();
@@ -426,7 +462,11 @@ public partial class Main : Control
         _next = Button("Skip >>", app.Next, "Right Arrow Key");
         _edge = Button(GoonerApp.EdgeButtonDefaultText, () => app.EdgeReached(), "E - a pause now, and a gentler beat behind it");
         _mute = Button("Mute", app.ToggleMute, "M");
-        foreach (var button in new[] { _prev, _load, _stop, _next, _edge, _mute })
+        // The device's one control, beside Mute as on the Python side; NoFocus like the rest, or a
+        // focused device button would swallow the panic key.
+        _device = Button("No device", () => app.Intiface?.Press());
+        _device.Visible = false;
+        foreach (var button in new[] { _prev, _load, _stop, _next, _edge, _mute, _device })
         {
             button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             _controls.AddChild(button);

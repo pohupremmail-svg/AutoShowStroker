@@ -49,6 +49,8 @@ public partial class PrivacyPanel : AppPanel
         Body.AddChild(open);
 
         BuildDiagnosticLog();
+        if (privacy.DeviceOutputNote is { } note)
+            Body.AddChild(Widgets.Text(note, 15, Palette.Text, wrap: true));
 
         Body.AddChild(Header("Delete my data"));
         foreach (var category in PrivacyData.Categories)

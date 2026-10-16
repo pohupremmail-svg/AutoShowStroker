@@ -68,6 +68,7 @@ public partial class SettingsPanel : AppPanel
         LanguageRow => Language(),
         TonesRow => Tones(),
         ManagePhraseFilesRow => Action("Manage Custom Phrase Files...", _openPhraseFiles),
+        DeviceRow => new DeviceTab(_form.Device!, _host),
         ResetRow reset => Action("Reset to defaults", () =>
         {
             _form.Reset(reset.Tab);
@@ -216,7 +217,12 @@ public partial class SettingsPanel : AppPanel
     {
         if (_form.Apply())
         {
-            Close();
+            // The device's address and range last: a changed address may first need consent, and
+            // the panel closes once that is answered either way.
+            if (_form.Device?.Apply() == Gooner.Core.Devices.DeviceStep.AskConsent)
+                DeviceConsent.Ask(_host, _form.Device, Close);
+            else
+                Close();
             return;
         }
         var refusal = new AppPanel("Can't save these settings", new Vector2(460, 0));

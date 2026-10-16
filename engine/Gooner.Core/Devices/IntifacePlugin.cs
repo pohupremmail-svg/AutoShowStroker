@@ -311,4 +311,23 @@ public sealed class DeviceSettings
 
     // The live state back onto the draft - after the connection changed under the tab.
     public void Refresh() => Enabled = Controller.Enabled;
+
+    // --- the tab's buttons ---
+
+    public void TestUp() => Controller.TestUp();
+
+    public void TestDown() => Controller.TestDown();
+
+    public void EmergencyStop() => _plugin.EmergencyStop();
+
+    public void Resume() => _plugin.ResumeSync();
+
+    public void Scan() => Controller.Scan();
+
+    // Something the tab shows has changed.
+    public event Action? Changed
+    {
+        add => _plugin.StateChanged += value;
+        remove => _plugin.StateChanged -= value;
+    }
 }

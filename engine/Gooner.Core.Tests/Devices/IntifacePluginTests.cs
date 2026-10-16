@@ -485,6 +485,20 @@ public sealed class IntifacePluginTests : IDisposable
         Assert.True(Tab().CanResume);
     }
 
+    [Fact]
+    public void the_tabs_buttons_reach_the_device()
+    {
+        Ready();
+        SessionStarts();
+        var tab = Tab();
+
+        tab.EmergencyStop();
+        Assert.False(Plugin.Armed);
+
+        tab.Resume();
+        Assert.True(Plugin.Armed);
+    }
+
     // --- what the user is told before a single byte leaves the machine ---
 
     [Fact]
