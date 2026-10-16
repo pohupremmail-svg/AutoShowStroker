@@ -25,8 +25,27 @@ here unchanged. This file only adds what is specific to this side.
 - `Gooner.Parity.Tests/` — compares the port against golden files the Python implementation
   writes (`python -m parity.generate`). Not part of the solution's default test run, because it
   needs the Python side; CI runs it in its own job.
+- `Gooner.Harness/` — a console app that plays a whole session without a screen
+  (`dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240`). Developer tool,
+  ships with nothing. The wiring it runs is `Gooner.Core.Simulation.HeadlessSession`, which is
+  also the reference for how the engine wires the handlers together.
 - The Godot project comes later (phase 2); it references `Gooner.Core` and adds only picture,
   sound, input and effects.
+
+## How the core keeps time
+
+- **No timer fires on its own.** Every QTimer of the Python side is a `ClockTimer` on a
+  `Timing.ClockScheduler`, and the host calls `Advance()` once a frame: everything that came due
+  fires in due order (a tie goes to the timer created first), each at the moment it was due. One
+  scheduler is shared by everything on the session clock, so the climax can never be overtaken by
+  notes due after it.
+- **The rhythm reads an `ISessionClock`** - seconds as a double. In the engine that is the audio
+  clock. Not a `TimeProvider` for the rhythm: those count in 100 ns ticks. Wall-clock things
+  (ScoreTracker, the recorder, callout teases) keep a `TimeProvider`.
+- **Dice come from an `IRandomSource`**, with Python's `random.uniform/randint/choice/choices`
+  reproduced on top of it, so the parity harness can replay the exact draws the Python side made.
+- Note gaps stay the **whole milliseconds** Python schedules - exact at 48 kHz, and what keeps the
+  two implementations comparable note for note.
 
 ## Rules
 
@@ -58,4 +77,8 @@ dotnet build engine/GoonerEngine.sln
 dotnet test engine/GoonerEngine.sln
 .venv/Scripts/python.exe -m parity.generate      # from the repo root
 dotnet test engine/Gooner.Parity.Tests
+dotnet run --project engine/Gooner.Harness -- --help-is-the-comment-in-Program.cs
 ```
+
+Both test projects run their tests in sequence (`AssemblyInfo.cs`): the log is one sink for the
+whole process, and a test with file logging on would otherwise catch other tests' warnings.
