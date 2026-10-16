@@ -29,8 +29,15 @@ here unchanged. This file only adds what is specific to this side.
   (`dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240`). Developer tool,
   ships with nothing. The wiring it runs is `Gooner.Core.Simulation.HeadlessSession`, which is
   also the reference for how the engine wires the handlers together.
-- The Godot project comes later (phase 2); it references `Gooner.Core` and adds only picture,
-  sound, input and effects.
+- `godot/` — the Godot project (`Gooner.Engine`, Godot 4.7.2 .NET). It references `Gooner.Core`
+  and adds only picture, sound, input and effects; anything a test without an engine could check
+  belongs in the core instead. It has its own `Gooner.Engine.sln` because Godot's build and
+  export look for `<assembly name>.sln` beside `project.godot`; `GoonerEngine.sln` holds it too,
+  so one build compiles everything.
+- `res/` (callouts, click, icons) is read **from disk**, never through Godot's `res://`:
+  `Gooner.Core.Data.ResourceRoot` finds the repo's own copy from a dev run and the one beside the
+  executable once exported. The files never go through Godot's importer, so the engine reads
+  exactly what the Python app reads.
 
 ## How the core keeps time
 
@@ -78,7 +85,14 @@ dotnet test engine/GoonerEngine.sln
 .venv/Scripts/python.exe -m parity.generate      # from the repo root
 dotnet test engine/Gooner.Parity.Tests
 dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240   # options: top of Program.cs
+dotnet build engine/godot/Gooner.Engine.csproj
+"$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
+"$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 ```
+
+`$GODOT` is the Godot 4.7.2 .NET *console* binary (`Godot_v4.7.2-stable_mono_win64_console.exe`);
+the plain one detaches from the terminal and its exit code is lost. Godot's own packages restore
+from the NuGet cache the editor fills, so there is deliberately no `nuget.config` here.
 
 Both test projects run their tests in sequence (`AssemblyInfo.cs`): the log is one sink for the
 whole process, and a test with file logging on would otherwise catch other tests' warnings.

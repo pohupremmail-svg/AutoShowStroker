@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gooner.Core.Tests", "Gooner
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gooner.Harness", "Gooner.Harness\Gooner.Harness.csproj", "{048C27BC-7167-420E-9CE8-19E68ABC0739}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "godot", "godot", "{8D4FAABC-C56A-6D5C-8531-6A6B417F5DBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gooner.Engine", "godot\Gooner.Engine.csproj", "{F27B7AD3-E4EB-472E-9547-78907AF6DD85}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,8 +59,23 @@ Global
 		{048C27BC-7167-420E-9CE8-19E68ABC0739}.Release|x64.Build.0 = Release|Any CPU
 		{048C27BC-7167-420E-9CE8-19E68ABC0739}.Release|x86.ActiveCfg = Release|Any CPU
 		{048C27BC-7167-420E-9CE8-19E68ABC0739}.Release|x86.Build.0 = Release|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Debug|x64.Build.0 = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Debug|x86.Build.0 = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Release|x64.ActiveCfg = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Release|x64.Build.0 = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Release|x86.ActiveCfg = Debug|Any CPU
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85}.Release|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F27B7AD3-E4EB-472E-9547-78907AF6DD85} = {8D4FAABC-C56A-6D5C-8531-6A6B417F5DBA}
 	EndGlobalSection
 EndGlobal

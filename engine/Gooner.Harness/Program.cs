@@ -1,4 +1,5 @@
 using System.Globalization;
+using Gooner.Core.Data;
 using Gooner.Core.Sessions;
 using Gooner.Core.Simulation;
 
@@ -128,12 +129,8 @@ internal sealed record Args(int? Seed, double Minutes, (double Min, double Max)?
     }
 
     // res/callouts, found by walking up from wherever the harness runs - the same files the app reads.
-    public static string? FindCallouts()
-    {
-        foreach (var start in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
-            for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
-                if (Directory.Exists(Path.Combine(dir.FullName, "res", "callouts")))
-                    return Path.Combine(dir.FullName, "res", "callouts");
-        return null;
-    }
+    public static string? FindCallouts() =>
+        ResourceRoot.Find([Environment.CurrentDirectory, AppContext.BaseDirectory]) is { } res
+            ? Path.Combine(res, "callouts")
+            : null;
 }
