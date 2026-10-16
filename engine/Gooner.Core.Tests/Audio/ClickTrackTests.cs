@@ -163,6 +163,21 @@ public class ClickTrackTests
         Assert.Equal([0f, 0f, 1.0f, 0.5f, 0.25f], Left(track, 5));
     }
 
+    // What a check of the running engine reads: how many clicks went out, and how many of those
+    // could not go out on their own frame.
+    [Fact]
+    public void it_counts_the_clicks_it_started_and_those_that_came_late()
+    {
+        var track = Track();
+        track.Schedule([100.002, 100.004]);
+        Left(track, 10);
+        track.Schedule([100.008]);
+        Left(track, 1);
+
+        Assert.Equal(3, track.ClicksStarted);
+        Assert.Equal(1, track.ClicksLate);
+    }
+
     [Fact]
     public void it_counts_the_frames_it_has_written()
     {

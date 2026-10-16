@@ -53,6 +53,14 @@ here unchanged. This file only adds what is specific to this side.
   reproduced on top of it, so the parity harness can replay the exact draws the Python side made.
 - Note gaps stay the **whole milliseconds** Python schedules - exact at 48 kHz, and what keeps the
   two implementations comparable note for note.
+- **In the engine the clock is the audio** (`godot/scripts/Audio/SessionAudio.cs`): the frames
+  the mixer has consumed, so an underrun delays the clock instead of breaking the rhythm. The
+  stream is filled from its own thread, never from a frame. Each frame the picture clock
+  (`Timing.PictureClock`) follows it into a `FrameClock`, the scheduler is advanced, and
+  `BeatHandler.UpcomingNotes` - the exact moments, not `UpcomingBeats`' approximation - goes to
+  the `Audio.ClickTrack`, which mixes each click on its note's own frame. A note is committed
+  once written, so how far ahead the stream is written (80 ms, more if the device runs dry) is
+  how late a note can be learned of and still click on time.
 
 ## Rules
 
@@ -88,6 +96,7 @@ dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240   # opt
 dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
+"$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
 ```
 
 `$GODOT` is the Godot 4.7.2 .NET *console* binary (`Godot_v4.7.2-stable_mono_win64_console.exe`);

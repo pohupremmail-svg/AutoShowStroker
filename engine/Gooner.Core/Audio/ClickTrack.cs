@@ -52,6 +52,27 @@ public sealed class ClickTrack
     }
 
     private long _framesWritten;
+    private int _clicksStarted;
+    private int _clicksLate;
+
+    // Clicks that went out, and how many of those could not go out on their own frame - what a
+    // check of the running engine reads. A late one means a note was predicted too close to its
+    // moment.
+    public int ClicksStarted
+    {
+        get
+        {
+            lock (_lock) return _clicksStarted;
+        }
+    }
+
+    public int ClicksLate
+    {
+        get
+        {
+            lock (_lock) return _clicksLate;
+        }
+    }
 
     // beat_loudness: linear, 0 to 1, as QSoundEffect took it.
     public float Volume
@@ -111,6 +132,8 @@ public sealed class ClickTrack
                 while (_pending.Count > 0 && _pending[0] <= frame)
                 {
                     _started.Add(_pending[0]);
+                    _clicksStarted++;
+                    if (_pending[0] < frame) _clicksLate++;
                     _pending.RemoveAt(0);
                     // From here: on its own frame, or now if it was learned of too late for that.
                     if (!_muted) _sounding.Add(frame);
