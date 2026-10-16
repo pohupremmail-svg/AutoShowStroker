@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Gooner.Core.App;
+using System.Linq;
 using System.Text.Json.Nodes;
+using Gooner.Core.Media;
 using Gooner.Core.Panels;
 using Gooner.Core.Sessions;
 using Gooner.Engine.Panels;
@@ -29,7 +31,7 @@ public partial class Main
             (null, Key.None, null),
             ("Check for Updates...", Key.None, () => NotYet("Check for Updates", "3.12")));
         AddMenu(bar, "Sessions",
-            ("Saved Sessions...", Key.None, () => NotYet("Saved Sessions", "3.10")));
+            ("Saved Sessions...", Key.None, ShowSavedSessions));
         AddMenu(bar, "Statistics",
             ("Long-term Statistics", Key.None, ShowLongTermStatistics),
             ("Achievements", Key.None, ShowAchievements));
@@ -68,6 +70,8 @@ public partial class Main
         ["settings-callouts"] = () => ShowSettings("Callouts"),
         ["phrasefiles"] = ShowPhraseFiles,
         ["patterns"] = () => ShowPatternEditor(() => { }),
+        ["saved"] = ShowSavedSessions,
+        ["explorer"] = ShowSampleExplorer,
         ["godot-components"] = () => _panels.Show(new LicensesPanel(AppPaths.Licenses, show: "Godot Engine components")),
     };
 
@@ -159,7 +163,7 @@ public partial class Main
         var app = _app!;
         var report = new StatisticsReport(app.Score.DeliverInfos(), app.Score.LastSessionNewRecords,
             app.Recorder.Timeline(), app.NewAchievements);
-        _panels.Show(new StatisticsPanel(report, () => NotYet("Session Explorer", "3.10")));
+        _panels.Show(new StatisticsPanel(report, () => ShowExplorer(app.Recorder.Timeline(), app.SaveCurrentSession)));
     }
 
     // A recap with something in every part of it, for --smoke-panel=statistics.
@@ -176,6 +180,36 @@ public partial class Main
         var timeline = new SessionTimeline(0, 1325, 1300, "ruined", [], [new RecordedSegment("beat", "Standard Beat", 2.0, 0, 1325, [])]);
         var report = new StatisticsReport(stats, new Dictionary<string, double> { ["total_dur_sec"] = 1100.0 }, timeline,
             [Gooner.Core.Achievements.AchievementCatalogue.All[0]]);
-        _panels.Show(new StatisticsPanel(report, () => NotYet("Session Explorer", "3.10")));
+        _panels.Show(new StatisticsPanel(report, ShowSampleExplorer));
+    }
+
+    // The explorer is handed the timeline and the way to save it; it keeps neither.
+    private void ShowExplorer(SessionTimeline timeline, Func<bool>? save) =>
+        _panels.Show(new SessionExplorerPanel(new SessionExplorer(timeline, save), _panels, _app!.Scheduler));
+
+    // A session over the smoke run's --media folder, for --smoke-panel=explorer: every file shown
+    // for ten seconds, a pause in the middle, a fake-out and a ruined climax.
+    private void ShowSampleExplorer()
+    {
+        var files = AppPaths.UserArg("media") is { } media ? MediaKinds.FindSupportedFiles(media) : [];
+        var shown = files.Select((path, i) => new RecordedMedium(path, i * 10.0, i * 10.0 + 10.0, false)).ToList();
+        var end = Math.Max(60.0, shown.Count * 10.0);
+        var timeline = new SessionTimeline(0, end, end - 5, "ruined", [end * 0.3],
+        [
+            new RecordedSegment("beat", "Standard Beat", 2.0, 0, end * 0.45, [.. shown.Where(m => m.Start < end * 0.45)]),
+            new RecordedSegment("pause", null, null, end * 0.45, end * 0.55, []),
+            new RecordedSegment("finale", "Quick Swing", 4.5, end * 0.55, end, [.. shown.Where(m => m.Start >= end * 0.45)]),
+        ]);
+        var panel = new SessionExplorerPanel(new SessionExplorer(timeline, () => true), _panels, _app!.Scheduler);
+        _panels.Show(panel);
+        var scrub = AppPaths.UserArg("scrub") is { } at ? double.Parse(at, System.Globalization.CultureInfo.InvariantCulture) : end * 0.2;
+        panel.ScrubForSmoke(scrub);
+    }
+
+    private void ShowSavedSessions()
+    {
+        var app = _app!;
+        if (app.DataStore is not { } store) return;
+        _panels.Show(new SavedSessionsPanel(new SavedSessionsShelf(store, (session, ignore) => app.ReplaySession(session, ignore)), _panels));
     }
 }

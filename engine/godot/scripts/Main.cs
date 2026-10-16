@@ -34,6 +34,8 @@ namespace Gooner.Engine;
 //                         Stop at the end, so the question is in the screenshot, and
 //                         --answer=came|ruined|stopped|none answers it, so the recap is.
 //   -- --smoke-panel=<n>  opens one panel by name (see SmokePanels) and quits; with --screenshot.
+//                         The explorer's sample is built over --media=<folder>, scrubbed to
+//                         --scrub=<s>.
 //   -- --data-dir=<path>  where the history, settings and saved sessions go (see AppPaths).
 public partial class Main : Control
 {
