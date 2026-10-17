@@ -122,6 +122,7 @@ public sealed class GoonerApp : ISettingsOwner
         Player = new PlaylistPlayer(stage, _settings, _random, Scheduler);
         Hud = new SessionHud(Score, _settings, Scheduler);
         Banner = new ClimaxBanner(Scheduler);
+        Look = new Look(_settings);
 
         if (options.DeviceOutput)
             Intiface = new IntifacePlugin(this, new IntifaceController(_settings, options.Post));
@@ -154,6 +155,7 @@ public sealed class GoonerApp : ISettingsOwner
     public PlaylistPlayer Player { get; }
     public SessionHud Hud { get; }
     public ClimaxBanner Banner { get; }
+    public Look Look { get; }
     public IntifacePlugin? Intiface { get; }
     public ClockTimer DeniedStopTimer { get; }
     public ClockTimer EdgeCooldownTimer { get; }

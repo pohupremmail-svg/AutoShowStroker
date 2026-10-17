@@ -19,6 +19,7 @@ public partial class SettingsPanel : AppPanel
     private readonly Dictionary<string, SpinBox> _numbers = [];
     private readonly Dictionary<string, CheckBox> _toggles = [];
     private readonly Dictionary<string, CheckBox> _tones = [];
+    private readonly Dictionary<string, List<Button>> _choices = [];
     private readonly List<GridContainer> _rhythmGrids = [];
     private readonly TabContainer _tabs;
     private OptionButton? _language;
@@ -63,6 +64,7 @@ public partial class SettingsPanel : AppPanel
         NoteRow note => Widgets.Text(note.Text, 11, Palette.Text, wrap: true),
         NumberRow number => Number(_form.Numbers[number.Name]),
         ToggleRow toggle => Toggle(_form.Toggles[toggle.Name]),
+        ChoiceRow choice => Choice(_form.Choices[choice.Name]),
         RhythmsRow => Rhythms(),
         ManagePatternsRow => Action("Manage Custom Patterns...", () => _openPatternEditor(RefreshRhythms)),
         LanguageRow => Language(),
@@ -127,6 +129,37 @@ public partial class SettingsPanel : AppPanel
         check.Toggled += on => setting.Value = on;
         _toggles[setting.Name] = check;
         return check;
+    }
+
+    // A button per option, the chosen one lit: the options are few, and seeing them all side by side
+    // is half the point of a look setting.
+    private HBoxContainer Choice(ChoiceSetting setting)
+    {
+        var row = new HBoxContainer();
+        row.AddChild(new Label { Text = setting.Label, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1 });
+        var options = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
+        options.AddThemeConstantOverride("separation", 4);
+        var group = new ButtonGroup();
+        var buttons = new List<Button>();
+        foreach (var option in setting.Options)
+        {
+            var button = new Button
+            {
+                Text = option.Label,
+                ToggleMode = true,
+                ButtonGroup = group,
+                FocusMode = FocusModeEnum.None,
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            };
+            button.Toggled += on => button.ThemeTypeVariation = on ? "PrimaryButton" : "";
+            button.ButtonPressed = option.Value == setting.Value;
+            button.Pressed += () => setting.Value = option.Value;
+            buttons.Add(button);
+            options.AddChild(button);
+        }
+        _choices[setting.Name] = buttons;
+        row.AddChild(options);
+        return row;
     }
 
     private GridContainer Rhythms()
@@ -208,6 +241,16 @@ public partial class SettingsPanel : AppPanel
         foreach (var (name, spin) in _numbers) spin.SetValueNoSignal(_form.Numbers[name].Value);
         foreach (var (name, check) in _toggles) check.SetPressedNoSignal(_form.Toggles[name].Value);
         foreach (var (tone, check) in _tones) check.SetPressedNoSignal(_form.Tones[tone]);
+        foreach (var (name, buttons) in _choices)
+        {
+            var setting = _form.Choices[name];
+            for (var i = 0; i < buttons.Count; i++)
+            {
+                var on = setting.Options[i].Value == setting.Value;
+                buttons[i].SetPressedNoSignal(on);
+                buttons[i].ThemeTypeVariation = on ? "PrimaryButton" : "";
+            }
+        }
         foreach (var grid in _rhythmGrids) FillRhythms(grid);
         _language?.Select(_form.Languages.ToList().IndexOf(_form.Language));
         RefreshTones();

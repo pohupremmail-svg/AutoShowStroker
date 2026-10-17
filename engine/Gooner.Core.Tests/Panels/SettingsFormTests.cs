@@ -700,9 +700,10 @@ public sealed class SettingsFormTests : IDisposable
 
     // --- the layout ---
 
+    // The dialog's tabs in its order, and the engine's own Look behind them.
     [Fact]
     public void the_tabs_are_the_dialogs() =>
-        Assert.Equal(["Playback", "Beat & Rhythm", "Climax", "Callouts"], Form.Tabs.Select(t => t.Title));
+        Assert.Equal(["Playback", "Beat & Rhythm", "Climax", "Callouts", "Look"], Form.Tabs.Select(t => t.Title));
 
     // Every value the form holds is on some tab, once, and every tab ends with its reset button.
     [Fact]
@@ -710,9 +711,60 @@ public sealed class SettingsFormTests : IDisposable
     {
         var numbers = Form.Tabs.SelectMany(t => t.Rows).OfType<NumberRow>().Select(r => r.Name).ToList();
         var toggles = Form.Tabs.SelectMany(t => t.Rows).OfType<ToggleRow>().Select(r => r.Name).ToList();
+        var choices = Form.Tabs.SelectMany(t => t.Rows).OfType<ChoiceRow>().Select(r => r.Name).ToList();
 
         Assert.Equal(Form.Numbers.Keys.Order(), numbers.Order());
         Assert.Equal(Form.Toggles.Keys.Order(), toggles.Order());
+        Assert.Equal(Form.Choices.Keys.Order(), choices.Order());
         Assert.All(Form.Tabs, tab => Assert.IsType<ResetRow>(tab.Rows[^1]));
+    }
+
+    // --- the look (the engine's own) ---
+
+    [Fact]
+    public void the_look_offers_every_choice_of_its_owner()
+    {
+        var rows = Form.Tabs.Single(t => t.Title == "Look").Rows;
+
+        Assert.Equal(Look.Choices.Keys.Order(), rows.OfType<ChoiceRow>().Select(r => r.Name).Order());
+        Assert.Contains(new ToggleRow("focus_wanders"), rows);
+        Assert.Equal(Look.Choices["note_track"], Form.Choices["note_track"].Options);
+    }
+
+    [Fact]
+    public void a_chosen_look_is_applied_and_stored()
+    {
+        Form.Choices["note_track"].Value = "ring";
+        Form.Choices["censor"].Value = "blur";
+        Form.Toggles["focus_wanders"].Value = false;
+
+        Assert.True(Form.Apply());
+
+        Assert.Equal("ring", _app.Look.NoteTrack);
+        Assert.Equal("blur", _app.Look.Censor);
+        Assert.False(_app.Look.FocusWanders);
+        Assert.Equal("ring", _settings.GetString("Look/note_track", ""));
+        Assert.Equal("blur", _settings.GetString("Look/censor", ""));
+        Assert.False(_settings.GetBool("Look/focus_wanders", true));
+    }
+
+    [Fact]
+    public void resetting_the_look_brings_back_its_defaults()
+    {
+        Form.Choices["color_scheme"].Value = "boudoir";
+        Form.Toggles["focus_wanders"].Value = false;
+
+        Form.Reset("Look");
+
+        Assert.Equal("neon", Form.Choices["color_scheme"].Value);
+        Assert.True(Form.Toggles["focus_wanders"].Value);
+    }
+
+    [Fact]
+    public void a_choice_outside_its_options_is_not_taken()
+    {
+        Form.Choices["effects"].Value = "extreme";
+
+        Assert.Equal("normal", Form.Choices["effects"].Value);
     }
 }

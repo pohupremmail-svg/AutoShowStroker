@@ -97,12 +97,49 @@ public sealed class ToggleSetting
     internal void Write() => _write(Value);
 }
 
+// A setting the settings show as one of a few named options. A value that is not one of them is
+// not taken - the draft keeps what it had.
+public sealed class ChoiceSetting
+{
+    private readonly Action<string> _write;
+    private string _value;
+
+    internal ChoiceSetting(string name, string label, string group, IReadOnlyList<LookOption> options, string @default, string value, Action<string> write)
+    {
+        Name = name;
+        Label = label;
+        Group = group;
+        Options = options;
+        Default = @default;
+        _value = value;
+        _write = write;
+    }
+
+    public string Name { get; }
+    public string Label { get; }
+    public string Group { get; }
+    public IReadOnlyList<LookOption> Options { get; }
+    public string Default { get; }
+
+    public string Value
+    {
+        get => _value;
+        set
+        {
+            if (Options.Any(o => o.Value == value)) _value = value;
+        }
+    }
+
+    internal void Write() => _write(Value);
+}
+
 // What a tab of the settings holds, top to bottom; the panel draws each kind of row.
 public abstract record SettingsRow;
 public sealed record HeaderRow(string Text) : SettingsRow;
 public sealed record NoteRow(string Text) : SettingsRow;
 public sealed record NumberRow(string Name) : SettingsRow;
 public sealed record ToggleRow(string Name) : SettingsRow;
+public sealed record ChoiceRow(string Name) : SettingsRow;
 public sealed record RhythmsRow : SettingsRow;
 public sealed record ManagePatternsRow : SettingsRow;
 public sealed record LanguageRow : SettingsRow;
@@ -143,6 +180,7 @@ public sealed class SettingsForm
     private readonly GoonerApp _app;
     private readonly Dictionary<string, NumberSetting> _numbers = [];
     private readonly Dictionary<string, ToggleSetting> _toggles = [];
+    private readonly Dictionary<string, ChoiceSetting> _choices = [];
     private Dictionary<string, bool> _rhythms = [];
     private Dictionary<string, bool> _tones = [];
 
@@ -154,6 +192,7 @@ public sealed class SettingsForm
         var beat = app.Beat;
         var climax = app.Climax;
         var hud = app.Hud;
+        var look = app.Look;
 
         NumberRow Num(string name, string label, string group, IReadOnlyDictionary<string, object> defaults, bool isInt,
             double min, double max, double step, Func<double> read, Action<double> write)
@@ -166,6 +205,11 @@ public sealed class SettingsForm
         {
             _toggles[name] = new ToggleSetting(name, label, group, (bool)defaults[name], value, write, tooltip);
             return new ToggleRow(name);
+        }
+        ChoiceRow LookChoice(string name, string label, string value, Action<string> write)
+        {
+            _choices[name] = new ChoiceSetting(name, label, Look.SettingsGroup, Look.Choices[name], (string)Look.Defaults[name], value, write);
+            return new ChoiceRow(name);
         }
 
         const string AppGroup = "GoonerApp";
@@ -250,6 +294,21 @@ public sealed class SettingsForm
             Language = callouts.Lang;
             _tones = callouts.AvailableTones.ToDictionary(t => t, t => callouts.SelectedTones.Contains(t));
         }
+        // The engine's own: the note track, the colours, the effects - nothing the Python app had.
+        tabs.Add(new SettingsTab("Look",
+        [
+            new HeaderRow("Note Track"),
+            LookChoice("note_track", "Note track:", look.NoteTrack, v => look.NoteTrack = v),
+            new HeaderRow("Hypno Ring"),
+            Toggle("focus_wanders", "The ring wanders across the picture", Look.SettingsGroup, Look.Defaults, look.FocusWanders, v => look.FocusWanders = v,
+                "It drifts to a new spot every few seconds and at every change of rhythm, and your eyes go with it."),
+            LookChoice("censor", "Around the ring:", look.Censor, v => look.Censor = v),
+            new NoteRow("Only the ring stays clear - the rest of the picture is blurred, pixelated or darkened."),
+            new HeaderRow("Colours & Effects"),
+            LookChoice("color_scheme", "Colours:", look.ColorScheme, v => look.ColorScheme = v),
+            LookChoice("effects", "Effects:", look.Effects, v => look.Effects = v),
+            new ResetRow("Look"),
+        ]));
         // The device's tab only when there is device output - the tab is its UI, not the form's.
         if (app.Intiface is { } intiface)
         {
@@ -265,6 +324,8 @@ public sealed class SettingsForm
     public IReadOnlyDictionary<string, NumberSetting> Numbers => _numbers;
 
     public IReadOnlyDictionary<string, ToggleSetting> Toggles => _toggles;
+
+    public IReadOnlyDictionary<string, ChoiceSetting> Choices => _choices;
 
     // The Device tab's draft; null without device output. Its connection settings are applied
     // separately, after Apply, since a changed address may first need the user's consent.
@@ -339,6 +400,9 @@ public sealed class SettingsForm
                 case ToggleRow toggle:
                     _toggles[toggle.Name].Value = _toggles[toggle.Name].Default;
                     break;
+                case ChoiceRow choice:
+                    _choices[choice.Name].Value = _choices[choice.Name].Default;
+                    break;
                 case RhythmsRow:
                     foreach (var name in _rhythms.Keys.ToList()) _rhythms[name] = true;
                     break;
@@ -387,6 +451,11 @@ public sealed class SettingsForm
         {
             toggle.Write();
             settings?.SetValue($"{toggle.Group}/{toggle.Name}", toggle.Value);
+        }
+        foreach (var choice in _choices.Values)
+        {
+            choice.Write();
+            settings?.SetValue($"{choice.Group}/{choice.Name}", choice.Value);
         }
 
         var selected = _rhythms.Where(r => r.Value).Select(r => r.Key).ToList();
