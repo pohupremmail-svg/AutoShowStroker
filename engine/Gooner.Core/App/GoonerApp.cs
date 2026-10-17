@@ -123,6 +123,7 @@ public sealed class GoonerApp : ISettingsOwner
         Hud = new SessionHud(Score, _settings, Scheduler);
         Banner = new ClimaxBanner(Scheduler);
         Look = new Look(_settings);
+        Window = new WindowState(_settings);
 
         if (options.DeviceOutput)
             Intiface = new IntifacePlugin(this, new IntifaceController(_settings, options.Post));
@@ -156,6 +157,7 @@ public sealed class GoonerApp : ISettingsOwner
     public SessionHud Hud { get; }
     public ClimaxBanner Banner { get; }
     public Look Look { get; }
+    public WindowState Window { get; }
     public IntifacePlugin? Intiface { get; }
     public ClockTimer DeniedStopTimer { get; }
     public ClockTimer EdgeCooldownTimer { get; }

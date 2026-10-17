@@ -145,6 +145,10 @@ public partial class Main : Control
         _track = new NoteTrackView(_app.Look, _particles, new Gooner.Core.Randomness.SystemRandomSource());
         _app.SessionStarted += _track.Reset;
         Build();
+        // Full screen the first time, and after that as the window was last left; a smoke run keeps
+        // the fixed window it is checked at.
+        if (_app.Window.Fullscreen && !OS.GetCmdlineUserArgs().Any(arg => arg.StartsWith("--smoke", StringComparison.Ordinal)))
+            EnterFullscreen();
 
         _smoke = AppPaths.UserFlag("smoke-beat") ? "beat" : AppPaths.UserFlag("smoke-session") ? "session" : null;
         if (_smoke is not null)
@@ -364,17 +368,20 @@ public partial class Main : Control
         else EnterFullscreen();
     }
 
+    // Both remember the switch for the next start (WindowState).
     private void EnterFullscreen()
     {
         if (DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Fullscreen) return;
         _wasMaximized = DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Maximized;
         DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+        _app?.Window.Remember(fullscreen: true);
     }
 
     private void LeaveFullscreen()
     {
         if (DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Fullscreen) return;
         DisplayServer.WindowSetMode(_wasMaximized ? DisplayServer.WindowMode.Maximized : DisplayServer.WindowMode.Windowed);
+        _app?.Window.Remember(fullscreen: false);
     }
 
     // The folder picker; what it starts with goes to the playlist, counted - a folder is never logged.
