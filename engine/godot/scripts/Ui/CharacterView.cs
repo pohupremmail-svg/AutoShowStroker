@@ -27,6 +27,8 @@ public partial class CharacterView : SubViewportContainer
 
     // The start screen is rebuilt on a change of language; the figure is handed on to the new one
     // rather than loaded again, which takes up to a second.
+    private static readonly string[] Feet = ["LeftFoot", "RightFoot"];
+
     private static (string Path, Node3D Root)? _kept;
 
     private readonly SubViewport _viewport = new() { TransparentBg = true, OwnWorld3D = true, Msaa3D = Viewport.Msaa.Msaa4X };
@@ -107,6 +109,7 @@ public partial class CharacterView : SubViewportContainer
             _faces.Pause();
         }
         FindLids();
+        FaceTheCamera();
         Frame();
     }
 
@@ -149,16 +152,24 @@ public partial class CharacterView : SubViewportContainer
     }
 
     // The camera, so that the feet stand on the pedestal's floor (84% of the way down, Pedestal) and
-    // the head sits under the top edge, whatever the figure's height.
+    // the head sits under the top edge, whatever the figure's height. Measured in the world, not in
+    // the skeleton's own space: an export from Blender often scales or turns the armature.
     private void Frame()
     {
-        if (_skeleton is null || Bone("Head") is not { } head) return;
-        var top = _skeleton.GetBoneGlobalRest(head).Origin.Y + 0.2f;
-        var half = top / 1.48f; // feet at 0.84, top at 0.10 of the height: top = 0.74 * 2 * half
+        if (_skeleton is null || !_skeleton.IsInsideTree() || Bone("Head") is not { } headBone) return;
+        var head = At(headBone);
+        var feet = Feet.Select(Bone).OfType<int>().Select(b => At(b).Y).DefaultIfEmpty(0).Min();
+        var height = head.Y - feet;
+        var floor = feet - height * 0.06f; // the foot bone sits at the ankle
+        var top = head.Y + height * 0.14f;
+        var half = (top - floor) / 1.48f; // floor at 0.84, top at 0.10 of the view: 0.74 * 2 * half
         var distance = half / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2));
-        _camera.Position = new Vector3(0, 0.68f * half, distance);
-        FaceTheCamera();
+        _camera.Position = new Vector3(head.X, floor + 0.68f * half, head.Z + distance);
+        _camera.Near = Math.Max(0.01f, distance * 0.01f);
+        _camera.Far = Math.Max(100, distance * 10);
     }
+
+    private Vector3 At(int bone) => _skeleton!.GlobalTransform * _skeleton.GetBoneGlobalRest(bone).Origin;
 
     // Which way it faces comes from the skeleton, not the spec version: a figure facing the camera
     // (+Z) has its left arm at +X.
