@@ -6,14 +6,15 @@ using Godot;
 namespace Gooner.Engine.Ui;
 
 // The start screen's stage: a spotlight falling on a floor of slowly turning rings, the logo
-// floating above it. Where a character will stand one day.
+// floating above it - or, when there is one, a character standing on it.
 public partial class Pedestal : Control
 {
     private readonly PaintLayer _light = new(additive: true);
     private readonly Texture2D? _logo;
+    private readonly CharacterView? _character;
     private double _time;
 
-    public Pedestal(Texture2D? logo)
+    public Pedestal(Texture2D? logo, string? character)
     {
         _logo = logo;
         MouseFilter = MouseFilterEnum.Ignore;
@@ -21,6 +22,7 @@ public partial class Pedestal : Control
         SizeFlagsVertical = SizeFlags.ExpandFill;
         _light.Paint = Paint;
         AddChild(_light);
+        if (character is not null) AddChild(_character = new CharacterView(character));
     }
 
     public override void _Process(double delta)
@@ -47,7 +49,7 @@ public partial class Pedestal : Control
         c.DrawDashedEllipse(new Vector2(cx, floor), reach * 0.74f, reach * 0.74f * 0.22f, new Color(accent, 0.7f), 2, 36, -turn * 0.5f);
         c.DrawDashedEllipse(new Vector2(cx, floor), reach * 0.48f, reach * 0.48f * 0.22f, new Color(cool, 0.8f), 2, 18, turn * 0.8f);
 
-        if (_logo is null) return;
+        if (_logo is null || _character?.Loaded == true) return;
         var side = Math.Min(reach * 1.1f, Size.Y * 0.55f);
         var centre = new Vector2(cx, floor - side * 0.75f + MathF.Sin(turn * 1.2f) * 10);
         Glow.Draw(c, centre, side * 0.75f, new Color(accent, 0.3f));

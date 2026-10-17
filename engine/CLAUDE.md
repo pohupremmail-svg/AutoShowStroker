@@ -175,6 +175,19 @@ here unchanged. This file only adds what is specific to this side.
   user's call). The field names in a saved session's problems (`duration_sec`, ...) stay as they
   are written in the file.
 
+## Characters (phase 8, begun)
+
+- `res/characters/*.vrm`, first by name (`CharacterFiles.First`), stands on the start screen's
+  pedestal (`Ui/CharacterView`); none, or one that will not load, leaves the logo there. The
+  models are **gitignored** until there are ones the app may pass on: rights in writing, nothing
+  explicit on GitHub, unmistakably adult. The local test model's own licence forbids passing it on.
+- Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
+  Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
+  `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,
+  bone poses reset. Do not "simplify" any of it; each one was a crash or a distorted mesh.
+- Motion is written against humanoid bone names, in model space (`CharacterView.Turn`), never in a
+  bone's local axes - that is what makes one motion fit every model.
+
 ## How the core keeps time
 
 - **No timer fires on its own.** Every QTimer of the Python side is a `ClockTimer` on a

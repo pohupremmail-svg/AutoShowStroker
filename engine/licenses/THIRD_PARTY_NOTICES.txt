@@ -38,6 +38,19 @@ Source: EIRTeam.FFmpeg-84ea333cb6b836b3a8951a70830b836d18c893d1-source.tar.gz
 License: MIT License
 License text: EIRTeam.FFmpeg-MIT.txt
 
+== godot-vrm 2.0.1 (V-Sekai, revision e15199f) ==
+Loads the VRM characters: addons/vrm. Copyright (c) 2020-2021 V-Sekai Contributors, (c) 2020
+VRM Consortium. Modified: the runtime import can be told not to retarget the skeleton
+("vrm/retarget", in vrm_extension.gd and 1.0/VRMC_vrm.gd), which distorted meshes loaded at runtime.
+License: MIT License
+License text: godot-vrm-MIT.txt
+
+== Godot-MToon-Shader 3.4.0 (V-Sekai) ==
+The toon shading of the VRM characters: addons/Godot-MToon-Shader. Copyright (c) 2020-2022
+V-Sekai Contributors, (c) 2018 Masataka SUMI.
+License: MIT License
+License text: Godot-MToon-Shader-MIT.txt
+
 == FFmpeg N-111611-g5b11ee9429 (2023-07-24) ==
 Bundled with EIRTeam.FFmpeg: avcodec-60.dll, avfilter-9.dll, avformat-60.dll, avutil-58.dll,
 swresample-4.dll, swscale-7.dll. This software uses libraries from the FFmpeg project under the
