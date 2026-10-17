@@ -37,7 +37,9 @@ public partial class CharacterView : SubViewportContainer
     private BoneMap? _bones;
     private AnimationPlayer? _faces;
     private string? _mood;
-    private double _time, _nextBlink = 3;
+    // The blend shapes the model's "blink" expression closes, at the weight it closes them to.
+    private readonly List<(MeshInstance3D Mesh, int Shape, float Full)> _lids = [];
+    private double _time, _nextBlink = 3, _blinkedAt = -1;
     private Vector2 _gaze;
 
     public bool Loaded => _root is not null;
@@ -97,6 +99,7 @@ public partial class CharacterView : SubViewportContainer
         _faces = All<AnimationPlayer>(root).FirstOrDefault();
         _mood = Expression("relaxed") ?? Expression("happy");
         if (_mood is not null) _faces!.Play(_mood);
+        FindLids();
         Frame();
     }
 
@@ -183,13 +186,39 @@ public partial class CharacterView : SubViewportContainer
         Turn("Head", Vector3.Up, 14 * _gaze.X);
         Turn("Head", Vector3.Right, 10 * _gaze.Y, keep: true);
 
-        if (_faces is not null && _time >= _nextBlink && Expression("blink") is { } blink)
+        Blink();
+    }
+
+    // Blinking is done here, not by playing "blink": an expression only writes the shapes it keys, so
+    // going back to the mood afterwards left the eyes shut for good.
+    private void FindLids()
+    {
+        if (_faces is null || Expression("blink") is not { } name || _faces.GetNodeOrNull(_faces.RootNode) is not { } root) return;
+        var blink = _faces.GetAnimation(name);
+        for (var i = 0; i < blink.GetTrackCount(); i++)
         {
-            _faces.Play(blink);
-            var faces = _faces;
-            GetTree().CreateTimer(0.14).Timeout += () => { if (IsInstanceValid(faces) && _mood is not null) faces.Play(_mood); };
+            if (blink.TrackGetType(i) != Animation.TrackType.BlendShape || blink.TrackGetKeyCount(i) == 0) continue;
+            var path = blink.TrackGetPath(i);
+            if (root.GetNodeOrNull(path.GetConcatenatedNames()) is not MeshInstance3D mesh) continue;
+            var shape = mesh.FindBlendShapeByName(path.GetConcatenatedSubNames());
+            if (shape >= 0) _lids.Add((mesh, shape, blink.TrackGetKeyValue(i, 0).AsSingle()));
+        }
+    }
+
+    // Shut in 70 ms, held for 40, open again in 90 - and written back to nothing at the end.
+    private void Blink()
+    {
+        if (_lids.Count == 0) return;
+        if (_time >= _nextBlink)
+        {
+            _blinkedAt = _time;
             _nextBlink = _time + 2.5 + Random.Shared.NextDouble() * 3.5;
         }
+        if (_blinkedAt < 0) return;
+        var since = (float)(_time - _blinkedAt);
+        var shut = since < 0.07f ? since / 0.07f : since < 0.11f ? 1 : Math.Max(0, 1 - (since - 0.11f) / 0.09f);
+        foreach (var (mesh, shape, full) in _lids) mesh.SetBlendShapeValue(shape, full * shut);
+        if (shut <= 0) _blinkedAt = -1;
     }
 
     private string? Expression(string name) =>
