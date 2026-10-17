@@ -72,22 +72,7 @@ public static class UiTheme
         theme.SetFontSize("font_size", "PanelTitle", 22);
         theme.SetColor("font_color", "PanelTitle", Of(Palette.Accent));
 
-        // The menu bar and its menus, in the palette's Highlight and HighlightedText.
-        StyleBoxFlat MenuItem(Color background)
-        {
-            var box = Box(background, 4);
-            box.ContentMarginLeft = box.ContentMarginRight = 10;
-            box.ContentMarginTop = box.ContentMarginBottom = 4;
-            return box;
-        }
-        theme.SetStylebox("normal", "MenuBar", MenuItem(Colors.Transparent));
-        theme.SetStylebox("hover", "MenuBar", MenuItem(Of(Palette.Secondary)));
-        theme.SetStylebox("pressed", "MenuBar", MenuItem(Of(Palette.Accent)));
-        theme.SetStylebox("disabled", "MenuBar", MenuItem(Colors.Transparent));
-        theme.SetColor("font_color", "MenuBar", Of(Palette.Text));
-        theme.SetColor("font_hover_color", "MenuBar", Of(Palette.Text));
-        theme.SetColor("font_pressed_color", "MenuBar", Of(Palette.Background));
-        theme.SetColor("font_hover_pressed_color", "MenuBar", Of(Palette.Background));
+        // The lists drop-downs open, in the palette's Highlight and HighlightedText.
         var popup = Box(Of(Palette.Surface), 6, 4);
         popup.SetBorderWidthAll(1);
         popup.BorderColor = Of(Palette.Secondary);

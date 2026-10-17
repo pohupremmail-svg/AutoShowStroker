@@ -26,9 +26,9 @@ public sealed class SessionExplorer
     public const double FakeWindowSec = 4.0;
 
     public const string SavedMessage =
-        "Saved under Sessions > Saved Sessions, where it can be played again.\n\n" +
+        "Saved under Saved Sessions on the start screen, where it can be played again.\n\n" +
         "It records the paths of the media it showed, so replaying finds them again. Delete saved sessions " +
-        "under Help > Privacy & Data, and leave the paths out when exporting one to somebody else.";
+        "under Privacy & Data, and leave the paths out when exporting one to somebody else.";
 
     public const string SaveFailedMessage = "This session could not be saved. There may be no room left on the disk.";
 

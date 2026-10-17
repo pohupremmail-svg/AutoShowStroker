@@ -13,7 +13,8 @@ using Godot;
 
 namespace Gooner.Engine;
 
-// The menu bar and the panels it opens: everything the Python window showed as a dialog.
+// The start screen, the dock's menu and the panels they open: everything the Python window showed
+// as a menu or a dialog.
 public partial class Main
 {
     private AppPanel? _question;

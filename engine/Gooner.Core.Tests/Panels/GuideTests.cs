@@ -115,6 +115,19 @@ public sealed class GuideTests
         Assert.Contains("deleting its folder", text);
     }
 
+    // The engine has no menu bar: what was under Help, Sessions and Statistics is on the start screen
+    // (and the dock's menu), and the buttons the shortcuts name are the dock's.
+    [Fact]
+    public void the_engine_sends_you_nowhere_its_window_does_not_have()
+    {
+        foreach (var topic in Guide.Topics)
+        {
+            foreach (var gone in new[] { "Help &gt;", "Sessions &gt;", "Statistics &gt;", "Skip &gt;&gt;", "&lt;&lt; Previous" })
+                Assert.DoesNotContain(gone, topic.Html);
+        }
+        Assert.Contains("start screen", Text("Privacy"));
+    }
+
     [Fact]
     public void only_the_edits_differ_from_the_python_text()
     {

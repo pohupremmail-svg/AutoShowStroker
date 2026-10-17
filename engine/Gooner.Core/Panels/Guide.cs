@@ -301,6 +301,29 @@ public static class Guide
             "those.",
             "<p>GoonerApp is portable, so deleting its folder does <i>not</i> remove any of " +
             "that."),
+        // The engine has no menu bar: Help, Sessions and Statistics are on the start screen and in
+        // the dock's menu, and the buttons the shortcuts name are the dock's icons.
+        new("Privacy",
+            " Open <b>Help &gt; Privacy &amp; Data</b> to see the exact paths on this ",
+            " Open <b>Privacy &amp; Data</b> - on the start screen, or in the dock's menu - to see the exact paths on this "),
+        new("Privacy",
+            "<p>The first exception is Help &gt; Check for Updates: only when you click it and ",
+            "<p>The first exception is Check for Updates, at the foot of the start screen: only when you click it and "),
+        new("On-Screen Display",
+            "<b>Sessions &gt; Saved Sessions</b> plays it ",
+            "<b>Saved Sessions</b> on the start screen plays it "),
+        new("On-Screen Display",
+            "<p><b>Statistics &gt; Achievements</b> lists every one there is, not only the ",
+            "<p><b>Achievements</b> on the start screen lists every one there is, not only the "),
+        new("On-Screen Display",
+            "and deletable under Help &gt; Privacy &amp; Data.</p>",
+            "and deletable under Privacy &amp; Data.</p>"),
+        new("Keyboard Shortcuts",
+            "(same as Skip &gt;&gt;)",
+            "(same as Skip in the dock)"),
+        new("Keyboard Shortcuts",
+            "(same as &lt;&lt; Previous)",
+            "(same as Previous in the dock)"),
     ];
 
     // The topics as the engine shows them: the edits applied, a tab title with one ampersand where

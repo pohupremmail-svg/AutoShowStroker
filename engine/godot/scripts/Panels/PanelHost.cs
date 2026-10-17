@@ -4,8 +4,8 @@ using Godot;
 
 namespace Gooner.Engine.Panels;
 
-// The layer every panel is shown on, over the whole window - the menu bar included, since a modal
-// dialog blocked that too. Panels stack: Settings opens the pattern editor over itself, Saved
+// The layer every panel is shown on, over the whole window - the start screen included, as a modal
+// dialog blocked everything behind it. Panels stack: Settings opens the pattern editor over itself, Saved
 // Sessions the explorer, and only the one on top takes input. The session behind goes on playing,
 // as it did behind a QDialog.
 //
