@@ -35,6 +35,7 @@ public partial class NoteTrackView : Control
     private readonly PaintLayer _floor = new(additive: false);
     private readonly PaintLayer _light = new(additive: true);
     private readonly Random _flicker = new();
+    private readonly Random _sparks = new();
     private TrackForecast _forecast = new([], []);
     private double _now;
     private long _landed;
@@ -101,6 +102,7 @@ public partial class NoteTrackView : Control
         _now = now;
         _forecast = forecast;
         _focus.Step(delta, now, wander: _look.FocusWanders && Style == "ring");
+        Shed(delta);
 
         var dt = (float)delta;
         _hit *= MathF.Exp(-dt * 9);
@@ -113,6 +115,23 @@ public partial class NoteTrackView : Control
         }
         _floor.QueueRedraw();
         _light.QueueRedraw();
+    }
+
+    // Fine sparks coming off the notes as they fly, drifting back the way they came and going out -
+    // a few a second for each, more with stronger effects.
+    private void Shed(double delta)
+    {
+        var chance = 9 * Strength * delta;
+        foreach (var (note, ordinal) in Coming())
+        {
+            if (_sparks.NextDouble() > chance) continue;
+            var (at, r, alpha) = NoteAt(note, ordinal);
+            var (before, _, _) = NoteAt(note, ordinal, _now - 0.05);
+            var back = (before - at).LengthSquared() > 0.01f ? (before - at).Normalized() : Vector2.Up;
+            var drift = back.Rotated((float)(_sparks.NextDouble() - 0.5) * 1.2f) * (30 + (float)_sparks.NextDouble() * 50);
+            _particles.Add(at + back * r * 0.3f, drift, NoteColor(note.Weight), ParticleKind.Dot, 0.35f + (float)_sparks.NextDouble() * 0.3f,
+                (1.2f + (float)_sparks.NextDouble()) * Math.Max(0.5f, r / 30) * alpha, drag: 1.5f);
+        }
     }
 
     // A denial: the beat stops dead, and what was still coming shatters where it was.
@@ -198,26 +217,83 @@ public partial class NoteTrackView : Control
         }
     }
 
-    // Where a coming note is drawn: position, radius, opacity (fading in at the far end).
-    private (Vector2 At, float Radius, float Alpha) NoteAt(ScheduledNote note, long ordinal)
+    // Where a coming note is drawn: position, radius, opacity (fading in at the far end) - now, or at
+    // an earlier moment of the clock, which is where its trail runs.
+    private (Vector2 At, float Radius, float Alpha) NoteAt(ScheduledNote note, long ordinal, double? when = null)
     {
-        var ahead = Ahead(note.At);
+        var time = when ?? _now;
+        var ahead = (note.At - time) / LeadTimeSec;
         var size = NoteSize(note.Weight);
         switch (Style)
         {
             case "ring":
                 var ring = new HypnoRing(Size.X, Size.Y, _look.FocusWanders);
-                return (V(ring.At(ahead, (int)(ordinal & 1), _now, P(Focus))), (9 + 17 * (1 - (float)ahead)) * size, FadeIn(ahead, 0.15));
+                return (V(ring.At(ahead, (int)(ordinal & 1), time, P(Focus))), (9 + 17 * (1 - (float)ahead)) * size, FadeIn(ahead, 0.15));
             case "stream":
                 var stream = new StreamLane(Size.X, Size.Y);
                 return (new Vector2(stream.X(ahead), stream.CenterY), 17 * size, FadeIn(ahead, 0.07));
             case "tunnel":
                 var tunnel = new TunnelLane(Size.X, Size.Y);
-                return (V(tunnel.At(ahead, note.At, _now)), 40 * size / (1 + (float)ahead * TunnelLane.Depth), FadeIn(ahead, 0.15));
+                return (V(tunnel.At(ahead, note.At, time)), 40 * size / (1 + (float)ahead * TunnelLane.Depth), FadeIn(ahead, 0.15));
             default:
-                var lane = new HighwayLane(Size.X, Size.Y).At(ahead, _now);
+                var lane = new HighwayLane(Size.X, Size.Y).At(ahead, time);
                 var r = 42 * lane.Scale * size;
                 return (new Vector2(lane.X, lane.Y - r * 0.7f), r, FadeIn(ahead, 0.18));
+        }
+    }
+
+    // How far back a note's trail reaches, in seconds of the clock, and in how many pieces.
+    private const double TrailSec = 0.22;
+    private const int TrailSteps = 12;
+
+    // The note's trail: where it really was a moment ago - the same geometry asked at earlier
+    // moments, so the streak bends with the lane's sway and the ring's turn instead of pointing
+    // somewhere the note never went. A slim core that thins and fades towards its end, as wide as
+    // the note at its head - so it shrinks with it into the distance - inside a soft light that has
+    // no edge at all, and a shimmer running back along both.
+    private void Comet(PaintLayer c, ScheduledNote note, long ordinal, Color color)
+    {
+        var points = new List<Vector2>(TrailSteps + 1);
+        var widths = new List<float>(TrailSteps + 1);
+        var alphas = new List<float>(TrailSteps + 1);
+        for (var k = 0; k <= TrailSteps; k++)
+        {
+            var when = _now - k * TrailSec / TrailSteps;
+            // Not further back than where it came into view.
+            if ((note.At - when) / LeadTimeSec > 1) break;
+            var (at, r, alpha) = NoteAt(note, ordinal, when);
+            var t = k / (float)TrailSteps;
+            points.Add(at);
+            widths.Add(r * 0.36f * MathF.Pow(1 - t, 2.2f));
+            var shimmer = 0.78f + 0.22f * MathF.Sin((float)(_now * 22) - k * 0.9f + ordinal);
+            alphas.Add(alpha * MathF.Pow(1 - t, 1.4f) * shimmer);
+        }
+        if (points.Count < 2) return;
+        for (var k = 1; k < points.Count; k++)
+            Glow.Draw(c, points[k], widths[k] * 4.2f + 2, Fade(color, alphas[k] * 0.2f));
+        Ribbon(c, points, widths, alphas, color, 1f, 0.85f);
+    }
+
+    private static readonly Vector2[] NoUv = new Vector2[4];
+
+    // A strip along the points, `widths` from its middle to each side: one quad per piece, sharing
+    // its edges with the next, so the additive layer never lights a joint twice.
+    private static void Ribbon(PaintLayer c, List<Vector2> points, List<float> widths, List<float> alphas, Color color, float spread, float strength)
+    {
+        var normals = new Vector2[points.Count];
+        for (var i = 0; i < points.Count; i++)
+        {
+            var along = points[Math.Min(i + 1, points.Count - 1)] - points[Math.Max(i - 1, 0)];
+            normals[i] = along.LengthSquared() < 1e-6f ? Vector2.Zero : new Vector2(-along.Y, along.X).Normalized();
+        }
+        for (var i = 0; i + 1 < points.Count; i++)
+        {
+            if ((points[i + 1] - points[i]).LengthSquared() < 0.25f) continue;
+            var (a, b) = (normals[i] * widths[i] * spread, normals[i + 1] * widths[i + 1] * spread);
+            var (ca, cb) = (Fade(color, alphas[i] * strength), Fade(color, alphas[i + 1] * strength));
+            // A primitive rather than a polygon: no triangulation, so a piece that tapers to nothing
+            // at the tail is drawn as the sliver it is instead of refused.
+            c.DrawPrimitive([points[i] + a, points[i + 1] + b, points[i + 1] - b, points[i] - a], [ca, cb, cb, ca], NoUv);
         }
     }
 
@@ -396,9 +472,7 @@ public partial class NoteTrackView : Control
             var (note, ordinal) = coming[i];
             var (at, r, alpha) = NoteAt(note, ordinal);
             var color = NoteColor(note.Weight);
-            var back = lane.At(Math.Min(1, Ahead(note.At) + 0.07), _now);
-            var behind = new Vector2(back.X, back.Y - 42 * back.Scale * NoteSize(note.Weight) * 0.7f);
-            c.DrawPolylineColors([behind, at], [Fade(color, 0), Fade(color, 0.55f * alpha)], r * 0.9f, true);
+            Comet(c, note, ordinal, color);
             NoteGlow(c, at, r, color, alpha);
         }
     }
@@ -458,10 +532,7 @@ public partial class NoteTrackView : Control
         {
             var (at, r, alpha) = NoteAt(note, ordinal);
             var color = NoteColor(note.Weight);
-            var ahead = Ahead(note.At);
-            var trail = new Vector2[7];
-            for (var k = 0; k < trail.Length; k++) trail[k] = V(ring.At(ahead + k * 0.012, (int)(ordinal & 1), _now, P(centre)));
-            c.DrawPolyline(trail, Fade(color, 0.45f * alpha), r * 0.8f, true);
+            Comet(c, note, ordinal, color);
             NoteGlow(c, at, r, color, alpha);
         }
     }
@@ -508,8 +579,7 @@ public partial class NoteTrackView : Control
         {
             var (at, r, alpha) = NoteAt(note, ordinal);
             var color = NoteColor(note.Weight);
-            var tail = r * 5 + 30;
-            c.DrawPolylineColors([at + new Vector2(tail, 0), at], [Fade(color, 0), Fade(color, 0.6f * alpha)], r * 1.1f, true);
+            Comet(c, note, ordinal, color);
             NoteGlow(c, at, r, color, alpha);
         }
     }
@@ -564,8 +634,7 @@ public partial class NoteTrackView : Control
             var (note, ordinal) = coming[i];
             var (at, r, alpha) = NoteAt(note, ordinal);
             var color = NoteColor(note.Weight);
-            var back = V(tunnel.At(Math.Min(1, Ahead(note.At) + 0.06), note.At, _now));
-            c.DrawPolylineColors([back, at], [Fade(color, 0), Fade(color, 0.55f * alpha)], r * 0.9f, true);
+            Comet(c, note, ordinal, color);
             NoteGlow(c, at, r, color, alpha);
         }
     }
