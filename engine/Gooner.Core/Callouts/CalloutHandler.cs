@@ -226,12 +226,22 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
             ? [.. items.Select(i => (string)i!)]
             : null;
 
+    // The language or the mix of tones changed - the voice the app speaks in. The start screen
+    // draws its line again then.
+    public event Action? VoiceChanged;
+
     public void SetLang(string lang)
     {
         if (CalloutData.ContainsKey(lang) && _availableLanguages.Contains(lang))
+        {
+            var changed = Lang != lang;
             Lang = lang;
+            if (changed) VoiceChanged?.Invoke();
+        }
         else
+        {
             AppLog.Warning(Log, "Language {0} is not available", PyJson.Quote(lang));
+        }
     }
 
     // --- tones ---
@@ -263,7 +273,9 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
         var dropped = requested.Where(t => !available.Contains(t)).ToList();
         if (dropped.Count > 0)
             AppLog.Warning(Log, "Ignoring unavailable callout tones: {0}", string.Join(", ", dropped));
+        var before = SelectedTones;
         SelectedTones = [.. requested.Where(available.Contains)];
+        if (!before.SequenceEqual(SelectedTones)) VoiceChanged?.Invoke();
     }
 
     // The selected tones the current language has files for. Falls back to the default tone rather

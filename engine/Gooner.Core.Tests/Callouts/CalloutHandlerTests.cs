@@ -294,6 +294,33 @@ public sealed class CalloutHandlerTests : IDisposable
         Assert.Equal("de main_menu phrase", _handler.TitleLine());
     }
 
+    // The start screen draws a new line when the voice changes, and only then.
+    [Fact]
+    public void a_change_of_language_or_tones_is_announced_and_nothing_else_is()
+    {
+        var changes = 0;
+        _handler.VoiceChanged += () => changes++;
+
+        _handler.SetLang("de");
+        _handler.SetLang("de");
+        _handler.SetLang("xx");
+        _handler.SetTones(["flirty"]);
+        _handler.SetTones(["flirty"]);
+
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void a_new_mix_of_tones_is_announced()
+    {
+        var changes = 0;
+        _handler.VoiceChanged += () => changes++;
+
+        _handler.SetTones([]);
+
+        Assert.Equal(1, changes);
+    }
+
     [Fact]
     public void there_is_no_title_line_without_main_menu_lines()
     {

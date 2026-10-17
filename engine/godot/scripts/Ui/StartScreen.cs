@@ -112,6 +112,14 @@ public partial class StartScreen : Control
 
     private static Label LogoPart(string text) => new() { Text = text };
 
+    // A new line under the name, faded in - when the voice it speaks in has changed.
+    public void RefreshLine()
+    {
+        _tagline.Text = _line() ?? DefaultLine;
+        _tagline.Modulate = new Color(1, 1, 1, 0);
+        _tagline.CreateTween().TweenProperty(_tagline, "modulate:a", 0.8f, 0.5f);
+    }
+
     // After a change of colour scheme, and each time it comes up - with a new line each time.
     public void Restyle()
     {

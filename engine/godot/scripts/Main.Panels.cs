@@ -34,8 +34,10 @@ public partial class Main
             new("Settings", "settings", () => "Rhythm, climax, callouts, look", ShowSettings),
             new("Exit", "power", () => null, () => Quit(0)),
         };
-        // Under the name, a line in the voice the app will speak in.
-        return new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version, () => app.Callouts?.TitleLine());
+        // Under the name, a line in the voice the app will speak in - a new one when that changes.
+        var start = new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version, () => app.Callouts?.TitleLine());
+        if (app.Callouts is { } callouts) callouts.VoiceChanged += start.RefreshLine;
+        return start;
     }
 
     private string? SavedCount()
