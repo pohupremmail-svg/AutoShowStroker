@@ -1101,12 +1101,11 @@ public sealed class GoonerAppTests : IDisposable
 
     // --- settings and the diagnostic log ---
 
-    private static readonly string[] DefaultKeys = ["ask_for_outcome", "diagnostic_log", "diagnostic_log_level", "show_startup_splash"];
+    private static readonly string[] DefaultKeys = ["ask_for_outcome", "diagnostic_log", "diagnostic_log_level"];
 
     [Fact]
     public void defaults_dict_matches_init_defaults()
     {
-        Assert.True(App.ShowStartupSplash);
         Assert.True(App.AskForOutcome);
         Assert.False(App.DiagnosticLog);
         Assert.Equal(AppLog.DefaultLevel, App.DiagnosticLogLevel);
@@ -1116,16 +1115,6 @@ public sealed class GoonerAppTests : IDisposable
     [Fact]
     public void settings_keys_come_from_an_explicit_group_constant() => Assert.Equal("GoonerApp", GoonerApp.SettingsGroup);
 
-    [Fact]
-    public void show_startup_splash_respects_saved_setting()
-    {
-        _settings.SetValue("GoonerApp/show_startup_splash", false);
-
-        Assert.False(App.ShowStartupSplash);
-    }
-
-    [Fact]
-    public void show_startup_splash_defaults_to_true() => Assert.True(App.ShowStartupSplash);
 
     [Fact]
     public void show_record_chase_defaults_to_true() => Assert.True(App.Hud.ShowRecordChase);

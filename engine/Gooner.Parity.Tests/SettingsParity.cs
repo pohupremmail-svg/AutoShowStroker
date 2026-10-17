@@ -62,10 +62,14 @@ public class SettingsParity
             return defaults.Keys.Select(name => $"{group}/{name}");
         }).Concat(ReadByName).ToHashSet();
 
-        var missing = Golden.Load(Module)["keys"]!.AsArray().Select(k => (string)k!).Where(k => !read.Contains(k)).ToList();
+        var missing = Golden.Load(Module)["keys"]!.AsArray().Select(k => (string)k!).Where(k => !read.Contains(k) && !Dropped.Contains(k)).ToList();
 
         Assert.True(missing.Count == 0, "Kept by the Python app, read nowhere here: " + string.Join(", ", missing));
     }
+
+    // Kept by the Python app and left behind on purpose: the engine has no startup splash (the user's
+    // call, 2026-10-17 - the start screen is the welcome now).
+    private static readonly string[] Dropped = ["GoonerApp/show_startup_splash"];
 
     private static readonly string[] ReadByName =
         [

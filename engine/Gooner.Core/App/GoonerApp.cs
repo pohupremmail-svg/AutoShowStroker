@@ -86,7 +86,6 @@ public sealed class GoonerApp : ISettingsOwner
 
     public static IReadOnlyDictionary<string, object> Defaults { get; } = new Dictionary<string, object>
     {
-        ["show_startup_splash"] = true,
         ["ask_for_outcome"] = true,
         ["diagnostic_log"] = false,
         ["diagnostic_log_level"] = AppLog.DefaultLevel,
@@ -121,7 +120,6 @@ public sealed class GoonerApp : ISettingsOwner
         UiLanguage = new UiLanguage(_settings, options.LocaleDir);
         Character = new CharacterChoice(_settings, options.CharacterDir);
         UiLanguage.Apply();
-        ShowStartupSplash = ReadBool("show_startup_splash");
         AskForOutcome = ReadBool("ask_for_outcome");
 
         Beat = new BeatHandler(_settings, _data, _random, scheduler: Scheduler);
@@ -179,7 +177,6 @@ public sealed class GoonerApp : ISettingsOwner
 
     // --- settings ---
 
-    public bool ShowStartupSplash { get; set; }
     public bool AskForOutcome { get; set; }
     public bool DiagnosticLog { get; private set; }
     public string DiagnosticLogLevel { get; private set; }

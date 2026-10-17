@@ -162,18 +162,8 @@ public partial class Main : Control
             _smokeUntil = double.MaxValue;
         else if (AppPaths.UserArg("smoke-panel") is { } panel)
             Callable.From(() => SmokePanel(panel)).CallDeferred();
-        else if (_app.ShowStartupSplash)
-            ShowSplash(ShowWhatsNewOnStartup);
         else
             Callable.From(ShowWhatsNewOnStartup).CallDeferred();
-    }
-
-    // Over everything, panels included; then whatever follows it.
-    private void ShowSplash(Action then)
-    {
-        var splash = new Splash(AppPaths.Resources);
-        splash.Finished += then;
-        AddChild(splash);
     }
 
     // GoonerApp._apply_window_icon: the window and the taskbar show the app's icon, not Godot's.

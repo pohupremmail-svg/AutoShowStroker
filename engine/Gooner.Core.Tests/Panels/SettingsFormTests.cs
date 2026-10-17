@@ -207,22 +207,6 @@ public sealed class SettingsFormTests : IDisposable
     }
 
     [Fact]
-    public void startup_splash_checkbox_initialized_from_app() =>
-        Assert.Equal(_app.ShowStartupSplash, Form.Toggles["show_startup_splash"].Value);
-
-    [Fact]
-    public void accept_settings_updates_show_startup_splash()
-    {
-        var expected = !_app.ShowStartupSplash;
-        Form.Toggles["show_startup_splash"].Value = expected;
-
-        Form.Apply();
-
-        Assert.Equal(expected, _app.ShowStartupSplash);
-        Assert.Equal(expected, _settings.GetBool("GoonerApp/show_startup_splash", !expected));
-    }
-
-    [Fact]
     public void record_chase_checkbox_initialized_from_app() =>
         Assert.Equal(_app.Hud.ShowRecordChase, Form.Toggles["show_record_chase"].Value);
 
@@ -340,7 +324,7 @@ public sealed class SettingsFormTests : IDisposable
         foreach (var name in new[] { "min_dur", "max_dur", "video_min_dur" }) Number(name).Value = 9.9;
         Number("beat_loudness").Value = 0.0;
         Number("vid_loudness").Value = 0.0;
-        foreach (var name in new[] { "show_startup_splash", "show_record_chase", "show_session_timer" })
+        foreach (var name in new[] { "show_record_chase", "show_session_timer" })
             Form.Toggles[name].Value = !Form.Toggles[name].Default;
 
         Form.Reset("Playback");
@@ -350,7 +334,6 @@ public sealed class SettingsFormTests : IDisposable
         Assert.Equal((double)PlaylistPlayer.Defaults["video_min_dur"], Number("video_min_dur").Value);
         Assert.Equal((double)Gooner.Core.Beat.BeatHandler.Defaults["beat_loudness"], Number("beat_loudness").Value);
         Assert.Equal((double)PlaylistPlayer.Defaults["vid_loudness"], Number("vid_loudness").Value);
-        Assert.Equal((bool)GoonerApp.Defaults["show_startup_splash"], Form.Toggles["show_startup_splash"].Value);
         Assert.Equal((bool)SessionHud.Defaults["show_record_chase"], Form.Toggles["show_record_chase"].Value);
         Assert.Equal((bool)SessionHud.Defaults["show_session_timer"], Form.Toggles["show_session_timer"].Value);
     }

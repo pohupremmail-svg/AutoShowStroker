@@ -245,7 +245,6 @@ public sealed class SettingsForm
                 new HeaderRow(L10n.T("General Settings")),
                 Num("beat_loudness", L10n.T("Beat Volume"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.0, 1.0, 0.1, () => beat.BeatLoudness, v => beat.BeatLoudness = v),
                 Num("vid_loudness", L10n.T("Video Volume"), PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.0, 1.0, 0.1, () => player.VidLoudness, v => player.VidLoudness = v),
-                Toggle("show_startup_splash", L10n.T("Show startup splash animation"), AppGroup, GoonerApp.Defaults, app.ShowStartupSplash, v => app.ShowStartupSplash = v),
                 Toggle("show_record_chase", L10n.T("Show live personal-record chase"), SessionHud.SettingsGroup, SessionHud.Defaults, hud.ShowRecordChase, v => hud.ShowRecordChase = v),
                 Toggle("show_session_timer", L10n.T("Show session timer"), SessionHud.SettingsGroup, SessionHud.Defaults, hud.ShowSessionTimer, v => hud.ShowSessionTimer = v),
                 new ResetRow("Playback"),

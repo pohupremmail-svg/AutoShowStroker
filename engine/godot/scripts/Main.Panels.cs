@@ -113,7 +113,6 @@ public partial class Main
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,
         ["updates"] = CheckForUpdates,
-        ["splash"] = () => ShowSplash(() => { }),
         // An exception nobody catches, thrown from a deferred call as a real one would be.
         ["crash"] = () => Callable.From(() => throw new InvalidOperationException("a smoke-run crash")).CallDeferred(),
         ["picker"] = () => OpenFolder(AppPaths.UserArg("media") is { } media ? [media] : null),
