@@ -85,7 +85,8 @@ here unchanged. This file only adds what is specific to this side.
   `GuideTests` fails while any still sends the user to Help, Sessions or Statistics.
 - **Texts copied from the Python side stay word for word.** `Changelog.Entries` and
   `Guide.PythonTopics` are generated from the Python source and compared by the parity run - an
-  entry added on `main` and merged in fails there until it is copied over. Where the engine works
+  entry added on `main` and merged in fails there until it is copied over (and `LocaleFilesTests`
+  until it is translated, see "The app's own language"). Where the engine works
   differently, the Guide gets an edit on top (`Guide.EngineEdits`, naming the exact sentence it
   replaces), never a change inside the copy.
 - **Device output (Intiface) is `Gooner.Core.Devices`.** The connection is an actor
@@ -143,6 +144,36 @@ here unchanged. This file only adds what is specific to this side.
   lists `main_menu` among its keys too, to keep the files valid there; it never says it.
 - **The window opens full screen the first time** and after that as it was last left
   (`Gooner.Core.App.WindowState`, remembered the moment the user switches).
+
+## The app's own language
+
+- **The app's own words come in English, German and French** (`Gooner.Core.Localization`), picked
+  under Settings > Playback > App Language - apart from the language the callouts speak in. It is
+  English until the user picks another, whatever Windows is set to (the user's call). `UiLanguage`
+  (group `Ui`) holds the choice; `GoonerApp` applies it before it builds anything that words
+  something, and the window builds the start screen, the dock and the answers under the climax
+  again when it changes (`Main.ApplyLanguage`) - a panel is worded when it opens.
+- **English is the code.** Every text is written in English where it is used and looked up in
+  `res/locales/<language>/*.json` (English text -> translation, every file of the folder together);
+  what a catalogue lacks stays English. So the English app is exactly the code, and the parity run,
+  which runs in English, never sees any of this.
+- **Only literals go in**: `L10n.T("...")`; `L10n.F("... {0}", value)` for a text with values in it,
+  never a `$"..."` into L10n; `L10n.P(count, one, other)` for a count, where French takes the
+  singular for none as well (a singular that shows the number says `{0}`, not `1`); `L10n.N("...")`
+  marks a name that is also stored or compared - a settings tab, a rhythm, a tone - which is
+  translated (`T`) only where it is shown. A static table of display texts is translated where it
+  is read, never in its initializer, which would keep whatever language was in use first. Log lines
+  are never translated.
+- **`LocaleFilesTests` holds every catalogue to the code**: `SourceTexts` reads every literal handed
+  to L10n out of Gooner.Core and the Godot scripts, and the test fails on a text without a
+  translation, a translation of a text that is gone, and one that lost a placeholder or a tag.
+  What is translated as a whole where it is shown is added from the running code: the Guide block by
+  block (`Guide.Translated`, `RichText.Blocks`), every What's New entry, every achievement. So a
+  text copied from the Python side that changes when `main` is merged in fails here until its
+  translations follow - write them then, in the app's voice, as the callouts are written.
+- The climax words over the picture (CUM, RUINED, DENIED) stay English in every language (the
+  user's call). The field names in a saved session's problems (`duration_sec`, ...) stay as they
+  are written in the file.
 
 ## How the core keeps time
 

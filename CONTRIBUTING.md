@@ -155,6 +155,29 @@ within a list, no phrase shared between two tones of the same language, every la
 least the default tone, and no stray phrase file outside a language folder. It does **not** check that your writing reads well — for that, still run the app
 (`python main.py`), pick your language and tone in Settings, and play through a session.
 
+### Translating the App Itself
+
+The app's own words - the start screen, the panels, the settings, the guide, What's New - are a
+separate thing from the callouts, and are picked separately (Settings > Playback > App Language).
+They live in `res/locales/<language>/*.json`: one folder per language, each file an object of
+English text -> translation. English has no folder; it is what the code says.
+
+- **Keep the English exactly as it is** - it is how the app finds the translation. Keep every
+  `{0}`, `{1}` (a number or a name the app fills in) and every tag (`<b>`, `<li>`, ...) of it.
+- **Write it the way a native speaker would say it**, in the app's own voice - the same rule as
+  for callouts. Address the user the way that language's callouts do (`du` in German, `tu` in
+  French).
+- The climax words over the picture (CUM / RUINED / DENIED) stay English in every language.
+- A new language needs its name in its own words in `Catalogue.NativeNames`
+  (`engine/Gooner.Core/Localization/Catalogue.cs`), and every text translated:
+
+```bash
+dotnet test engine/Gooner.Core.Tests --filter LocaleFilesTests
+```
+
+It fails on any text without a translation, any translation of a text that no longer exists, and
+any translation that lost a placeholder or a tag - and names each one, ready to copy.
+
 ---
 
 ### 🚀 Submitting Your Contribution (Pull Requests)
