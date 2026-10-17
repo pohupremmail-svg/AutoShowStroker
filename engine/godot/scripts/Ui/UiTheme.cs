@@ -3,8 +3,9 @@ using Godot;
 
 namespace Gooner.Engine.Ui;
 
-// The palette of src/theme.py as a Godot theme: the same colours, the same rounded buttons. The
-// new look comes in phase 7; this is the old one, so the two apps can be compared side by side.
+// The colour scheme in use (Gooner.Core.App.Palette) as a Godot theme: the rounded buttons, fields
+// and tabs of src/theme.py, translucent where they sit on glass, and the look's own pieces - the
+// dock's buttons, the start screen's cards and links. Built again when the scheme changes.
 public static class UiTheme
 {
     public static Color Of(string hex) => Color.FromHtml(hex);
@@ -135,7 +136,7 @@ public static class UiTheme
         theme.SetStylebox("tab_selected", "TabContainer", Tab(Palette.Accent));
         theme.SetStylebox("tab_disabled", "TabContainer", Tab(Palette.DisabledBg));
         theme.SetStylebox("tab_focus", "TabContainer", new StyleBoxEmpty());
-        var page = Box(Of(Palette.Background), 8);
+        var page = Box(Of(Palette.Background, 0.4f), 8);
         page.SetBorderWidthAll(1);
         page.BorderColor = Of(Palette.Secondary);
         page.CornerRadiusTopLeft = 0;
@@ -201,12 +202,105 @@ public static class UiTheme
         theme.SetFont("italics_font", "RichTextLabel", Italic);
         theme.SetFont("mono_font", "RichTextLabel", Mono);
 
+        Look(theme);
+
         var tooltip = Box(Of(Palette.Surface), 4, 6);
         tooltip.SetBorderWidthAll(1);
         tooltip.BorderColor = Of(Palette.Secondary);
         theme.SetStylebox("panel", "TooltipPanel", tooltip);
         theme.SetColor("font_color", "TooltipLabel", Of(Palette.Text));
         return theme;
+    }
+
+    // The pieces of the look that the Python app never had.
+    private static void Look(Theme theme)
+    {
+        StyleBoxFlat Soft(Color background, bool glow = false, int radius = 14)
+        {
+            var box = Box(background, radius);
+            box.ContentMarginLeft = box.ContentMarginRight = 10;
+            box.ContentMarginTop = box.ContentMarginBottom = 8;
+            if (glow)
+            {
+                box.ShadowColor = Of(Palette.Accent, 0.4f);
+                box.ShadowSize = 14;
+            }
+            return box;
+        }
+        void Fonts(string type, Color normal, Color hover)
+        {
+            foreach (var state in new[] { "font_color", "font_pressed_color", "font_focus_color" })
+                theme.SetColor(state, type, normal);
+            theme.SetColor("font_hover_color", type, hover);
+            theme.SetColor("font_hover_pressed_color", type, hover);
+            theme.SetColor("font_disabled_color", type, Of(Palette.DisabledText));
+        }
+
+        // The dock's buttons: nothing behind them until the pointer is over one.
+        theme.SetTypeVariation("DockButton", "Button");
+        theme.SetStylebox("normal", "DockButton", Soft(new Color(1, 1, 1, 0)));
+        theme.SetStylebox("hover", "DockButton", Soft(new Color(1, 1, 1, 0.09f), glow: true));
+        theme.SetStylebox("pressed", "DockButton", Soft(Of(Palette.Accent, 0.3f)));
+        theme.SetStylebox("disabled", "DockButton", Soft(new Color(1, 1, 1, 0)));
+        theme.SetColor("icon_disabled_color", "DockButton", new Color(1, 1, 1, 0.3f));
+        Fonts("DockButton", Of(Palette.Text), Colors.White);
+
+        // "I reached my Edge" - the one lit button in the dock.
+        StyleBoxFlat Edge(float alpha)
+        {
+            var box = Soft(Of(Palette.Accent, alpha), glow: true);
+            box.SetBorderWidthAll(1);
+            box.BorderColor = Of(Palette.Accent, 0.6f);
+            box.ContentMarginLeft = box.ContentMarginRight = 18;
+            return box;
+        }
+        theme.SetTypeVariation("EdgeButton", "Button");
+        theme.SetStylebox("normal", "EdgeButton", Edge(0.22f));
+        theme.SetStylebox("hover", "EdgeButton", Edge(0.38f));
+        theme.SetStylebox("pressed", "EdgeButton", Edge(0.55f));
+        var spent = Soft(new Color(1, 1, 1, 0.05f));
+        spent.ContentMarginLeft = spent.ContentMarginRight = 18;
+        theme.SetStylebox("disabled", "EdgeButton", spent);
+        theme.SetFont("font", "EdgeButton", Bold);
+        Fonts("EdgeButton", Colors.White, Colors.White);
+
+        // The start screen's cards: dark glass, lit up and rimmed in the accent under the pointer.
+        StyleBoxFlat Card(Color background, Color rim, float glow)
+        {
+            var box = Box(background, 18);
+            box.SetBorderWidthAll(1);
+            box.BorderColor = rim;
+            box.ContentMarginLeft = box.ContentMarginRight = 18;
+            box.ContentMarginTop = box.ContentMarginBottom = 12;
+            if (glow > 0)
+            {
+                box.ShadowColor = Of(Palette.Accent, glow);
+                box.ShadowSize = 22;
+            }
+            return box;
+        }
+        theme.SetTypeVariation("Card", "Button");
+        theme.SetStylebox("normal", "Card", Card(Of(Palette.Background, 0.55f), Of(Palette.Text, 0.16f), 0));
+        theme.SetStylebox("hover", "Card", Card(Of(Palette.Background, 0.7f), Of(Palette.Accent, 0.65f), 0.35f));
+        theme.SetStylebox("pressed", "Card", Card(Of(Palette.Accent, 0.3f), Of(Palette.Accent, 0.8f), 0.4f));
+        theme.SetStylebox("focus", "Card", new StyleBoxEmpty());
+        Fonts("Card", Of(Palette.Text), Colors.White);
+        theme.SetTypeVariation("CardPrimary", "Button");
+        theme.SetStylebox("normal", "CardPrimary", Card(Of(Palette.Accent, 0.55f), Of(Palette.Text, 0.45f), 0.3f));
+        theme.SetStylebox("hover", "CardPrimary", Card(Of(Palette.Accent, 0.72f), Of(Palette.Text, 0.7f), 0.6f));
+        theme.SetStylebox("pressed", "CardPrimary", Card(Of(Palette.Accent, 0.85f), Of(Palette.Text, 0.8f), 0.5f));
+        theme.SetStylebox("focus", "CardPrimary", new StyleBoxEmpty());
+        Fonts("CardPrimary", Colors.White, Colors.White);
+
+        // The start screen's footer: plain words until the pointer is on one.
+        theme.SetTypeVariation("Link", "Button");
+        foreach (var state in new[] { "normal", "hover", "pressed", "disabled", "focus" })
+        {
+            var plain = new StyleBoxEmpty();
+            plain.ContentMarginLeft = plain.ContentMarginRight = 4;
+            theme.SetStylebox(state, "Link", plain);
+        }
+        Fonts("Link", Of(Palette.Text, 0.55f), Of(Palette.Accent));
     }
 
     // A 16 px rounded square, 1 px rim, drawn by hand: a CheckBox takes its box as an icon.
@@ -241,4 +335,20 @@ public static class UiTheme
     public static readonly SystemFont Italic = new() { FontNames = ["Segoe UI", "sans-serif"], FontItalic = true };
 
     public static readonly SystemFont Mono = new() { FontNames = ["Consolas", "monospace"] };
+
+    private static readonly System.Collections.Generic.Dictionary<string, SystemFont> Displays = [];
+
+    // The face of the big words - the logo, the callout, the climax banner - in the scheme in use:
+    // Segoe UI at its heaviest for Neon, an italic Bodoni for Boudoir.
+    public static SystemFont Display
+    {
+        get
+        {
+            var scheme = Palette.Current;
+            if (Displays.TryGetValue(scheme.Name, out var font)) return font;
+            font = new SystemFont { FontNames = [.. scheme.DisplayFonts], FontItalic = scheme.DisplayItalic, FontWeight = scheme.DisplayItalic ? 600 : 800 };
+            Displays[scheme.Name] = font;
+            return font;
+        }
+    }
 }

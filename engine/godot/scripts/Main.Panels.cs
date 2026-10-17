@@ -8,6 +8,7 @@ using Gooner.Core.Panels;
 using Gooner.Core.Sessions;
 using Gooner.Core.Updates;
 using Gooner.Engine.Panels;
+using Gooner.Engine.Ui;
 using Godot;
 
 namespace Gooner.Engine;
@@ -17,43 +18,65 @@ public partial class Main
 {
     private AppPanel? _question;
 
-    // The menus of GoonerApp.create_menu_bar, in its order and with its shortcuts.
-    private MenuBar BuildMenu()
+    // What the menu bar held, now on the start screen - the big cards for what one comes to do, every
+    // other way in along its foot - and, during a session, in the dock's menu.
+    private StartScreen BuildStart()
     {
-        var bar = new MenuBar();
-        AddMenu(bar, "Settings",
-            ("Change Settings", Ctrl(Key.S), ShowSettings),
-            ("Quit", Ctrl(Key.Q), () => Quit(0)));
-        AddMenu(bar, "Help",
-            ("What's New", Key.None, () => ShowWhatsNew(_app!.ChangelogEntries)),
-            ("Guide", Key.F1, () => _panels.Show(new GuidePanel())),
-            ("Privacy & Data...", Key.None, ShowPrivacy),
-            ("Third-Party Licenses...", Key.None, () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
-            (null, Key.None, null),
-            ("Check for Updates...", Key.None, CheckForUpdates));
-        AddMenu(bar, "Sessions",
-            ("Saved Sessions...", Key.None, ShowSavedSessions));
-        AddMenu(bar, "Statistics",
-            ("Long-term Statistics", Key.None, ShowLongTermStatistics),
-            ("Achievements", Key.None, ShowAchievements));
-        AddMenu(bar, "Socials",
-            ("Join Discord", Key.None, () => ExternalUrl.Open(GoonerApp.DiscordInviteUrl, url => OS.ShellOpen(url))));
-        return bar;
+        var app = _app!;
+        var cards = new List<StartCard>
+        {
+            new("Start Session", "play", () => "Pick your folders, lean back", () => OpenFolder(), Primary: true),
+            new("Saved Sessions", "saved", SavedCount, ShowSavedSessions),
+            new("Achievements", "trophy",
+                () => $"{app.Achievements.UnlockedIds.Count} of {Gooner.Core.Achievements.AchievementCatalogue.All.Count} unlocked", ShowAchievements),
+            new("Statistics", "stats", () => "Every session so far", ShowLongTermStatistics),
+            new("Settings", "settings", () => "Rhythm, climax, callouts, look", ShowSettings),
+        };
+        return new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version);
     }
 
-    private static Key Ctrl(Key key) => (Key)((long)key | (long)KeyModifierMask.MaskCtrl);
-
-    // A null label is a separator.
-    private static void AddMenu(MenuBar bar, string title, params (string? Label, Key Accel, Action? Run)[] items)
+    private string? SavedCount()
     {
-        var menu = new PopupMenu { Name = title };
-        for (var id = 0; id < items.Length; id++)
+        if (_app!.DataStore is not { } store) return null;
+        var saved = new SavedSessionsShelf(store, (_, _) => false).Rows.Count;
+        return saved switch { 0 => "None saved yet", 1 => "1 saved", _ => $"{saved} saved" };
+    }
+
+    // The rest of the old menus, in their order.
+    private List<(string Label, Action Pressed)> MenuEntries() =>
+    [
+        ("What's New", () => ShowWhatsNew(_app!.ChangelogEntries)),
+        ("Guide", () => _panels.Show(new GuidePanel())),
+        ("Privacy & Data", ShowPrivacy),
+        ("Third-Party Licenses", () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
+        ("Check for Updates", CheckForUpdates),
+        ("Join Discord", () => ExternalUrl.Open(GoonerApp.DiscordInviteUrl, url => OS.ShellOpen(url))),
+        ("Quit", () => Quit(0)),
+    ];
+
+    // The dock's menu: everything the start screen offers, without leaving the session.
+    private void ShowMenu()
+    {
+        var panel = new AppPanel("Menu", new Vector2(360, 0));
+        var entries = new List<(string Label, Action Pressed)>
         {
-            if (items[id].Label is { } label) menu.AddItem(label, id, items[id].Accel);
-            else menu.AddSeparator();
+            ("Settings", ShowSettings),
+            ("Saved Sessions", ShowSavedSessions),
+            ("Long-term Statistics", ShowLongTermStatistics),
+            ("Achievements", ShowAchievements),
+        };
+        entries.AddRange(MenuEntries());
+        foreach (var (label, pressed) in entries)
+        {
+            var button = new Button { Text = label, FocusMode = Control.FocusModeEnum.None, Alignment = HorizontalAlignment.Left };
+            button.Pressed += () =>
+            {
+                panel.Close();
+                pressed();
+            };
+            panel.Body.AddChild(button);
         }
-        menu.IdPressed += id => items[id].Run?.Invoke();
-        bar.AddChild(menu);
+        _panels.Show(panel);
     }
 
     // The panels a smoke run can open by name: -- --smoke-panel=<name> --screenshot=<png>.
@@ -70,6 +93,8 @@ public partial class Main
         ["settings-beat"] = () => ShowSettings("Beat & Rhythm"),
         ["settings-callouts"] = () => ShowSettings("Callouts"),
         ["settings-device"] = () => ShowSettings(Gooner.Core.Devices.IntifacePlugin.TabTitle),
+        ["settings-look"] = () => ShowSettings("Look"),
+        ["menu"] = ShowMenu,
         ["phrasefiles"] = ShowPhraseFiles,
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,

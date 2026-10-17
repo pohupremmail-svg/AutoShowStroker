@@ -11,6 +11,7 @@ using Gooner.Core.Migration;
 using Gooner.Core.Panels;
 using Gooner.Core.Settings;
 using Gooner.Core.Timing;
+using Gooner.Core.Track;
 using Gooner.Engine.Audio;
 using Gooner.Engine.Fx;
 using Gooner.Engine.Panels;
@@ -21,12 +22,14 @@ using Godot;
 
 namespace Gooner.Engine;
 
-// The window: the picture with its captions, the controls, and the footer with the banner, the
-// answers and the note track - laid out as the Python app lays it out. Everything it shows is
+// The window: the picture filling it, with the effect layer over it - the note track in the style
+// the look picks, the captions, the climax - and the controls on a dock of glass floating above.
+// Between sessions the start screen takes the menu bar's place. Everything it shows is
 // Gooner.Core.App.GoonerApp's state, synced once a frame; everything it does is a call into it.
 //
 // The frame, in order: the audio clock is read and the picture clock follows it, the app runs
-// everything that came due, and the coming notes go to the click and the track alike.
+// everything that came due, the climax reacts to what the banner now says, and the coming notes go
+// to the click and the track alike.
 //
 //   -- --smoke            quits at once; exit code 0 when res/ was found.
 //   -- --smoke-beat       plays a rhythm for a few seconds; 0 when every click went out on its own
@@ -46,9 +49,6 @@ namespace Gooner.Engine;
 public partial class Main : Control
 {
     private const double SmokeSeconds = 8.0;
-    private const int FooterHeight = 0;
-    private const int OutcomeRowHeight = 38;
-    private const int CalloutMargin = 8;
 
     private SessionAudio? _audio;
     private FrameClock? _clock;
@@ -58,19 +58,24 @@ public partial class Main : Control
     private NoteTrackView? _track;
     private Particles _particles = null!;
     private readonly StageFilter _filter = new();
-    private float _aberration;
+    private readonly Random _shake = new();
+    private string _scheme = "";
     private bool _wasMaximized;
     private int _hits;
     private double _smokeUntil;
     private string? _smoke;
 
     // Widgets synced from the app's state every frame.
-    private Button _prev = null!, _load = null!, _stop = null!, _next = null!, _edge = null!, _mute = null!, _device = null!;
-    private HBoxContainer _controls = null!, _outcomeRow = null!;
-    private Control _controlsRow = null!, _footer = null!;
-    private PanelContainer _banner = null!, _callout = null!, _chase = null!, _clockCaption = null!;
-    private Label _bannerText = null!, _calloutText = null!, _chaseText = null!, _clockText = null!;
-    private MenuBar _menu = null!;
+    private Panel _background = null!;
+    private Control _world = null!;
+    private Vignette _vignette = null!;
+    private ClimaxOverlay _climax = null!;
+    private GlassChip _chase = null!, _clockChip = null!;
+    private CalloutView _callout = null!;
+    private RhythmBadge _rhythm = null!;
+    private PanelContainer _outcome = null!;
+    private Dock _dock = null!;
+    private StartScreen _start = null!;
     private PanelHost _panels = null!;
     private CrashReporter? _crashes;
 
@@ -188,16 +193,24 @@ public partial class Main : Control
         _clock.Now = _picture.Next(_audio.Heard(), delta);
         if (_smokeUntil == double.MaxValue) BeginSmoke();
         _app.Frame();
+        if (_scheme != _app.Look.ColorScheme) ApplyScheme();
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
         click.Schedule(notes.Where(n => n.Audible).Select(n => n.At));
         click.Volume = (float)_app.Beat.BeatLoudness;
         click.Muted = _app.Beat.IsMuted;
+        // Before the track gets its new forecast: a denial shatters what was still coming.
+        _climax.Strength = (float)_app.Look.EffectScale;
+        _climax.Sync(_app.Banner, _app.IsRunning);
         // The same moments the click was given, with the stretches of the plan they fall in.
         _track!.Show(_app.Beat.Forecast(NoteTrackView.LeadTimeSec), _clock.Now, delta);
         // Censoring round the Hypno Ring, wherever it has wandered; the clear circle breathes with the beat.
         var censor = _track.ShowsRing && _app.IsRunning ? _app.Look.Censor : null;
-        _filter.Apply(censor, _track.Focus, _track.FocusRadius * 2.5f * (1 + 0.07f * _track.Flare), _aberration);
+        _filter.Apply(censor, _track.Focus, _track.FocusRadius * 2.5f * (1 + 0.07f * _track.Flare), _climax.Aberration);
+        _world.Position = _climax.Shake > 0
+            ? new Vector2((float)(_shake.NextDouble() - 0.5) * _climax.Shake, (float)(_shake.NextDouble() - 0.5) * _climax.Shake)
+            : Vector2.Zero;
+        Place();
         Sync();
 
         if (_smokeUntil > 0 && _clock.Now >= _smokeUntil) EndSmoke(click);
@@ -207,70 +220,77 @@ public partial class Main : Control
     private void Sync()
     {
         var app = _app!;
-        _prev.Disabled = _next.Disabled = _stop.Disabled = !app.IsRunning;
-        _load.Text = app.LoadButtonText;
-        _edge.Visible = app.EdgeButtonVisible;
-        _edge.Disabled = !app.EdgeButtonEnabled;
-        _edge.Text = app.EdgeButtonText;
-        _mute.Text = app.IsMuted ? "Unmute" : "Mute";
+        var running = app.IsRunning;
+        _start.ShowScreen(!running);
+        _dock.Visible = running;
+        _dock.MayFade = running && !_panels.AnyOpen;
+        _dock.Previous.Disabled = _dock.Next.Disabled = _dock.Stop.Disabled = !running;
+        _dock.Edge.Visible = app.EdgeButtonVisible;
+        _dock.Edge.Disabled = !app.EdgeButtonEnabled;
+        _dock.Edge.Text = app.EdgeButtonText;
+        _dock.ShowMuted(app.IsMuted);
         if (app.Intiface is { } intiface)
         {
             // Only while device output is on - it doubles as the disclosure that a connection is open.
             var device = intiface.Button;
-            _device.Visible = device.Visible;
-            _device.Text = device.Text;
-            _device.Disabled = !device.Enabled;
-            _device.TooltipText = device.Tooltip;
-            _device.ThemeTypeVariation = device.Primary ? "PrimaryButton" : "";
+            _dock.Device.Visible = device.Visible;
+            _dock.Device.Text = device.Text;
+            _dock.Device.Disabled = !device.Enabled;
+            _dock.Device.TooltipText = device.Tooltip;
+            _dock.Device.ThemeTypeVariation = device.Primary ? "EdgeButton" : "DockButton";
         }
-
-        _banner.Visible = app.Banner.Text is not null;
-        if (app.Banner.Text is { } text)
-        {
-            _bannerText.Text = text;
-            _banner.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(app.Banner.Color!), 12, 10));
-        }
-        // The footer grows for the question rather than squeezing the note track; the media area
-        // above changes only then.
-        _outcomeRow.Visible = app.OutcomeQuestion is not null;
-        _footer.CustomMinimumSize = new Vector2(0, FooterHeight + (_outcomeRow.Visible ? OutcomeRowHeight : 0));
-
-        if (_calloutText.Text != (app.Hud.CalloutText ?? ""))
-            FitCallout(app.Hud.CalloutText);
-        Caption(_callout, _calloutText, app.Hud.CalloutText);
-        Caption(_chase, _chaseText, app.Hud.RecordChaseText);
-        Caption(_clockCaption, _clockText, app.Hud.SessionTimerText);
+        _outcome.Visible = app.OutcomeQuestion is not null;
+        _callout.Show(app.Hud.CalloutText);
+        _chase.Show(app.Hud.RecordChaseText);
+        _clockChip.Show(app.Hud.SessionTimerText);
         SyncQuestion();
-        // A modal dialog blocked the window's menu shortcuts too.
-        _menu.SetDisableShortcuts(_panels.AnyOpen);
     }
 
-    // As wide as its text, up to nine tenths of the picture, then wrapped - what the QLabel in its
-    // grid cell did. The panel is centred on the bottom edge and shrinks back to fit.
-    private void FitCallout(string? text)
+    // Where the captions go: above the note track, wherever the look has put it - and below the
+    // climax's word while it is up.
+    private void Place()
     {
-        if (text is null) return;
-        var font = _calloutText.GetThemeFont("font");
-        var size = _calloutText.GetThemeFontSize("font_size");
-        var available = _stage!.Size.X * 0.9f - 2 * CalloutMargin;
-        var width = Math.Min(font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X + 2, available);
-        _calloutText.CustomMinimumSize = new Vector2(Math.Max(1, width), 0);
-        _calloutText.Text = text;
+        var size = Size;
+        var style = _app!.Look.NoteTrack;
+        var stream = new StreamLane(size.X, size.Y);
+        _callout.Place(_climax.Showing ? size.Y * 0.62f : style switch
+        {
+            "ring" => size.Y - 110,
+            "stream" => stream.Top - 36,
+            "tunnel" => size.Y * 0.52f,
+            _ => size.Y * 0.43f,
+        });
+        _rhythm.At = style switch
+        {
+            "ring" => _track!.Focus,
+            "stream" => new Vector2(stream.HitX + 150, stream.Top - 26),
+            "tunnel" => new Vector2(size.X / 2, size.Y * 0.6f),
+            _ => new Vector2(size.X / 2, size.Y * 0.47f - 24),
+        };
+        _outcome.Size = _outcome.GetCombinedMinimumSize();
+        _outcome.Position = new Vector2((size.X - _outcome.Size.X) / 2, size.Y * 0.68f).Round();
     }
 
-    private static void Caption(PanelContainer panel, Label label, string? text)
+    // A change of colour scheme: the theme, the glass and the start screen in the new colours.
+    private void ApplyScheme()
     {
-        panel.Visible = text is not null;
-        label.Text = text ?? "";
+        _scheme = _app!.Look.ColorScheme;
+        Palette.Use(_scheme);
+        Theme = UiTheme.Build();
+        Glass.Refresh();
+        _background.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = UiTheme.Of(Palette.SurfaceDarkest) });
+        _start.Restyle();
+        _dock.Restyle();
     }
 
     // --- input ---
 
     // Panic comes first, before any control could take Space for itself: a focused button in a
     // panel would press itself instead. Only a field being typed in keeps it - there a space is
-    // a space.
+    // a space. Any movement of the pointer brings the dock back in full.
     public override void _Input(InputEvent @event)
     {
+        if (@event is InputEventMouseMotion) _dock?.Wake();
         if (_app is null || @event is not InputEventKey { Pressed: true, Echo: false, Keycode: Key.Space } key) return;
         if (key.CtrlPressed || key.ShiftPressed || key.AltPressed) return;
         if (GetViewport().GuiGetFocusOwner() is LineEdit or TextEdit) return;
@@ -278,9 +298,10 @@ public partial class Main : Control
         GetViewport().SetInputAsHandled();
     }
 
-    // The keys of the Python window: F/F11 fullscreen, Esc out of it, M mute, and the buttons' own
-    // shortcuts - each only while its button could be pressed. While a panel is open the window
-    // behind it is as unreachable as it was behind a modal dialog, and Esc dismisses the panel.
+    // The keys of the Python window: F/F11 fullscreen, Esc out of it, M mute, the buttons' own
+    // shortcuts - each only while its button could be pressed - and the old menus' (Ctrl+S, F1,
+    // Ctrl+Q). While a panel is open the window behind it is as unreachable as it was behind a modal
+    // dialog, and Esc dismisses the panel.
     public override void _UnhandledKeyInput(InputEvent @event)
     {
         if (_app is null || @event is not InputEventKey { Pressed: true, Echo: false } key) return;
@@ -291,6 +312,7 @@ public partial class Main : Control
             return;
         }
         var ctrl = key.CtrlPressed;
+        var running = _app.IsRunning;
         switch (key.Keycode)
         {
             case Key.F or Key.F11:
@@ -300,21 +322,30 @@ public partial class Main : Control
                 LeaveFullscreen();
                 break;
             case Key.Space when ctrl:
-                if (!_stop.Disabled) _app.Stop();
+                if (running) _app.Stop();
                 break;
             case Key.M:
                 _app.ToggleMute();
                 break;
-            case Key.Left when !_prev.Disabled:
+            case Key.Left when running:
                 _app.Previous();
                 break;
-            case Key.Right when !_next.Disabled:
+            case Key.Right when running:
                 _app.Next();
                 break;
             case Key.O when ctrl:
                 OpenFolder();
                 break;
-            case Key.E when _edge.Visible && !_edge.Disabled:
+            case Key.S when ctrl:
+                ShowSettings();
+                break;
+            case Key.Q when ctrl:
+                Quit(0);
+                break;
+            case Key.F1:
+                _panels.Show(new GuidePanel());
+                break;
+            case Key.E when _app.EdgeButtonVisible && _app.EdgeButtonEnabled:
                 _app.EdgeReached();
                 break;
             default:
@@ -333,14 +364,12 @@ public partial class Main : Control
     {
         if (DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Fullscreen) return;
         _wasMaximized = DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Maximized;
-        _controlsRow.Visible = false;
         DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
     }
 
     private void LeaveFullscreen()
     {
         if (DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Fullscreen) return;
-        _controlsRow.Visible = true;
         DisplayServer.WindowSetMode(_wasMaximized ? DisplayServer.WindowMode.Maximized : DisplayServer.WindowMode.Windowed);
     }
 
@@ -468,110 +497,85 @@ public partial class Main : Control
     private void Build()
     {
         var app = _app!;
-        var background = new Panel { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };
-        background.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = UiTheme.Of(Palette.Background) });
-        AddChild(background);
+        _scheme = app.Look.ColorScheme;
+        Palette.Use(_scheme);
+        Theme = UiTheme.Build();
+        _background = new Panel { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };
+        _background.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = UiTheme.Of(Palette.SurfaceDarkest) });
+        AddChild(_background);
 
-        var root = new VBoxContainer { AnchorRight = 1, AnchorBottom = 1 };
-        root.AddThemeConstantOverride("separation", 0);
-        AddChild(root);
-        _menu = BuildMenu();
-        root.AddChild(_menu);
+        // The world: the picture and everything laid over it, shaken as one at the climax.
+        _world = new Control { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_world);
+        _world.AddChild(_stage);
+        _world.AddChild(_filter);
+        _vignette = new Vignette();
+        _world.AddChild(_vignette);
+        _world.AddChild(_track);
+        _clockChip = new GlassChip();
+        _world.AddChild(_clockChip);
+        _clockChip.SetAnchorsAndOffsetsPreset(LayoutPreset.TopLeft, LayoutPresetMode.Minsize, 16);
+        _chase = new GlassChip();
+        _world.AddChild(_chase);
+        _chase.SetAnchorsAndOffsetsPreset(LayoutPreset.CenterTop, LayoutPresetMode.Minsize, 16);
+        _chase.GrowHorizontal = GrowDirection.Both;
+        _rhythm = new RhythmBadge();
+        _world.AddChild(_rhythm);
+        _callout = new CalloutView();
+        _world.AddChild(_callout);
+        _climax = new ClimaxOverlay(_particles);
+        _world.AddChild(_climax);
+        _world.AddChild(_particles);
 
-        // The picture, with the captions laid over it.
-        var media = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
-        root.AddChild(media);
-        media.AddChild(_stage);
-        // Over the picture: what the effect layer does to it, then the note track, then the captions.
-        media.AddChild(_filter);
-        media.AddChild(_track);
-        (_callout, _calloutText) = CaptionPanel(24, 0.9f, 10, CalloutMargin);
-        _calloutText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _calloutText.HorizontalAlignment = HorizontalAlignment.Center;
-        // Bottom centre, sized by containers: the wrapped height follows the text by itself.
-        var calloutArea = new MarginContainer { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };
-        foreach (var side in new[] { "left", "right", "top", "bottom" })
-            calloutArea.AddThemeConstantOverride($"margin_{side}", 12);
-        var calloutColumn = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.End, MouseFilter = MouseFilterEnum.Ignore };
-        var calloutRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-        calloutRow.AddChild(_callout);
-        calloutColumn.AddChild(calloutRow);
-        calloutArea.AddChild(calloutColumn);
-        media.AddChild(calloutArea);
-        (_chase, _chaseText) = CaptionPanel(13, 0.85f, 8, 6);
-        media.AddChild(_chase);
-        _chase.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight, LayoutPresetMode.Minsize, 8);
-        _chase.GrowHorizontal = GrowDirection.Begin;
-        (_clockCaption, _clockText) = CaptionPanel(13, 0.85f, 8, 6);
-        media.AddChild(_clockCaption);
-        _clockCaption.SetAnchorsAndOffsetsPreset(LayoutPreset.TopLeft, LayoutPresetMode.Minsize, 8);
-        media.AddChild(_particles);
+        _track!.RhythmArrived += _rhythm.Announce;
+        _track.NoteLanded += strength => _vignette.Pulse(strength * 0.28f * (float)app.Look.EffectScale);
+        _climax.Denied += _track.Shatter;
 
-        // The controls.
-        _controls = new HBoxContainer();
-        var controlsMargin = new MarginContainer();
-        foreach (var side in new[] { "left", "right", "top", "bottom" })
-            controlsMargin.AddThemeConstantOverride($"margin_{side}", 8);
-        controlsMargin.AddChild(_controls);
-        root.AddChild(controlsMargin);
-        _controlsRow = controlsMargin;
-        _prev = Button("<< Previous", app.Previous, "Left Arrow Key");
-        _load = Button("Set Gooning Folder and Start.", () => OpenFolder(), "Ctrl+O");
-        _load.ThemeTypeVariation = "PrimaryButton";
-        _stop = Button("Stop", app.Stop, "Ctrl+Space");
-        _next = Button("Skip >>", app.Next, "Right Arrow Key");
-        _edge = Button(GoonerApp.EdgeButtonDefaultText, () => app.EdgeReached(), "E - a pause now, and a gentler beat behind it");
-        _mute = Button("Mute", app.ToggleMute, "M");
-        // The device's one control, beside Mute as on the Python side; NoFocus like the rest, or a
-        // focused device button would swallow the panic key.
-        _device = Button("No device", () => app.Intiface?.Press());
-        _device.Visible = false;
-        foreach (var button in new[] { _prev, _load, _stop, _next, _edge, _mute, _device })
-        {
-            button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            _controls.AddChild(button);
-        }
-
-        // The footer: banner, answers, note track.
-        _footer = new VBoxContainer { CustomMinimumSize = new Vector2(0, FooterHeight) };
-        _footer.AddThemeConstantOverride("separation", 0);
-        root.AddChild(_footer);
-        _banner = new PanelContainer { Visible = false };
-        _bannerText = new Label { HorizontalAlignment = HorizontalAlignment.Center };
-        _bannerText.AddThemeFontSizeOverride("font_size", 28);
-        _bannerText.AddThemeColorOverride("font_color", Colors.White);
-        _banner.AddChild(_bannerText);
-        _footer.AddChild(_banner);
-        _outcomeRow = new HBoxContainer { CustomMinimumSize = new Vector2(0, OutcomeRowHeight), Visible = false };
-        // Styled alike on purpose: a highlighted answer under a question whose only value is an
-        // honest one would be a recommendation.
-        foreach (var (label, answer) in new[] { ("I Came", "came"), ("I Ruined It", "ruined"), ("I Stopped", "stopped") })
-        {
-            var button = Button(label, () => app.ReportOutcome(answer));
-            button.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            _outcomeRow.AddChild(button);
-        }
-        _footer.AddChild(_outcomeRow);
-
-        // Over everything, the menu bar included.
+        _outcome = BuildOutcome();
+        AddChild(_outcome);
+        _dock = BuildDock();
+        AddChild(_dock);
+        _start = BuildStart();
+        AddChild(_start);
+        // Over everything, the start screen included.
         _panels = new PanelHost();
         AddChild(_panels);
         Sync();
     }
 
-    private static (PanelContainer Panel, Label Text) CaptionPanel(int fontSize, float alpha, int radius, int margin)
+    // The answers to "what actually happened?", on glass under the climax. Styled alike on purpose: a
+    // highlighted answer under a question whose only value is an honest one would be a recommendation.
+    private PanelContainer BuildOutcome()
     {
-        var panel = new PanelContainer { Visible = false, MouseFilter = MouseFilterEnum.Ignore };
-        var box = UiTheme.Box(new Color(45 / 255f, 29 / 255f, 58 / 255f, alpha), radius, margin);
-        // The glow the Qt side drew as a drop shadow.
-        box.ShadowColor = UiTheme.Of(Palette.Accent, 0.45f);
-        box.ShadowSize = 9;
-        panel.AddThemeStyleboxOverride("panel", box);
-        var label = new Label { MouseFilter = MouseFilterEnum.Ignore };
-        label.AddThemeFontSizeOverride("font_size", fontSize);
-        label.AddThemeColorOverride("font_color", UiTheme.Of(Palette.Accent));
-        panel.AddChild(label);
-        return (panel, label);
+        var card = new PanelContainer { Visible = false };
+        Glass.Apply(card, 22, 14, opacity: 0.55f);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        foreach (var (label, answer) in new[] { ("I Came", "came"), ("I Ruined It", "ruined"), ("I Stopped", "stopped") })
+        {
+            var button = Button(label, () => _app!.ReportOutcome(answer));
+            button.CustomMinimumSize = new Vector2(150, 44);
+            row.AddChild(button);
+        }
+        card.AddChild(row);
+        return card;
+    }
+
+    private Dock BuildDock()
+    {
+        var app = _app!;
+        var dock = new Dock { Visible = false };
+        dock.Previous.Pressed += app.Previous;
+        dock.Stop.Pressed += app.Stop;
+        dock.Next.Pressed += app.Next;
+        dock.Edge.Pressed += () => app.EdgeReached();
+        dock.Mute.Pressed += app.ToggleMute;
+        // The device's one control, beside Mute as on the Python side.
+        dock.Device.Pressed += () => app.Intiface?.Press();
+        dock.Folder.Pressed += () => OpenFolder();
+        dock.Settings.Pressed += ShowSettings;
+        dock.Menu.Pressed += ShowMenu;
+        return dock;
     }
 
     // NoFocus, as the Qt side has it: a focused button takes Space for itself, and Space is Panic.
