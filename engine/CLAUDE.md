@@ -137,6 +137,13 @@ here unchanged. This file only adds what is specific to this side.
   Hypno Ring and splits the colours at the climax; it is not drawn at all while there is nothing to
   do, so the screen is not copied for nothing.
 
+- **The start screen speaks in the app's voice**: the line under the name is a `main_menu` line of
+  the phrase files, in the language and tones picked (`CalloutHandler.TitleLine`), new each time the
+  screen comes up - shown whether callouts are on or not. `res/` is shared, so the Python side
+  lists `main_menu` among its keys too, to keep the files valid there; it never says it.
+- **The window opens full screen the first time** and after that as it was last left
+  (`Gooner.Core.App.WindowState`, remembered the moment the user switches).
+
 ## How the core keeps time
 
 - **No timer fires on its own.** Every QTimer of the Python side is a `ClockTimer` on a
