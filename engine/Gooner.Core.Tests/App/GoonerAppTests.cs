@@ -1074,6 +1074,20 @@ public sealed class GoonerAppTests : IDisposable
         Assert.StartsWith("\U0001f3c6 New Total Beats Record!", App.Hud.RecordChaseText);
     }
 
+    // Whatever the talking chance: the session opens with a greeting, not with the first rhythm
+    // passing for a change of tempo.
+    [Fact]
+    public void a_session_opens_with_a_greeting_while_callouts_are_on()
+    {
+        _settings.SetValue("CalloutHandler/active_callout", true);
+        _settings.SetValue("CalloutHandler/talking_chance", 0.0);
+
+        StartWith();
+        RunFor(0.5);
+
+        Assert.Equal("en session_started phrase", App.Hud.CalloutText);
+    }
+
     [Fact]
     public void a_forced_line_reaches_the_hud()
     {

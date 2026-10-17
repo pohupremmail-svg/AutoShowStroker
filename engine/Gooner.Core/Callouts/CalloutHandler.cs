@@ -101,6 +101,8 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
     private readonly List<string> _availableLanguages = [];
     private List<CustomPhraseFile> _customPhraseFiles = [];
     private double? _teaseEndsAt;
+    // Set by SessionStarted: the next beat change is the session's first rhythm, not a change.
+    private bool _firstRhythm;
 
     public CalloutHandler(
         string calloutDir,
@@ -398,7 +400,19 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
 
     // --- triggers ---
 
-    public void SessionStarted() => SelectAndOutputSentence("session_started");
+    // A deliberate deviation from the Python app (parity/allowlist.json, callouts.draws):
+    // there the greeting is rolled against the talking chance like any line, and the session's
+    // first rhythm counts as a change of tempo - from 0, or from wherever the last session ended -
+    // so a session could open with "faster" instead of a greeting. Here a session always opens with
+    // one while callouts are on, and its first rhythm only sets the tempo the next change is held
+    // against.
+    public void SessionStarted()
+    {
+        _firstRhythm = true;
+        if (!ActiveCallout) return;
+        if (PickPhrase("session_started") is { } greeting)
+            ShowTease(greeting);
+    }
 
     public void MediaSkipped() => SelectAndOutputSentence("media_skipped");
 
@@ -415,6 +429,12 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
     public void BeatChangeGeneral(double freq, string? pattern)
     {
         _ = pattern;
+        if (_firstRhythm)
+        {
+            _firstRhythm = false;
+            CurFreq = freq;
+            return;
+        }
         if (_random.NextDouble() < 0.5)
             SelectAndOutputSentence("beat_change_general");
         else if (CurFreq > freq)

@@ -729,6 +729,12 @@ def callout_draws():
             ["select_and_output_sentence", "session_started"], ["hide"],
             ["set", "talking_chance", 1.0], ["select_and_output_sentence", "pause_end"], ["hide"],
             ["set", "talking_chance", 0.0], ["select_and_output_sentence", "pause_end"]]),
+        # How a session opens: the greeting loses its roll, and the first rhythm passes for a change
+        # of tempo from 0 - "faster" is the first thing said. The engine deviates here on purpose
+        # (allowlist: callouts.draws).
+        "session_start": ([0.9, 0.9, 0.0], [0, 0, 0, 0], [
+            ["set", "active_callout", True], ["set", "talking_chance", 0.5],
+            ["session_started"], ["beat_change_general", 2.0, "Standard Beat"]]),
         "an_unknown_category": ([0.0], [0, 0], [
             ["set", "active_callout", True], ["set", "talking_chance", 1.0],
             ["select_and_output_sentence", "does_not_exist"], ["force_output_sentence", "nor_this"]]),

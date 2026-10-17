@@ -216,6 +216,68 @@ public sealed class CalloutHandlerTests : IDisposable
         Assert.Equal(["en beat_change_slower phrase"], said);
     }
 
+    // --- the start of a session (the engine's own) ---
+    //
+    // The Python app rolls the talking chance for its greeting like for any line, and counts the
+    // session's first rhythm as a change of it - so when the greeting lost its roll, the first
+    // thing said could be "faster". The engine always greets while callouts are on, and says
+    // nothing for the first rhythm.
+
+    [Fact]
+    public void a_session_always_opens_with_a_greeting_while_callouts_are_on()
+    {
+        _handler.ActiveCallout = true;
+        _handler.TalkingChance = 0.0;
+        _random.Uniform = () => 0.99;
+
+        Assert.Equal(["en session_started phrase"], Said(_handler, _handler.SessionStarted));
+    }
+
+    [Fact]
+    public void there_is_no_greeting_while_callouts_are_off()
+    {
+        _handler.ActiveCallout = false;
+
+        Assert.Empty(Said(_handler, _handler.SessionStarted));
+    }
+
+    [Fact]
+    public void the_first_rhythm_of_a_session_is_not_a_change()
+    {
+        _handler.ActiveCallout = true;
+        _handler.TalkingChance = 1.0;
+        _random.Uniform = () => 0.9;
+        _handler.SessionStarted();
+        _time.Now += 600;
+        _handler.Tick();
+
+        Assert.Empty(Said(_handler, () => _handler.BeatChangeGeneral(2.0, "Standard Beat")));
+        Assert.Equal(2.0, _handler.CurFreq);
+        Assert.Equal(["en beat_change_faster phrase"], Said(_handler, () => _handler.BeatChangeGeneral(3.0, "Quick Swing")));
+    }
+
+    // Not "slower" because the last session ended faster: each session's first rhythm only sets
+    // the tempo the next change is held against.
+    [Fact]
+    public void every_session_starts_its_comparison_afresh()
+    {
+        _handler.ActiveCallout = true;
+        _handler.TalkingChance = 1.0;
+        _random.Uniform = () => 0.9;
+        _handler.SessionStarted();
+        _handler.BeatChangeGeneral(2.0, "Standard Beat");
+        _handler.BeatChangeGeneral(5.0, "Quick Swing");
+        _time.Now += 600;
+        _handler.Tick();
+
+        _handler.SessionStarted();
+        _time.Now += 600;
+        _handler.Tick();
+
+        Assert.Empty(Said(_handler, () => _handler.BeatChangeGeneral(1.0, "Standard Beat")));
+        Assert.Equal(1.0, _handler.CurFreq);
+    }
+
     // --- directory-loading edge cases ---
 
     [Fact]

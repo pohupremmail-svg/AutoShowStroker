@@ -72,6 +72,7 @@ public class CalloutsParity
                     case "select_and_output_sentence": handler.SelectAndOutputSentence((string)s[1]!); break;
                     case "force_output_sentence": handler.ForceOutputSentence((string)s[1]!); break;
                     case "beat_change_general": handler.BeatChangeGeneral(s[1]!.GetValue<double>(), (string?)s[2]); break;
+                    case "session_started": handler.SessionStarted(); break;
                     default: throw new ArgumentException($"Unknown step '{s[0]}'.", nameof(json));
                 }
                 said.Add(new JsonArray("is_teasing", handler.IsTeasing));
@@ -82,6 +83,12 @@ public class CalloutsParity
                 ["snapshot"] = Snapshot(handler),
                 ["left"] = new JsonObject { ["uniforms"] = random.UniformsLeft, ["choices"] = random.ChoicesLeft },
             };
+            if (Golden.Allowed(Module + ".draws", name) is { } reason)
+            {
+                // A listed deviation still has to *be* one - once the two agree, the entry is stale.
+                Assert.False(Golden.Equivalent(c["expected"], actual), $"'{name}' is allowlisted but no longer differs: {reason}");
+                return;
+            }
             Assert.True(Golden.Equivalent(c["expected"], actual), $"{name}:\nexpected {c["expected"]!.ToJsonString()}\nactual   {actual.ToJsonString()}");
         }
         finally

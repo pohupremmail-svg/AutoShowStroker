@@ -14,5 +14,8 @@
     "qt_serialised": "QSettings keeps a list holding an empty line as a QDataStream blob (@Variant), which the import cannot read. It leaves the value in the registry rather than guessing - the only copy stays - and the engine reads the default. The app writes no such list: tone and rhythm names are never empty.",
     "unreadable_numbers": "Same as settings.read: float() on text that is not a number raises, and Python raises that out of the constructor. The port reads the default and logs the key.",
     "beyond_int32": "int(float()) of a number past 32 bits is a Python int the port's int cannot hold; the port reads the default. No setting the app writes is one - the only int settings are seconds and counts."
+  },
+  "callouts.draws": {
+    "session_start": "The Python app rolls the talking chance for its greeting like for any line and counts the session's first rhythm as a change of tempo, so a session could open with \"faster\" instead of a greeting. The engine always greets while callouts are on (the user's call, 2026-10-17) and says nothing for the first rhythm - it only sets the tempo the next change is held against."
   }
 }
