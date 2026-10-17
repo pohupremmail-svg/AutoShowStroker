@@ -61,7 +61,12 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
         "fake_climax_fell_for",
         // The user pressing "I reached my Edge" - the one moment they ask the app for mercy.
         "edge_reached",
+        // Not a trigger: the line under the name on the start screen, in the voice the app will
+        // speak in (TitleLine). Nothing in a session says it.
+        TitleKey,
     ];
+
+    public const string TitleKey = "main_menu";
 
     // Ordered soft to harsh, with the detached one last - the order the settings offer them in.
     public static readonly IReadOnlyDictionary<string, string> ToneLabels = new OrderedDictionary<string, string>
@@ -446,6 +451,10 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
 
         CurFreq = freq;
     }
+
+    // The start screen's line: a main_menu phrase of the language and tones picked, or null when
+    // there is none. Whether callouts are on does not matter - it is the app's face, not a callout.
+    public string? TitleLine() => PickPhrase(TitleKey);
 
     // One random phrase for the category out of the active tone mix, or null. A tone is drawn
     // first and only then a line from it, so every ticked tone gets an equal voice - pooling the

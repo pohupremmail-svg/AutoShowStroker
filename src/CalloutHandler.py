@@ -29,6 +29,9 @@ TRIGGER_KEYS = [
     # The user pressing "I reached my Edge" - the one moment they ask the app for mercy
     # rather than the other way round.
     "edge_reached",
+    # Not an event: the line under the name on the engine's start screen, in the voice the app will
+    # speak in. Loaded here so the shared phrase files validate on both sides; never said.
+    "main_menu",
 ]
 
 

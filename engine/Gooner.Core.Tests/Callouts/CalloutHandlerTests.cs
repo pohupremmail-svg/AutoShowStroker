@@ -278,6 +278,30 @@ public sealed class CalloutHandlerTests : IDisposable
         Assert.Equal(1.0, _handler.CurFreq);
     }
 
+    // --- the start screen's line (the engine's own) ---
+
+    // Under the name on the start screen: a main_menu line of the language and tones picked, so
+    // the app greets in the voice it will speak in. Shown whether callouts are on or not - it is
+    // the app's face, not a callout.
+    [Fact]
+    public void the_title_line_is_a_main_menu_line_in_the_language_picked()
+    {
+        Assert.False(_handler.ActiveCallout);
+        Assert.Equal("en main_menu phrase", _handler.TitleLine());
+
+        _handler.SetLang("de");
+
+        Assert.Equal("de main_menu phrase", _handler.TitleLine());
+    }
+
+    [Fact]
+    public void there_is_no_title_line_without_main_menu_lines()
+    {
+        _handler.CalloutData["en"]["flirty"]["main_menu"] = [];
+
+        Assert.Null(_handler.TitleLine());
+    }
+
     // --- directory-loading edge cases ---
 
     [Fact]

@@ -37,6 +37,9 @@ non-empty — a missing or typo'd key does not raise, the app just goes silent f
 - `edge_reached` - the user pressed "I reached my Edge". They are asking for mercy, and a pause
   plus a slower beat is already on its way, so answer the admission rather than narrating the
   pause (`pause_start` does that).
+- `main_menu` - not an event: the line under the app's name on the engine's start screen, drawn
+  at random each time it comes up. One short line, an invitation rather than an instruction - no
+  session is running yet - and in the tone's voice like everything else.
 
 ## Adding phrases to an existing file
 

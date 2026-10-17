@@ -142,5 +142,13 @@
     "You want a break? Say please.",
     "Whatever. Take your little pause.",
     "So we're doing this the slow way now. Great."
+  ],
+  "main_menu": [
+    "Ugh, finally. Took you long enough.",
+    "Don't just stare at the menu. Start already.",
+    "Bet you won't even make it past the warm-up.",
+    "Oh, back for more? Cute.",
+    "Hurry up. I don't wait around for anyone.",
+    "Fine, I'll play with you. Don't make it boring."
   ]
 }

@@ -32,8 +32,10 @@ public partial class Main
                 () => $"{app.Achievements.UnlockedIds.Count} of {Gooner.Core.Achievements.AchievementCatalogue.All.Count} unlocked", ShowAchievements),
             new("Statistics", "stats", () => "Every session so far", ShowLongTermStatistics),
             new("Settings", "settings", () => "Rhythm, climax, callouts, look", ShowSettings),
+            new("Exit", "power", () => null, () => Quit(0)),
         };
-        return new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version);
+        // Under the name, a line in the voice the app will speak in.
+        return new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version, () => app.Callouts?.TitleLine());
     }
 
     private string? SavedCount()
@@ -43,7 +45,8 @@ public partial class Main
         return saved switch { 0 => "None saved yet", 1 => "1 saved", _ => $"{saved} saved" };
     }
 
-    // The rest of the old menus, in their order.
+    // The rest of the old menus, in their order. Quitting is the start screen's Exit card and the
+    // last entry of the dock's menu.
     private List<(string Label, Action Pressed)> MenuEntries() =>
     [
         ("What's New", () => ShowWhatsNew(_app!.ChangelogEntries)),
@@ -52,7 +55,6 @@ public partial class Main
         ("Third-Party Licenses", () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
         ("Check for Updates", CheckForUpdates),
         ("Join Discord", () => ExternalUrl.Open(GoonerApp.DiscordInviteUrl, url => OS.ShellOpen(url))),
-        ("Quit", () => Quit(0)),
     ];
 
     // The dock's menu: everything the start screen offers, without leaving the session.
@@ -67,6 +69,7 @@ public partial class Main
             ("Achievements", ShowAchievements),
         };
         entries.AddRange(MenuEntries());
+        entries.Add(("Quit", () => Quit(0)));
         foreach (var (label, pressed) in entries)
         {
             var button = new Button { Text = label, FocusMode = Control.FocusModeEnum.None, Alignment = HorizontalAlignment.Left };

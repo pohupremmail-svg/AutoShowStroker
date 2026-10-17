@@ -22,6 +22,7 @@ public static class Icons
         ["saved"] = "<path d='M6 3h12v18l-6-4-6 4V3Z'/>",
         ["trophy"] = "<path d='M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z'/><path d='M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3'/>",
         ["stats"] = "<path d='M4 20V10M10 20V4M16 20v-7M22 20H2'/>",
+        ["power"] = "<path d='M12 3v9'/><path d='M18.4 6.6a9 9 0 1 1-12.8 0'/>",
         ["device"] = "<rect x='7' y='2' width='10' height='20' rx='5'/><path d='M12 7v3'/>",
         ["grip"] = "<circle cx='9' cy='6' r='1'/><circle cx='15' cy='6' r='1'/><circle cx='9' cy='12' r='1'/><circle cx='15' cy='12' r='1'/><circle cx='9' cy='18' r='1'/><circle cx='15' cy='18' r='1'/>",
     };

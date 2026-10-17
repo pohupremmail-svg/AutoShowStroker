@@ -142,5 +142,13 @@
     "Immobile. Et silencieux.",
     "Bien de m'avoir prévenue. Maintenant obéis.",
     "Tu recommenceras sur mon ordre."
+  ],
+  "main_menu": [
+    "Tu es ici parce que je le permets. Commence.",
+    "Assieds-toi. Pas touche tant que je ne l'ai pas dit.",
+    "Ce soir, tu suis mon rythme. Rien d'autre.",
+    "Choisis tes dossiers. Ensuite, tu m'appartiens.",
+    "Tu te branles quand je le dis, tu t'arrêtes quand je le dis.",
+    "Ne me fais pas attendre. Lance la session."
   ]
 }

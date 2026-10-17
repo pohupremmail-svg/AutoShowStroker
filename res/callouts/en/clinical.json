@@ -142,5 +142,13 @@
     "Stop stimulation. We resume at a lower rate.",
     "Recorded. Your threshold is closer than expected.",
     "Pausing. Let the response subside."
+  ],
+  "main_menu": [
+    "System ready. Awaiting subject.",
+    "Select a media source to begin the procedure.",
+    "Arousal protocol loaded. Proceed when ready.",
+    "Subject detected. Calibrating rhythm parameters.",
+    "All parameters nominal. Initiate on command.",
+    "Data collection resumes on your input."
   ]
 }

@@ -17,15 +17,25 @@ public sealed record StartCard(string Title, string Icon, Func<string?> Subtitle
 public partial class StartScreen : Control
 {
     private readonly List<(StartCard Card, Label Subtitle)> _cards = [];
+    private readonly List<Button> _buttons = [];
+    private VBoxContainer _column = null!;
     private readonly PaintLayer _bokeh = new(additive: true);
     private readonly (float X, float Y, float Depth, float Speed, int Hue)[] _motes = new (float, float, float, float, int)[46];
     private readonly Random _random = new();
-    private readonly Label _logoLeft, _logoRight;
+    private readonly Label _logoLeft, _logoRight, _tagline;
+    private readonly Func<string?> _line;
     private Tween? _tween;
     private double _time;
 
-    public StartScreen(string? resources, IReadOnlyList<StartCard> cards, IReadOnlyList<(string Label, Action Pressed)> links, string version)
+    // The line under the name when the phrase files have none for the language and tones picked.
+    public const string DefaultLine = "Lean back. I set the pace tonight.";
+
+    // `line` is asked each time the screen comes up: a main_menu line of the callouts, in the
+    // voice the app speaks in.
+    public StartScreen(string? resources, IReadOnlyList<StartCard> cards, IReadOnlyList<(string Label, Action Pressed)> links,
+        string version, Func<string?> line)
     {
+        _line = line;
         SetAnchorsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
         for (var i = 0; i < _motes.Length; i++)
@@ -44,6 +54,7 @@ public partial class StartScreen : Control
 
         var column = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         column.AddThemeConstantOverride("separation", 12);
+        _column = column;
         row.AddChild(column);
         var logo = new HBoxContainer();
         logo.AddThemeConstantOverride("separation", 0);
@@ -51,10 +62,15 @@ public partial class StartScreen : Control
         logo.AddChild(_logoLeft);
         logo.AddChild(_logoRight);
         column.AddChild(logo);
-        var tagline = new Label { Text = "Lean back. I set the pace tonight." };
-        tagline.AddThemeFontSizeOverride("font_size", 18);
-        tagline.Modulate = new Color(1, 1, 1, 0.75f);
-        column.AddChild(tagline);
+        _tagline = new Label
+        {
+            Text = DefaultLine,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            CustomMinimumSize = new Vector2(560, 0),
+            SizeFlagsHorizontal = SizeFlags.ShrinkBegin,
+            Modulate = new Color(1, 1, 1, 0.8f),
+        };
+        column.AddChild(_tagline);
         column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 18) });
         foreach (var card in cards) column.AddChild(Card(card));
 
@@ -77,19 +93,35 @@ public partial class StartScreen : Control
         }
         AddChild(foot);
         Restyle();
+        Resized += Fit;
     }
 
     public bool Shown { get; private set; } = true;
 
+    // The name and the cards shrink with a short window, so the last card never runs into the foot.
+    private int LogoSize => (int)Math.Clamp(Size.Y * 0.12f, 64, 110);
+
+    private void Fit()
+    {
+        if (Size.Y <= 0) return;
+        var card = Math.Clamp(Size.Y * 0.078f, 52, 68);
+        foreach (var button in _buttons) button.CustomMinimumSize = new Vector2(440, card);
+        _column.AddThemeConstantOverride("separation", (int)Math.Clamp(Size.Y * 0.012f, 6, 12));
+        foreach (var part in new[] { _logoLeft, _logoRight }) part.AddThemeFontSizeOverride("font_size", LogoSize);
+    }
+
     private static Label LogoPart(string text) => new() { Text = text };
 
-    // After a change of colour scheme, and each time it comes up.
+    // After a change of colour scheme, and each time it comes up - with a new line each time.
     public void Restyle()
     {
+        _tagline.Text = _line() ?? DefaultLine;
+        _tagline.AddThemeFontOverride("font", UiTheme.Display);
+        _tagline.AddThemeFontSizeOverride("font_size", 21);
         foreach (var (part, color) in new[] { (_logoLeft, Colors.White), (_logoRight, UiTheme.Of(Palette.Accent)) })
         {
             part.AddThemeFontOverride("font", UiTheme.Display);
-            part.AddThemeFontSizeOverride("font_size", 96);
+            part.AddThemeFontSizeOverride("font_size", LogoSize);
             part.AddThemeColorOverride("font_color", color);
             part.AddThemeColorOverride("font_shadow_color", UiTheme.Of(Palette.Accent, 0.55f));
             part.AddThemeConstantOverride("shadow_outline_size", 12);
@@ -154,6 +186,7 @@ public partial class StartScreen : Control
         content.AddChild(text);
         button.AddChild(margin);
         _cards.Add((card, subtitle));
+        _buttons.Add(button);
 
         // Leaning in under the pointer.
         button.Resized += () => button.PivotOffset = button.Size / 2;

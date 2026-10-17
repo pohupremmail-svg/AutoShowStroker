@@ -142,5 +142,13 @@
     "Well done for stopping. Take your time.",
     "Shh, easy. We'll start again gently.",
     "You're doing so well. Just breathe."
+  ],
+  "main_menu": [
+    "Welcome back. Let's take good care of you.",
+    "Breathe out. You're safe here with me.",
+    "No pressure tonight. We'll go at your pace.",
+    "You deserve this. Start whenever you're ready.",
+    "I'm right here. Let me look after you.",
+    "Rough day? Come here, I'll make it better."
   ]
 }
