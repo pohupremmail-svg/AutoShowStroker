@@ -63,10 +63,12 @@ here unchanged. This file only adds what is specific to this side.
   (`engine/third_party/ffmpeg`, see its README). A new build of the extension replaces all of it
   together; `Gooner.Build.Tests` and `LicenseShelfTests` fail until the archives and notices follow.
 - **Every dialog of the Python app is a panel** (`godot/scripts/Panels/`), shown by the `PanelHost`
-  over the whole window - menu bar included, as a modal dialog blocked that too - while the session
-  plays on behind it. Panels stack; Esc and the corner cross run the panel's own answer to being
-  dismissed (`OnReject`; a question's escape button). Nothing waits on a panel the way
-  `QDialog.exec()` did: a question calls back. `Confirm.Ask`/`Confirm.Tell` are `QMessageBox`.
+  over the whole window - start screen included, as a modal dialog blocked everything behind it -
+  while the session plays on behind it. Panels are frosted glass (`Ui/Glass.cs`,
+  `shaders/glass.gdshader`) and can be dragged by their title and thrown. Panels stack; Esc and the
+  corner cross run the panel's own answer to being dismissed (`OnReject`; a question's escape
+  button). Nothing waits on a panel the way `QDialog.exec()` did: a question calls back.
+  `Confirm.Ask`/`Confirm.Tell` are `QMessageBox`.
   The pattern for each dialog: its logic is a model in `Gooner.Core.Panels` (`SettingsForm`,
   `StatisticsReport`, `PrivacyData`, `SavedSessionsShelf`, `SessionExplorer`, `MediaFolderPicker`,
   ...) carrying the ported tests of the dialog's Python test file; the panel only draws it and
@@ -74,6 +76,13 @@ here unchanged. This file only adds what is specific to this side.
   focus) are not ported.
 - **Panic is read in `_Input`, before any control**, so a focused button in a panel cannot take
   Space for itself; only a text field keeps its spaces.
+- **There is no menu bar and no button row** (phase 7). Between sessions the **start screen**
+  (`Ui/StartScreen.cs`) has big cards for what one comes to do and every other menu entry along its
+  foot; during a session a **glass dock** (`Ui/Dock.cs`) floats over the picture - draggable,
+  throwable, fading while the pointer rests - with the session's buttons and a menu panel holding
+  the rest. The old accelerators stay as keys (Ctrl+S settings, F1 guide, Ctrl+Q quit, Ctrl+O
+  folder). Texts copied from the Python side that name a menu get a `Guide.EngineEdits` edit;
+  `GuideTests` fails while any still sends the user to Help, Sessions or Statistics.
 - **Texts copied from the Python side stay word for word.** `Changelog.Entries` and
   `Guide.PythonTopics` are generated from the Python source and compared by the parity run - an
   entry added on `main` and merged in fails there until it is copied over. Where the engine works
@@ -100,6 +109,33 @@ here unchanged. This file only adds what is specific to this side.
   `Gooner.Core.Data.ResourceRoot` finds the repo's own copy from a dev run and the one beside the
   executable once exported. The files never go through Godot's importer, so the engine reads
   exactly what the Python app reads.
+
+## The look (phase 7)
+
+- **The look is settings** (`Gooner.Core.App.Look`, group `Look`): the note track (`highway`,
+  `ring`, `stream`, `tunnel`), the colour scheme, the effect strength, whether the Hypno Ring
+  wanders and what it does to the picture around it (`censor`: off, blur, mosaic, dark). A stored
+  choice this build does not know reads as the default. The Settings panel shows them on a Look tab.
+- **Colour schemes are `Gooner.Core.App.Palette.Schemes`** - Neon (src/theme.py's palette, unchanged)
+  and Boudoir. `Palette.Use` switches; everything asks `Palette` when it draws or builds, the window
+  rebuilds the theme and refreshes the glass when the setting changes. In every scheme the three
+  climax outcomes stay apart in colour (`PaletteTests`). The scheme also names the display face of
+  the big words (`UiTheme.Display`).
+- **The note track is drawn from `BeatHandler.Forecast`**: the exact note moments the click gets
+  (`UpcomingNotes` up to a pause) plus the stretches of the plan - so coming pauses and changes of
+  rhythm fly in with the notes, and the notes behind a pause are known. The geometry of each track
+  is in `Gooner.Core.Track`, and every track puts a note on its beat on the hit zone
+  (`TrackGeometryTests`) - that, and drawing from the click's own moments, is what lands a note on
+  its click. `godot/scripts/Track/NoteTrackView` paints it on two layers (normal and additive).
+- **A finale is drawn like any other rhythm**, and the climax overlay (`Fx/ClimaxOverlay`) reacts only
+  to what `ClimaxBanner` says: a fake climax is "cum" until it is revealed, so it runs the real one's
+  effects until then. Anything that painted the run-in differently would tell the user which climax
+  is the real one.
+- **The effect layer is sprites and shaders, not HDR**: glow is one radial texture tinted and drawn
+  additively (`Fx/Glow`), particles are drawn by hand (`Fx/Particles`, on their own time so the
+  climax can slow them - never the session clock). `shaders/stage_filter.gdshader` censors round the
+  Hypno Ring and splits the colours at the climax; it is not drawn at all while there is nothing to
+  do, so the screen is not copied for nothing.
 
 ## How the core keeps time
 
@@ -225,12 +261,15 @@ module) write throwaway keys of their own under `HKCU\Software` and delete them 
 app's key.
 
 `--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
-`settings`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`, `crash`, `splash`,
-...), waits for it to fade in and saves the window - how every panel was checked by eye.
+`settings`, `settings-look`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`,
+`crash`, `splash`, `menu`, `start` - the start screen alone - ...), waits for it to fade in and saves
+the window - how every panel was checked by eye.
 
-The smoke runs never touch a real data folder when given `--data-dir`; give them one. HDR 2D is
-off until the effect layer (phase 7) needs it: with it on, a screenshot of the viewport comes out
-in linear colour and every check of the palette reads too dark.
+The smoke runs never touch a real data folder when given `--data-dir`; give them one. A look to
+check by eye goes into that folder's `settings.json` first (`{"Look/note_track":"ring",
+"Look/censor":"blur"}`). HDR 2D stays off - the effect layer glows with sprites - because with it on
+a screenshot of the viewport comes out in linear colour and every check of the palette reads too
+dark.
 
 `$GODOT` is the Godot 4.7.2 .NET *console* binary (`Godot_v4.7.2-stable_mono_win64_console.exe`);
 the plain one detaches from the terminal and its exit code is lost. Godot's own packages restore

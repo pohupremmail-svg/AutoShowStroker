@@ -96,6 +96,8 @@ public partial class Main
         ["settings-device"] = () => ShowSettings(Gooner.Core.Devices.IntifacePlugin.TabTitle),
         ["settings-look"] = () => ShowSettings("Look"),
         ["menu"] = ShowMenu,
+        // Nothing over it: the start screen alone.
+        ["start"] = () => { },
         ["phrasefiles"] = ShowPhraseFiles,
         ["patterns"] = () => ShowPatternEditor(() => { }),
         ["saved"] = ShowSavedSessions,
