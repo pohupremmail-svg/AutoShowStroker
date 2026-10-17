@@ -27,7 +27,7 @@ public partial class SettingsPanel : AppPanel
 
     // openPatternEditor gets what to do once the editor is closed again: show its patterns.
     public SettingsPanel(SettingsForm form, PanelHost host, Action<Action> openPatternEditor, Action openPhraseFiles)
-        : base("Settings", new Vector2(560, 640))
+        : base("Settings", new Vector2(620, 660))
     {
         _form = form;
         _host = host;

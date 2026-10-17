@@ -9,8 +9,9 @@ namespace Gooner.Engine.Panels;
 // Sessions the explorer, and only the one on top takes input. The session behind goes on playing,
 // as it did behind a QDialog.
 //
-// A panel comes in over a dimmed window and leaves the same way; the fade is all that is animated
-// for now - the menus of phase 7 are a different design, not this one moving more.
+// A panel comes in over a lightly dimmed window - the session is meant to show through its glass -
+// rising and settling into place, and leaves the same way. It starts in the middle and stays there
+// as the window changes, until it is moved by hand.
 public partial class PanelHost : Control
 {
     private const float FadeSec = 0.14f;
@@ -24,7 +25,11 @@ public partial class PanelHost : Control
         MouseFilter = MouseFilterEnum.Ignore;
         Resized += () =>
         {
-            foreach (var (_, panel) in _open) panel.FitInto(Room);
+            foreach (var (_, panel) in _open)
+            {
+                panel.FitInto(Room);
+                if (!panel.Moved) Centre(panel);
+            }
         };
     }
 
@@ -39,21 +44,32 @@ public partial class PanelHost : Control
     public void Show(AppPanel panel)
     {
         if (panel.IsOpen) return;
-        var layer = new ColorRect { Color = new Color(0, 0, 0, 0.55f), AnchorRight = 1, AnchorBottom = 1 };
-        var center = new CenterContainer { AnchorRight = 1, AnchorBottom = 1 };
-        center.AddChild(panel);
-        layer.AddChild(center);
+        var layer = new ColorRect { Color = new Color(0, 0, 0, 0.3f), AnchorRight = 1, AnchorBottom = 1 };
+        layer.AddChild(panel);
         AddChild(layer);
         panel.Host = this;
         panel.FitInto(Room);
-        panel.Resized += () => panel.PivotOffset = panel.Size / 2;
+        panel.Resized += () =>
+        {
+            panel.PivotOffset = panel.Size / 2;
+            if (!panel.Moved) Centre(panel);
+        };
+        Centre(panel);
         _open.Add((layer, panel));
 
         layer.Modulate = new Color(1, 1, 1, 0);
-        panel.Scale = new Vector2(0.97f, 0.97f);
-        var tween = CreateTween().SetParallel().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        panel.Scale = new Vector2(0.9f, 0.9f);
+        panel.Rotation = -0.04f;
+        var tween = CreateTween().SetParallel().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
         tween.TweenProperty(layer, "modulate:a", 1f, FadeSec);
-        tween.TweenProperty(panel, "scale", Vector2.One, FadeSec);
+        tween.TweenProperty(panel, "scale", Vector2.One, FadeSec * 2.2f);
+        tween.TweenProperty(panel, "rotation", 0f, FadeSec * 2.2f);
+    }
+
+    private void Centre(AppPanel panel)
+    {
+        var size = panel.Size == Vector2.Zero ? panel.GetCombinedMinimumSize() : panel.Size;
+        panel.Position = ((Size - size) / 2).Round();
     }
 
     public void Close(AppPanel panel)
@@ -66,9 +82,10 @@ public partial class PanelHost : Control
         // Out of the way at once, so a click meant for what is under it is not caught by a panel
         // that is only still fading.
         layer.MouseFilter = MouseFilterEnum.Ignore;
-        var tween = CreateTween().SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
+        var tween = CreateTween().SetParallel().SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
         tween.TweenProperty(layer, "modulate:a", 0f, FadeSec);
-        tween.Finished += layer.QueueFree;
+        tween.TweenProperty(panel, "scale", new Vector2(0.94f, 0.94f), FadeSec);
+        tween.Chain().TweenCallback(Callable.From(layer.QueueFree));
         panel.RaiseClosed();
     }
 
