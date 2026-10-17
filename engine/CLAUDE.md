@@ -52,16 +52,16 @@ here unchanged. This file only adds what is specific to this side.
   what it carries over, and the installed Python app is still in use. A test against a copy of a
   real profile names its sources: `--legacy-registry=<key under HKCU>` and
   `--legacy-data-dir=<folder>`. Never point `--legacy-registry` at the app's own key.
-- **Video is the FFmpeg extension EIRTeam.FFmpeg**, in `godot/addons/ffmpeg/` and **deliberately
-  not in git yet** (the user's call, 2026-10-16: it ships with the app, its DLLs enter the repo
-  later). Copy it in by hand for a local run: `ffmpeg.gdextension` plus `win64/*.dll` from the
-  autobuild pinned in phase 0 (commit `84ea333`; release 1.1.4 never converts YUV on Godot 4.7),
-  then run `--import` once. A checkout without it builds and runs: the stage reaches the extension
-  by class name, reports every clip unplayable and the player moves on. Its FFmpeg is an **LGPL v3**
-  build (`--enable-version3`, no GPL, no nonfree; H.264, MPEG-4, VP8/9, AAC, MP3, Opus, Vorbis -
-  no HEVC); the wrapper is MIT. Every release package therefore carries the LGPLv3 and GPLv3 texts,
-  the wrapper's MIT licence, a note that the app uses FFmpeg, and the source archive of exactly that
-  FFmpeg version - phase 5 builds that in.
+- **Video is the FFmpeg extension EIRTeam.FFmpeg**, in `godot/addons/ffmpeg/`, committed as the
+  autobuild pinned in phase 0 left it (commit `84ea333`; release 1.1.4 never converts YUV on Godot
+  4.7) - plain git, not LFS (the user's call, 2026-10-17: 14 MB that never change). The stage
+  reaches the extension by class name, so a build without it still runs: every clip reports
+  unplayable and the player moves on. Its FFmpeg is an **LGPL v3** build (`--enable-version3`, no
+  GPL, no nonfree; H.264, MPEG-4, VP8/9, AAC, MP3, Opus, Vorbis - no HEVC); the wrapper is MIT.
+  The package carries the LGPLv3/GPLv3 texts and the wrapper's MIT text (`engine/licenses`), and
+  every release has the FFmpeg source of exactly that revision and the extension's source attached
+  (`engine/third_party/ffmpeg`, see its README). A new build of the extension replaces all of it
+  together; `Gooner.Build.Tests` and `LicenseShelfTests` fail until the archives and notices follow.
 - **Every dialog of the Python app is a panel** (`godot/scripts/Panels/`), shown by the `PanelHost`
   over the whole window - menu bar included, as a modal dialog blocked that too - while the session
   plays on behind it. Panels stack; Esc and the corner cross run the panel's own answer to being

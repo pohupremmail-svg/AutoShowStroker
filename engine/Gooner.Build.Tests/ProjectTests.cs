@@ -52,6 +52,34 @@ public class ProjectTests
         Has(options, "application/icon=\"res://icon.ico\"");
     }
 
+    // The LGPL lets FFmpeg go out only with its source, so every release carries the archive in
+    // engine/third_party/ffmpeg. It has to be the revision the bundled libraries were built from:
+    // their version string names it (N-<count>-g<first ten digits of the commit>).
+    [Fact]
+    public void the_ffmpeg_source_is_the_revision_the_libraries_were_built_from()
+    {
+        var archive = Path.GetFileName(Assert.Single(Directory.GetFiles(Repo.FfmpegSources, "FFmpeg-*-source.tar.gz")));
+        var commit = archive["FFmpeg-".Length..^"-source.tar.gz".Length];
+        var avutil = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(Path.Combine(Repo.FfmpegLibraries, "avutil-58.dll")));
+
+        Assert.Equal(40, commit.Length);
+        Assert.Contains($"-g{commit[..10]}-", avutil, StringComparison.Ordinal);
+    }
+
+    // The notices say where the source is; the release check attaches what they name.
+    [Fact]
+    public void the_notices_name_the_source_archives_a_release_carries()
+    {
+        var notices = File.ReadAllText(Path.Combine(Repo.Licenses, "THIRD_PARTY_NOTICES.txt"));
+        var archives = Directory.GetFiles(Repo.FfmpegSources, "*-source.tar.gz").Select(Path.GetFileName).ToList();
+
+        Assert.Equal(2, archives.Count);
+        foreach (var archive in archives)
+            Assert.Contains(archive!, notices, StringComparison.Ordinal);
+        Assert.Contains("engine/third_party/ffmpeg/*-source.tar.gz",
+            File.ReadAllText(Path.Combine(Repo.Root, ".github", "workflows", "release-check.yml")), StringComparison.Ordinal);
+    }
+
     // The executable's icon has to sit inside the Godot project for the export to embed it; it is a
     // copy of the one both apps use, and has to stay one.
     [Fact]

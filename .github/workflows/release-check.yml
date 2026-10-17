@@ -107,19 +107,24 @@ jobs:
       # Only after the verification passes, so a refused package can never reach the Releases tab.
       # Created as a draft: the release notes are written by hand in the app's own voice, and a tag
       # push should not put anything in front of users on its own.
-      - name: Attach the verified package to the release
+      #
+      # The FFmpeg source - and the video extension's, whose build scripts say how that FFmpeg was
+      # built - goes with every release: the LGPL lets FFmpeg be passed on only with its source in
+      # the same place, and THIRD_PARTY_NOTICES.txt says it is there.
+      - name: Attach the verified package and the FFmpeg source to the release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          package="dist/GoonerApp-${GITHUB_REF_NAME#v}-windows-x64.zip"
+          assets=("dist/GoonerApp-${GITHUB_REF_NAME#v}-windows-x64.zip" engine/third_party/ffmpeg/*-source.tar.gz)
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "Release $GITHUB_REF_NAME exists - replacing its asset with this build."
-            gh release upload "$GITHUB_REF_NAME" "$package" --clobber
+            echo "Release $GITHUB_REF_NAME exists - replacing its assets with this build."
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
           else
             notes="Draft - write the user-facing notes, then publish."
-            notes="$notes The attached package was built from this tag and passed the build tool's verification."
-            gh release create "$GITHUB_REF_NAME" "$package" \
+            notes="$notes The attached package was built from this tag and passed the build tool's verification;"
+            notes="$notes the FFmpeg source it carries is attached beside it."
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               --draft --title "$GITHUB_REF_NAME" --notes "$notes"
           fi

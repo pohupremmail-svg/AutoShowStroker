@@ -14,6 +14,10 @@ public sealed record Repository(string Root)
 
     public string FfmpegLibraries => Path.Combine(GodotProject, "addons", "ffmpeg", "win64");
 
+    // The source of the FFmpeg the libraries were built from, and of the extension that bundles
+    // them - attached to every release, as the LGPL asks.
+    public string FfmpegSources => Path.Combine(Root, "engine", "third_party", "ffmpeg");
+
     public string Dist => Path.Combine(Root, "dist");
 
     // The repository above `start`: the folder holding res/, VERSION and engine/.

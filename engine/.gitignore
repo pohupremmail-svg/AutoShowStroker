@@ -4,6 +4,5 @@ obj/
 *.user
 TestResults/
 
-# The FFmpeg extension (EIRTeam.FFmpeg, LGPLv3 build + MIT wrapper): native DLLs, kept out of git
-# for now and copied in by hand for local runs - see engine/CLAUDE.md. Shipped with the app later.
-godot/addons/ffmpeg/
+# The copy of the FFmpeg extension the Godot editor makes while it runs, so it can reload it.
+godot/addons/ffmpeg/win64/~*

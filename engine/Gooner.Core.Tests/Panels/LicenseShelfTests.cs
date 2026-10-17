@@ -74,13 +74,13 @@ public sealed partial class LicenseShelfTests : IDisposable
         Assert.Contains($"Package: Microsoft.NETCore.App.Runtime.win-x64/{version}", Notices);
     }
 
-    // The extension's DLLs are not in git yet (engine/CLAUDE.md); where a checkout has them, every
-    // FFmpeg library among them is named by file, so a new build of the extension shows up here.
+    // Every FFmpeg library the extension bundles is named by file, so a new build of the extension
+    // shows up here.
     [Fact]
     public void the_ffmpeg_the_video_extension_bundles_is_named_library_by_library()
     {
         var dlls = Repo.PathTo(Path.Combine("engine", "godot", "addons", "ffmpeg", "win64"));
-        if (!Directory.Exists(dlls)) return;
+        Assert.True(Directory.Exists(dlls), "The FFmpeg extension is missing from the checkout.");
 
         foreach (var library in Directory.GetFiles(dlls, "*.dll").Select(Path.GetFileName)
                      .Where(name => name!.StartsWith("av", StringComparison.Ordinal) || name.StartsWith("sw", StringComparison.Ordinal)))
