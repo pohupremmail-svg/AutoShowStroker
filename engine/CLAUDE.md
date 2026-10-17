@@ -176,6 +176,31 @@ here unchanged. This file only adds what is specific to this side.
 - The first export after a change compiles the C# project and can take minutes; later ones take
   seconds.
 
+## Release day: the switch
+
+The engine replaces the Python app in one release, planned for Christmas together with the new
+look (phase 7). Until that day the Python app on `main` is the product. On the day, in this order:
+
+1. **Open items closed**: the FFmpeg licence finding (TODO.md - its own build, or every statically
+   linked library's notice), and the phase 7 effect layer.
+2. **Remove the Python app** in one commit: `src/`, `tests/`, `parity/`, `main.py`, `scripts/`
+   (`build.py`, `verify_frozen.py`), `requirements*.txt`, `ruff.toml`, `pytest.ini`, the Python jobs
+   in `ci.yml`, `engine.yml`'s parity job and `audit.yml`'s pip-audit. What only the parity run
+   guarded is already guarded here (Changelog and Guide copies become the source; the session
+   format by `SessionFormatDocTests`; callout files by `CalloutLanguageFilesTests`).
+3. **Rewrite the docs for the engine**: the root `CLAUDE.md` (merge this file into it),
+   `CONTRIBUTING.md` (callout files are checked with `dotnet test`, not pytest),
+   `.claude/skills/add-callout-language`.
+4. **Take the profile over**: `AppPaths.TakesOverThePythonProfile` to true - the real data folder,
+   the registry import, the roaming move. Not before: every start without `--data-dir` would empty
+   the registry key of a Python app still in use.
+5. **Version and changelog**: the user picks the number (above the last Python release, or the
+   installed apps' update check never announces it); the entry goes into `Changelog.Entries` in
+   the app's own voice, and it is what What's New shows every updating user.
+6. **PR into `main`**, which the user merges; then the tag, the release check, the draft. The notes
+   say: unpack the folder, settings and history come along on their own, HEVC videos are skipped
+   (unless the own FFmpeg build is in), and the old `.exe` can be deleted.
+
 ## Commands
 
 ```
