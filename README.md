@@ -1,16 +1,16 @@
 # Auto Hero Generation (GoonerApp)
 
-A specialized, interactive PyQt6 multimedia application designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter") and motivational text instructions (callouts).
+A specialized, interactive multimedia application, built on the Godot engine, designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter") and motivational text instructions (callouts).
 
 **100% local and private.** Your media, session history, and settings never leave your machine — no account, no login, no telemetry, no cloud calls of any kind. There are exactly two opt-in exceptions, both off until you ask for them: Help > Check for Updates pings GitHub.com when you explicitly click it, and optional device output (Settings > Device) connects to an Intiface server whose address you type in yourself. That second one ships disabled, switches itself off again at every launch, asks before it connects, and lives in a folder you can delete outright — see below.
 
-Local still means written somewhere, so: your data (session history, custom patterns, custom phrase files, remembered media folders, saved sessions) lives as plain JSON in `%LOCALAPPDATA%\GoonerCock\GoonerApp`, and your settings in `HKEY_CURRENT_USER\Software\GoonerCock\GoonerApp`. GoonerApp is portable, so deleting the `.exe` leaves both behind — **Help > Privacy & Data** shows the exact paths, opens the data folder, and deletes any of it per category.
+Local still means written somewhere, so: your data (session history, custom patterns, custom phrase files, remembered media folders, saved sessions) lives as plain JSON in `%LOCALAPPDATA%\GoonerCock\GoonerApp`, and your settings right beside it in `settings.json`. Nothing else is written anywhere - not even a cache of the engine's own. GoonerApp is portable, so deleting its folder leaves your data behind — **Help > Privacy & Data** shows the exact paths, opens the data folder, and deletes any of it per category. Coming from an older version that kept its settings in the registry? The first start moves them over and removes the registry key.
 
 One thing there is worth naming: a session you explicitly **save** records the paths of the media it showed, so it can find them again when you replay it. That is the only thing the app writes to disk that contains them, it only happens when you press Save, and it is deletable like everything else. Exporting a session to hand on asks every time whether to include those paths.
 
 ## ✨ Features
 
-* **Playlist Functionality:** Select any local folder. The application recursively searches for all supported media formats (`.mp4`, `.avi`, `.mov`, `.mkv`, `.gif`, `.jpeg`, `.jpg`, `.png`, `.bmp`).
+* **Playlist Functionality:** Select any local folder. The application recursively searches for all supported media formats (`.mp4`, `.avi`, `.mov`, `.mkv`, `.gif`, `.jpeg`, `.jpg`, `.png`, `.bmp`). Videos encoded as HEVC (H.265) are not supported yet and are skipped.
 * **Randomized Playback:** The order of the media is completely shuffled (`random.shuffle`) each time a folder is loaded.
 * **Interactive Strokemeter (Beat Timer):** A dynamic rhythm generator located in the application's footer:
     * Automatically varying beat frequencies and rhythm patterns (e.g., *Standard Beat*, *Quick Swing*, *Simple Bounce*, *Double Tap*).
@@ -35,7 +35,7 @@ One thing there is worth naming: a session you explicitly **save** records the p
 
 ## 🎮 How To Use
 
-1. **Installation:** Download the latest `GoonerApp.exe` from the [Releases page](https://github.com/pohupremmail-svg/AutoShowStroker/releases/latest) — no Python or installation required, just run the `.exe`.
+1. **Installation:** Download the latest `GoonerApp-<version>-windows-x64.zip` from the [Releases page](https://github.com/pohupremmail-svg/AutoShowStroker/releases/latest), unpack it anywhere and run `GoonerApp.exe` inside the folder — no installation required. Keep the folder together: the program reads its sounds, phrases and license texts from beside the `.exe`.
    * The `.exe` isn't code-signed, so Windows SmartScreen or your antivirus may flag it as unrecognized. If you want to double-check it yourself before running it, scan the downloaded file with [VirusTotal](https://www.virustotal.com/).
 2. **Load Folder:** Click "Set Gooning Folder and Start." (or press `Ctrl + O`) and select the directory containing your images and videos. The slideshow will start automatically.
 3. **Navigation:**
@@ -107,94 +107,85 @@ before the server stops it — no app can deliver a stop over a broken socket.
 
 ### Implementation and verification
 
-The whole feature lives in `src/plugins/intiface/`. **Delete that folder and the app still
-starts**, without a Device tab and without anything else noticing — which is the point of
-it being a folder: device support is optional in a way the Strokemeter is not, and someone
-who owns no stroker should be able to remove it outright.
+The whole feature lives in `engine/Gooner.Core/Devices/`, and the app switches it on with a
+single option (`GoonerAppOptions.DeviceOutput`). **Without it the app still runs**, with no
+Device tab and nothing else noticing — device support is optional in a way the Strokemeter is
+not.
 
-Inside, three objects with one job each. `beat_sync.py` reads the rhythm and works out the
-next audible note and its direction. `controller.py` keeps WebSocket I/O, protocol
-negotiation, discovery, heartbeats and reconnect timers in a dedicated Qt worker thread, and
-knows nothing about beats. `plugin.py` decides when the two may be connected to each other.
+Inside, three objects with one job each. `BeatSync` reads the rhythm and works out the next
+audible note and its direction. `IntifaceController` keeps WebSocket I/O, protocol
+negotiation, discovery, heartbeats and reconnect timers in a worker of its own that does one
+thing at a time, and knows nothing about beats. `IntifacePlugin` decides when the two may be
+connected to each other.
 
-`BeatHandler` contributes exactly one thing to all of this: `note_scheduled_event`, which
-carries no payload and means "the rhythm has committed to its next note, so any prediction
-you hold is stale". When that note lands comes from the existing `upcoming_beats()`, which
-already walks silent steps and crosses segment boundaries, and which way the meter will show
-it comes from the existing `beat_meter_update_event`. The Strokemeter does not know the word
-"linear", in the same way it does not know the word "climax".
+`BeatHandler` contributes exactly one thing to all of this: `NoteScheduled`, which carries no
+payload and means "the rhythm has committed to its next note, so any prediction you hold is
+stale". When that note lands comes from `UpcomingBeats`, which already walks silent steps and
+crosses segment boundaries. The Strokemeter does not know the word "linear", in the same way
+it does not know the word "climax".
 
-QtWebSockets ships with the pinned PyQt6 dependency, so no extra client package is needed.
-The wire format follows the [Buttplug v3 linear/stop specification](https://buttplug.io/docs/spec-v3/spec/generic/)
+The WebSocket client is the one built into .NET, so no extra package is needed. The wire
+format follows the [Buttplug v3 linear/stop specification](https://buttplug.io/docs/spec-v3/spec/generic/)
 and [discovery specification](https://buttplug.io/docs/spec-v3/spec/enumeration/). Tests use
-a local simulated WebSocket server, never physical devices:
+a simulated Buttplug server on the local machine, never physical devices:
 
 ```powershell
-python -m pytest tests/test_plugin_intiface.py tests/test_plugin_intiface_beat_sync.py tests/test_plugin_intiface_plugin.py tests/test_plugin_intiface_ui.py
+dotnet test engine/Gooner.Core.Tests --filter "FullyQualifiedName~Devices"
 ```
 
-## 🚀 Installation & Execution (Developers)
+## 🚀 Building & Running (Developers)
 
-To run the application locally, you need **Python 3.13** and the appropriate dependencies. That is what CI runs, what `ruff` is configured for, and what the released `.exe` bundles — end users need no Python at all.
+GoonerApp runs on **Godot 4.7.2** with its logic in **C# on .NET 10**. You need:
 
-### 1. Create and Activate a Virtual Python Environment
-```bash
-# Create a virtual environment
-python -m venv .venv
+* the **.NET SDK** in the version `engine/global.json` pins,
+* **Godot 4.7.2 .NET** (the "mono" build) and, for a release package, its **export templates**
+  installed through the Godot editor (Editor > Manage Export Templates).
 
-# On Windows (PowerShell):
-.\.venv\Scripts\activate.ps1
+### Tests
 
-# On Linux/macOS or Git Bash:
-source .venv/bin/activate
+```powershell
+dotnet test engine/GoonerEngine.sln
 ```
 
-### 2. Install Dependencies
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+The app's logic lives in `engine/Gooner.Core`, a plain .NET library with no engine in it, so
+its tests run in seconds without Godot.
+
+### Run it
+
+Open `engine/godot/project.godot` in the Godot editor and press F5, or from a terminal:
+
+```powershell
+& "<path to Godot>\Godot_v4.7.2-stable_mono_win64.exe" --path engine/godot
 ```
 
-### 3. Start the Application
-```bash
-python main.py
+### Build the release package
+
+```powershell
+dotnet run --project engine/Gooner.Build -- build --godot "<path to Godot>\Godot_v4.7.2-stable_mono_win64_console.exe" --zip
 ```
 
-## 📦 Compile as a Standalone .exe (PyInstaller)
-
-You can package the entire application, including all sounds and language files, into a single, portable `.exe` file. This eliminates the need for the end-user to have Python installed.
-
-Ensure that your virtual environment is active and all dependencies from `requirements.txt` are installed. Then either run `python scripts/build.py`, or execute the following command directly in the main directory of the project:
-
-```bash
-pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --add-data "VERSION;." --icon "res/icons/favicon.ico" --name "GoonerApp" main.py
-```
-
-### What does this command do?
-* `--onefile`: Packages everything into a single executable `.exe` file.
-* `--windowed`: Prevents an unsightly console window from opening in the background when starting the app.
-* `--add-data "res;res"`: Embeds the entire resource folder (sounds and callouts) directly into the `.exe`.
-* `--add-data "VERSION;."`: Embeds the version file, used by the in-app "What's New" popup.
-* `--icon "res/icons/favicon.ico"`: Sets the `.exe`'s icon.
-* `--name "GoonerApp"`: Renames the final output file.
-
-After a successful build, you will find the finished file **`GoonerApp.exe`** in the newly created **`dist/`** directory. You can now move and pass on this file - it carries the license texts of the third-party software inside it (see below).
+This exports the app into `dist/GoonerApp/`, puts the sounds, phrases and license texts beside
+`GoonerApp.exe`, starts the result once and checks it - every part present and identical to the
+repository's, and nothing in it that names the machine it was built on - then packs
+`dist/GoonerApp-<version>-windows-x64.zip`. `-- verify` checks an existing package on its own.
+The tool only ever builds; it never talks to GitHub or any other server.
 
 ## 📂 Project Structure
 
-* `src/GoonerApp.py` - Main window, media control, and GUI layout.
-* `src/BeatHandler.py` - Logic for rhythm, audio playback, and pauses.
-* `src/CalloutHandler.py` - Management and selection of text instructions, across both language and tone.
-* `src/ScoreTracker.py` - Recording of session statistics.
+* `engine/Gooner.Core/` - the app's logic: rhythm (`Beat/`), climax (`Climax/`), callouts (`Callouts/`), statistics and achievements, saved sessions, settings and data files, device output (`Devices/`), and the model behind every panel (`Panels/`).
+* `engine/godot/` - the Godot project: window, stage, note track, panels, sound.
+* `engine/Gooner.Build/` - builds and checks the release package.
 * `res/callouts/` - phrase files, one folder per language and one file per tone (`en/flirty.json`, `de/dominant.json`, ...).
 
 ## 📜 License & Third-Party Software
 
 GoonerApp is free software under the GNU General Public License v3 ([LICENSE.txt](LICENSE.txt)).
-The packaged `.exe` also contains software by others - Python, Qt and the FFmpeg libraries Qt
-plays video with, PyQt6, NumPy, pyqtgraph and a few more. Each is listed with its license in
-[res/licenses/THIRD_PARTY_NOTICES.txt](res/licenses/THIRD_PARTY_NOTICES.txt), next to the full
-license texts; inside the app, **Help > Third-Party Licenses** shows the same.
+The package also contains software by others - the Godot engine, the .NET runtime, and the
+FFmpeg libraries videos are played with. Each is listed with its license in
+[engine/licenses/THIRD_PARTY_NOTICES.txt](engine/licenses/THIRD_PARTY_NOTICES.txt), next to the
+full license texts; inside the app, **Help > Third-Party Licenses** shows the same. FFmpeg is
+passed on under the LGPL, so the source of exactly the FFmpeg it bundles is attached to every
+release.
 
 ## 🌍 Contributing (New Languages, Tones & Phrases)
 
