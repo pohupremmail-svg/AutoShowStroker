@@ -23,7 +23,7 @@ public partial class PatternEditorPanel : AppPanel
     private readonly List<StepBar> _bars = [];
 
     public PatternEditorPanel(PatternEditor editor, Action click)
-        : base(L10n.T("Manage Custom Patterns"), new Vector2(640, 360))
+        : base(L10n.T("Manage Custom Patterns"), new Vector2(640, 480))
     {
         _editor = editor;
         _click = click;
