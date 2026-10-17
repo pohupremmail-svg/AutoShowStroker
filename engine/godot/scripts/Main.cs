@@ -12,6 +12,7 @@ using Gooner.Core.Panels;
 using Gooner.Core.Settings;
 using Gooner.Core.Timing;
 using Gooner.Engine.Audio;
+using Gooner.Engine.Fx;
 using Gooner.Engine.Panels;
 using Gooner.Engine.Stage;
 using Gooner.Engine.Track;
@@ -45,7 +46,7 @@ namespace Gooner.Engine;
 public partial class Main : Control
 {
     private const double SmokeSeconds = 8.0;
-    private const int FooterHeight = 110;
+    private const int FooterHeight = 0;
     private const int OutcomeRowHeight = 38;
     private const int CalloutMargin = 8;
 
@@ -54,7 +55,8 @@ public partial class Main : Control
     private readonly PictureClock _picture = new();
     private GoonerApp? _app;
     private MediaStage? _stage;
-    private BeatTrack? _track;
+    private NoteTrackView? _track;
+    private Particles _particles = null!;
     private bool _wasMaximized;
     private int _hits;
     private double _smokeUntil;
@@ -128,7 +130,9 @@ public partial class Main : Control
         _app.Beat.BeatHit += () => _hits++;
         _app.Panicked += () => DisplayServer.WindowSetMode(DisplayServer.WindowMode.Minimized);
         _app.StatisticsRequested += ShowRecap;
-        _track = new BeatTrack(_app.Beat, () => _clock.Now);
+        _particles = new Particles();
+        _track = new NoteTrackView(_app.Look, _particles, new Gooner.Core.Randomness.SystemRandomSource());
+        _app.SessionStarted += _track.Reset;
         Build();
 
         _smoke = AppPaths.UserFlag("smoke-beat") ? "beat" : AppPaths.UserFlag("smoke-session") ? "session" : null;
@@ -183,11 +187,12 @@ public partial class Main : Control
         if (_smokeUntil == double.MaxValue) BeginSmoke();
         _app.Frame();
 
-        var notes = _app.Beat.UpcomingNotes(BeatTrack.LeadTimeSec);
+        var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
         click.Schedule(notes.Where(n => n.Audible).Select(n => n.At));
         click.Volume = (float)_app.Beat.BeatLoudness;
         click.Muted = _app.Beat.IsMuted;
-        _track!.Show(notes);
+        // The same moments the click was given, with the stretches of the plan they fall in.
+        _track!.Show(_app.Beat.Forecast(NoteTrackView.LeadTimeSec), _clock.Now, delta);
         Sync();
 
         if (_smokeUntil > 0 && _clock.Now >= _smokeUntil) EndSmoke(click);
@@ -472,6 +477,8 @@ public partial class Main : Control
         var media = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
         root.AddChild(media);
         media.AddChild(_stage);
+        // The note track lies over the picture now, under the captions.
+        media.AddChild(_track);
         (_callout, _calloutText) = CaptionPanel(24, 0.9f, 10, CalloutMargin);
         _calloutText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _calloutText.HorizontalAlignment = HorizontalAlignment.Center;
@@ -492,6 +499,7 @@ public partial class Main : Control
         (_clockCaption, _clockText) = CaptionPanel(13, 0.85f, 8, 6);
         media.AddChild(_clockCaption);
         _clockCaption.SetAnchorsAndOffsetsPreset(LayoutPreset.TopLeft, LayoutPresetMode.Minsize, 8);
+        media.AddChild(_particles);
 
         // The controls.
         _controls = new HBoxContainer();
@@ -538,7 +546,6 @@ public partial class Main : Control
             _outcomeRow.AddChild(button);
         }
         _footer.AddChild(_outcomeRow);
-        _footer.AddChild(_track);
 
         // Over everything, the menu bar included.
         _panels = new PanelHost();
