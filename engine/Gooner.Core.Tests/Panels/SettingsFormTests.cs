@@ -2,6 +2,7 @@ using Gooner.Core.App;
 using Gooner.Core.Callouts;
 using Gooner.Core.Climax;
 using Gooner.Core.Data;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 using Gooner.Core.Panels;
@@ -33,12 +34,14 @@ public sealed class SettingsFormTests : IDisposable
             Settings = _settings,
             DataStore = data,
             CalloutDir = Repo.PathTo(Path.Combine("res", "callouts")),
+            LocaleDir = Repo.PathTo(Path.Combine("res", "locales")),
             Random = new ScriptedRandom(1),
         });
     }
 
     public void Dispose()
     {
+        L10n.Use(null);
         AppLog.Configure(false, null);
         _tmp.Delete(recursive: true);
     }
@@ -766,5 +769,50 @@ public sealed class SettingsFormTests : IDisposable
         Form.Choices["effects"].Value = "extreme";
 
         Assert.Equal("normal", Form.Choices["effects"].Value);
+    }
+
+    // --- the app's own language ---
+
+    // Its own row at the top, not one of the tab's tunable values: the Playback tab's reset brings the
+    // slideshow back to its defaults and leaves the language the user reads it all in alone.
+    [Fact]
+    public void the_app_language_is_offered_first()
+    {
+        var rows = Form.Tabs[0].Rows;
+
+        Assert.IsType<HeaderRow>(rows[0]);
+        Assert.IsType<UiLanguageRow>(rows[1]);
+        Assert.Equal(["en", "de", "fr"], Form.UiLanguages.Select(o => o.Value));
+        Assert.Equal("en", Form.UiLanguage);
+    }
+
+    [Fact]
+    public void saving_another_app_language_switches_to_it()
+    {
+        Form.UiLanguage = "de";
+
+        Assert.True(Form.Apply());
+
+        Assert.Equal("de", _app.UiLanguage.Language);
+        Assert.Equal("de", L10n.Language);
+        Assert.Equal("de", _settings.GetString("Ui/language", ""));
+    }
+
+    [Fact]
+    public void resetting_the_tab_keeps_the_app_language()
+    {
+        Form.UiLanguage = "fr";
+
+        Form.Reset("Playback");
+
+        Assert.Equal("fr", Form.UiLanguage);
+    }
+
+    [Fact]
+    public void an_app_language_not_on_offer_is_not_taken()
+    {
+        Form.UiLanguage = "es";
+
+        Assert.Equal("en", Form.UiLanguage);
     }
 }

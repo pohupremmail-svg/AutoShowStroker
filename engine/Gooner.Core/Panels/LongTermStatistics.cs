@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Gooner.Core.Localization;
 using Gooner.Core.Scoring;
 using Gooner.Core.Sessions;
 
@@ -21,17 +22,17 @@ public sealed class LongTermStatistics
         ArgumentNullException.ThrowIfNull(history);
         ArgumentNullException.ThrowIfNull(allTimeBests);
         _history = history;
-        SessionsPlayed = $"Sessions played: {history.Count}";
+        SessionsPlayed = L10n.F("Sessions played: {0}", history.Count);
         BestLines = ScoreTracker.PrMetrics.ToDictionary(metric => metric, metric =>
         {
             var formatted = allTimeBests.TryGetValue(metric, out var value) ? ScoreTracker.FormatMetricValue(metric, value) : StatisticsReport.NotAvailable;
-            return $"Best {ScoreTracker.PrMetricLabels[metric]}: {formatted}";
+            return L10n.F("Best {0}: {1}", L10n.T(ScoreTracker.PrMetricLabels[metric]), formatted);
         });
     }
 
-    // The choices of the chart's metric selector, the first one shown first.
-    public static IReadOnlyList<ChartMetric> Metrics { get; } =
-        [.. ScoreTracker.PrMetrics.Select(m => new ChartMetric(m, ScoreTracker.PrMetricLabels[m], ScoreTracker.PrMetricUnits[m]))];
+    // The choices of the chart's metric selector, the first one shown first, in the language in use.
+    public static IReadOnlyList<ChartMetric> Metrics =>
+        [.. ScoreTracker.PrMetrics.Select(m => new ChartMetric(m, L10n.T(ScoreTracker.PrMetricLabels[m]), L10n.T(ScoreTracker.PrMetricUnits[m])))];
 
     public string SessionsPlayed { get; }
 

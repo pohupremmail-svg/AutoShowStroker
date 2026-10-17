@@ -1,4 +1,5 @@
 using Gooner.Core.Formatting;
+using Gooner.Core.Localization;
 using Gooner.Core.Scoring;
 using Gooner.Core.Settings;
 using Gooner.Core.Timing;
@@ -101,11 +102,11 @@ public sealed class SessionHud : ISettingsOwner
             return;
         }
         var (metric, current, best) = status;
-        var label = ScoreTracker.PrMetricLabels[metric];
+        var label = L10n.T(ScoreTracker.PrMetricLabels[metric]);
         var currentText = ScoreTracker.FormatMetricValue(metric, current);
         RecordChaseText = current >= best
-            ? $"\U0001f3c6 New {label} Record! {currentText}"
-            : $"\U0001f3c6 Closing in on your {label} record: {currentText} / {ScoreTracker.FormatMetricValue(metric, best)}";
+            ? L10n.F("\U0001f3c6 New {0} Record! {1}", label, currentText)
+            : L10n.F("\U0001f3c6 Closing in on your {0} record: {1} / {2}", label, currentText, ScoreTracker.FormatMetricValue(metric, best));
     }
 
     public void RefreshClock()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Gooner.Core.App;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Gooner.Core.Localization;
 using Gooner.Core.Media;
 using Gooner.Core.Panels;
 using Gooner.Core.Sessions;
@@ -26,17 +27,22 @@ public partial class Main
         var app = _app!;
         var cards = new List<StartCard>
         {
-            new("Start Session", "play", () => "Pick your folders, lean back", () => OpenFolder(), Primary: true),
-            new("Saved Sessions", "saved", SavedCount, ShowSavedSessions),
-            new("Achievements", "trophy",
-                () => $"{app.Achievements.UnlockedIds.Count} of {Gooner.Core.Achievements.AchievementCatalogue.All.Count} unlocked", ShowAchievements),
-            new("Statistics", "stats", () => "Every session so far", ShowLongTermStatistics),
-            new("Settings", "settings", () => "Rhythm, climax, callouts, look", ShowSettings),
-            new("Exit", "power", () => null, () => Quit(0)),
+            new(L10n.T("Start Session"), "play", () => L10n.T("Pick your folders, lean back"), () => OpenFolder(), Primary: true),
+            new(L10n.T("Saved Sessions"), "saved", SavedCount, ShowSavedSessions),
+            new(L10n.T("Achievements"), "trophy",
+                () => L10n.F("{0} of {1} unlocked", app.Achievements.UnlockedIds.Count, Gooner.Core.Achievements.AchievementCatalogue.All.Count), ShowAchievements),
+            new(L10n.T("Statistics"), "stats", () => L10n.T("Every session so far"), ShowLongTermStatistics),
+            new(L10n.T("Settings"), "settings", () => L10n.T("Rhythm, climax, callouts, look"), ShowSettings),
+            new(L10n.T("Exit"), "power", () => null, () => Quit(0)),
         };
         // Under the name, a line in the voice the app will speak in - a new one when that changes.
         var start = new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version, () => app.Callouts?.TitleLine());
-        if (app.Callouts is { } callouts) callouts.VoiceChanged += start.RefreshLine;
+        if (app.Callouts is { } callouts)
+        {
+            callouts.VoiceChanged += start.RefreshLine;
+            // A start screen built again in another language must not be asked for a line once gone.
+            start.TreeExiting += () => callouts.VoiceChanged -= start.RefreshLine;
+        }
         return start;
     }
 
@@ -44,34 +50,34 @@ public partial class Main
     {
         if (_app!.DataStore is not { } store) return null;
         var saved = new SavedSessionsShelf(store, (_, _) => false).Rows.Count;
-        return saved switch { 0 => "None saved yet", 1 => "1 saved", _ => $"{saved} saved" };
+        return saved == 0 ? L10n.T("None saved yet") : L10n.F("{0} saved", saved);
     }
 
     // The rest of the old menus, in their order. Quitting is the start screen's Exit card and the
     // last entry of the dock's menu.
     private List<(string Label, Action Pressed)> MenuEntries() =>
     [
-        ("What's New", () => ShowWhatsNew(_app!.ChangelogEntries)),
-        ("Guide", () => _panels.Show(new GuidePanel())),
-        ("Privacy & Data", ShowPrivacy),
-        ("Third-Party Licenses", () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
-        ("Check for Updates", CheckForUpdates),
-        ("Join Discord", () => ExternalUrl.Open(GoonerApp.DiscordInviteUrl, url => OS.ShellOpen(url))),
+        (L10n.T("What's New"), () => ShowWhatsNew(_app!.ChangelogEntries)),
+        (L10n.T("Guide"), () => _panels.Show(new GuidePanel())),
+        (L10n.T("Privacy & Data"), ShowPrivacy),
+        (L10n.T("Third-Party Licenses"), () => _panels.Show(new LicensesPanel(AppPaths.Licenses))),
+        (L10n.T("Check for Updates"), CheckForUpdates),
+        (L10n.T("Join Discord"), () => ExternalUrl.Open(GoonerApp.DiscordInviteUrl, url => OS.ShellOpen(url))),
     ];
 
     // The dock's menu: everything the start screen offers, without leaving the session.
     private void ShowMenu()
     {
-        var panel = new AppPanel("Menu", new Vector2(360, 0));
+        var panel = new AppPanel(L10n.T("Menu"), new Vector2(360, 0));
         var entries = new List<(string Label, Action Pressed)>
         {
-            ("Settings", ShowSettings),
-            ("Saved Sessions", ShowSavedSessions),
-            ("Long-term Statistics", ShowLongTermStatistics),
-            ("Achievements", ShowAchievements),
+            (L10n.T("Settings"), ShowSettings),
+            (L10n.T("Saved Sessions"), ShowSavedSessions),
+            (L10n.T("Long-term Statistics"), ShowLongTermStatistics),
+            (L10n.T("Achievements"), ShowAchievements),
         };
         entries.AddRange(MenuEntries());
-        entries.Add(("Quit", () => Quit(0)));
+        entries.Add((L10n.T("Quit"), () => Quit(0)));
         foreach (var (label, pressed) in entries)
         {
             var button = new Button { Text = label, FocusMode = Control.FocusModeEnum.None, Alignment = HorizontalAlignment.Left };
@@ -147,10 +153,10 @@ public partial class Main
     private AppPanel BuildQuestion()
     {
         var app = _app!;
-        var panel = new AppPanel("How did that end?", new Vector2(520, 0));
-        panel.AddText("Before the recap - what actually happened?");
-        panel.AddText("Without an answer this session counts as one that never finished, which drags every average you are tracking.", 13, wrap: true);
-        foreach (var (label, answer) in new (string, string?)[] { ("I Came", "came"), ("I Ruined It", "ruined"), ("I Stopped", "stopped"), ("Rather not say", null) })
+        var panel = new AppPanel(L10n.T("How did that end?"), new Vector2(520, 0));
+        panel.AddText(L10n.T("Before the recap - what actually happened?"));
+        panel.AddText(L10n.T("Without an answer this session counts as one that never finished, which drags every average you are tracking."), 13, wrap: true);
+        foreach (var (label, answer) in new (string, string?)[] { (L10n.T("I Came"), "came"), (L10n.T("I Ruined It"), "ruined"), (L10n.T("I Stopped"), "stopped"), (L10n.T("Rather not say"), null) })
             panel.AddButton(label, () => app.AnswerHowItEnded(answer));
         panel.OnReject = () => app.AnswerHowItEnded(null);
         return panel;
@@ -202,7 +208,7 @@ public partial class Main
 
     // The question first, defaulting to No; then the one request, and what came of it.
     private void CheckForUpdates() =>
-        Confirm.Ask(_panels, "Check for Updates?", UpdateTexts.Consent, RunUpdateCheck);
+        Confirm.Ask(_panels, L10n.T("Check for Updates?"), UpdateTexts.Consent, RunUpdateCheck);
 
     private async void RunUpdateCheck()
     {
@@ -211,21 +217,21 @@ public partial class Main
         switch (result)
         {
             case UpdateAvailable available:
-                var panel = new AppPanel("Update Available", new Vector2(460, 0));
+                var panel = new AppPanel(L10n.T("Update Available"), new Vector2(460, 0));
                 panel.AddText(UpdateTexts.Available(available.Tag, version), 14, wrap: true);
-                panel.AddButton("Open Releases Page", () =>
+                panel.AddButton(L10n.T("Open Releases Page"), () =>
                 {
                     panel.Close();
                     ExternalUrl.Open(available.Url, url => OS.ShellOpen(url));
                 }, primary: true);
-                panel.AddButton("Close", panel.Close);
+                panel.AddButton(L10n.T("Close"), panel.Close);
                 _panels.Show(panel);
                 break;
             case UpToDate:
-                Confirm.Tell(_panels, "Up to Date", UpdateTexts.UpToDate(version));
+                Confirm.Tell(_panels, L10n.T("Up to Date"), UpdateTexts.UpToDate(version));
                 break;
             case CheckFailed failed:
-                Confirm.Tell(_panels, "Update Check Failed", UpdateTexts.Failed(failed.Message));
+                Confirm.Tell(_panels, L10n.T("Update Check Failed"), UpdateTexts.Failed(failed.Message));
                 break;
         }
     }

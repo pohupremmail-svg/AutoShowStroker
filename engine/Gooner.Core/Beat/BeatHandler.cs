@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Gooner.Core.Climax;
 using Gooner.Core.Data;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Randomness;
 using Gooner.Core.Sessions;
@@ -864,11 +865,11 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
     private static void ValidatePatternSteps(IReadOnlyCollection<int> steps)
     {
         if (steps.Count == 0)
-            throw new ArgumentException("A pattern needs at least one step.");
+            throw new ArgumentException(L10n.T("A pattern needs at least one step."));
         if (!steps.All(v => Math.Abs(v) is >= 1 and <= 4))
-            throw new ArgumentException("Every step's weight must have a magnitude between 1 and 4.");
+            throw new ArgumentException(L10n.T("Every step's weight must have a magnitude between 1 and 4."));
         if (!steps.Any(v => v > 0))
-            throw new ArgumentException("A pattern needs at least one audible step.");
+            throw new ArgumentException(L10n.T("A pattern needs at least one audible step."));
     }
 
     public void AddOrUpdateCustomPattern(string? name, IReadOnlyList<int> steps)
@@ -876,9 +877,9 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
         ArgumentNullException.ThrowIfNull(steps);
         name = name?.Trim() ?? "";
         if (name.Length == 0)
-            throw new ArgumentException("Pattern name must not be empty.");
+            throw new ArgumentException(L10n.T("Pattern name must not be empty."));
         if (BeatPatternsMap.ContainsKey(name))
-            throw new ArgumentException($"'{name}' collides with a built-in pattern name.");
+            throw new ArgumentException(L10n.F("'{0}' collides with a built-in pattern name.", name));
         ValidatePatternSteps(steps);
 
         AppLog.Info(Log, "Custom pattern {0} saved with {1} steps", PyJson.Quote(name), steps.Count);

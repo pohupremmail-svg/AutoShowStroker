@@ -6,6 +6,7 @@ using Gooner.Core.Climax;
 using Gooner.Core.Data;
 using Gooner.Core.Devices;
 using Gooner.Core.Formatting;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 using Gooner.Core.Migration;
@@ -27,6 +28,9 @@ public sealed record GoonerAppOptions
 
     // res/callouts; null for a session nobody talks in.
     public string? CalloutDir { get; init; }
+
+    // res/locales, the translations of the app's own words; null for English alone.
+    public string? LocaleDir { get; init; }
 
     // One stream of dice for every handler, so a seed replays a whole session.
     public IRandomSource? Random { get; init; }
@@ -71,7 +75,7 @@ public sealed class GoonerApp : ISettingsOwner
     // its own. Long, because the answer is the point; capped, so it cannot sit there forever.
     public const int DeniedAnswerTimeoutMs = 30000;
 
-    public const string EdgeButtonDefaultText = "I reached my Edge";
+    public static string EdgeButtonDefaultText => L10n.T("I reached my Edge");
 
     // Socials > Join Discord.
     public const string DiscordInviteUrl = "https://discord.gg/qqkcxvq37Z";
@@ -109,6 +113,9 @@ public sealed class GoonerApp : ISettingsOwner
         AppLog.Configure(DiagnosticLog, _data?.BaseDir, DiagnosticLogLevel);
         AppLog.Info(Log, "GoonerApp {0} starting", _version);
         options.Migration?.WriteToLog();
+        // Before anything is built that words something.
+        UiLanguage = new UiLanguage(_settings, options.LocaleDir);
+        UiLanguage.Apply();
         ShowStartupSplash = ReadBool("show_startup_splash");
         AskForOutcome = ReadBool("ask_for_outcome");
 
@@ -158,6 +165,7 @@ public sealed class GoonerApp : ISettingsOwner
     public ClimaxBanner Banner { get; }
     public Look Look { get; }
     public WindowState Window { get; }
+    public UiLanguage UiLanguage { get; }
     public IntifacePlugin? Intiface { get; }
     public ClockTimer DeniedStopTimer { get; }
     public ClockTimer EdgeCooldownTimer { get; }
@@ -174,12 +182,12 @@ public sealed class GoonerApp : ISettingsOwner
     public bool IsRunning { get; private set; }
     public bool IsMuted { get; private set; }
 
-    public string LoadButtonText => IsRunning ? "Change Gooning Folder." : "Set Gooning Folder and Start.";
+    public string LoadButtonText => IsRunning ? L10n.T("Change Gooning Folder.") : L10n.T("Set Gooning Folder and Start.");
 
     public bool EdgeButtonVisible { get; private set; } = true;
     public int EdgeCooldownLeft { get; private set; }
     public bool EdgeButtonEnabled => IsRunning && EdgeCooldownLeft <= 0;
-    public string EdgeButtonText => EdgeCooldownLeft > 0 ? $"Edge ({EdgeCooldownLeft}s)" : EdgeButtonDefaultText;
+    public string EdgeButtonText => EdgeCooldownLeft > 0 ? L10n.F("Edge ({0}s)", EdgeCooldownLeft) : EdgeButtonDefaultText;
 
     // The row of answers under the banner: "climax" or "fake" while it is up, null otherwise. The
     // same three answers at both, identically - a fake only works while it is indistinguishable.
@@ -420,7 +428,7 @@ public sealed class GoonerApp : ISettingsOwner
         AppLog.Info(Log, "Playlist loaded: {0} files", files.Count);
         if (files.Count == 0)
         {
-            Player.ShowMessage("No supported files found.");
+            Player.ShowMessage(L10n.T("No supported files found."));
             Stop();
             return;
         }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Engine.Ui;
 using Godot;
 
@@ -11,12 +12,12 @@ namespace Gooner.Engine.Panels;
 public partial class WhatsNewPanel : AppPanel
 {
     public WhatsNewPanel(IEnumerable<ChangelogEntry> entries)
-        : base("What's new", new Vector2(520, 480), scrolls: true)
+        : base(L10n.T("What's new"), new Vector2(520, 480), scrolls: true)
     {
         Body.AddThemeConstantOverride("separation", 14);
         foreach (var entry in entries.Reverse())
             Body.AddChild(Card(entry));
-        AddButton("Got it", Close, primary: true);
+        AddButton(L10n.T("Got it"), Close, primary: true);
     }
 
     // Qt drew the card's left edge in the accent and the rest in the secondary colour. A StyleBoxFlat
@@ -47,7 +48,7 @@ public partial class WhatsNewPanel : AppPanel
         badgeBox.ContentMarginLeft = badgeBox.ContentMarginRight = 10;
         badgeBox.ContentMarginTop = badgeBox.ContentMarginBottom = 3;
         badge.AddThemeStyleboxOverride("panel", badgeBox);
-        var version = new Label { Text = $"Version {entry.Version}" };
+        var version = new Label { Text = L10n.F("Version {0}", entry.Version) };
         version.AddThemeFontOverride("font", UiTheme.Bold);
         version.AddThemeFontSizeOverride("font_size", 12);
         version.AddThemeColorOverride("font_color", UiTheme.Of(Palette.Background));
@@ -60,7 +61,8 @@ public partial class WhatsNewPanel : AppPanel
             BbcodeEnabled = true,
             FitContent = true,
             ScrollActive = false,
-            Text = RichText.ToBbcode(entry.Html),
+            // Each entry translated as a whole: it is written in the app's voice, not sentence by sentence.
+            Text = RichText.ToBbcode(L10n.T(entry.Html)),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
         };
         text.AddThemeFontSizeOverride("normal_font_size", 13);

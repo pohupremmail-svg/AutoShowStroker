@@ -1,5 +1,6 @@
 using System;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -10,7 +11,7 @@ namespace Gooner.Engine.Panels;
 // delete - with the questions it asked in message boxes asked as panels.
 public partial class SavedSessionsPanel : AppPanel
 {
-    private const string Filter = "*.json ; GoonerApp session";
+    private static string Filter => "*.json ; " + L10n.T("GoonerApp session");
 
     private readonly SavedSessionsShelf _shelf;
     private readonly PanelHost _host;
@@ -24,7 +25,7 @@ public partial class SavedSessionsPanel : AppPanel
     private bool _withPaths;
 
     public SavedSessionsPanel(SavedSessionsShelf shelf, PanelHost host)
-        : base("Saved Sessions", new Vector2(640, 460))
+        : base(L10n.T("Saved Sessions"), new Vector2(640, 460))
     {
         _shelf = shelf;
         _host = host;
@@ -41,21 +42,21 @@ public partial class SavedSessionsPanel : AppPanel
         _empty = Widgets.Text(SavedSessionsShelf.EmptyText, 14, Palette.Text, wrap: true);
         Body.AddChild(_empty);
 
-        _replay = AddButton("Replay", Replay, primary: true);
-        _export = AddButton("Export...", AskAboutPaths);
-        _export.TooltipText = "Write this session to a file you can pass on";
-        var import = AddButton("Import...", () => _importPicker!.PopupCentered(new Vector2I(900, 600)));
-        import.TooltipText = "Put a session file somebody sent you on the shelf";
-        _delete = AddButton("Delete", AskToDelete);
+        _replay = AddButton(L10n.T("Replay"), Replay, primary: true);
+        _export = AddButton(L10n.T("Export..."), AskAboutPaths);
+        _export.TooltipText = L10n.T("Write this session to a file you can pass on");
+        var import = AddButton(L10n.T("Import..."), () => _importPicker!.PopupCentered(new Vector2I(900, 600)));
+        import.TooltipText = L10n.T("Put a session file somebody sent you on the shelf");
+        _delete = AddButton(L10n.T("Delete"), AskToDelete);
         var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         Buttons.AddChild(spacer);
         Buttons.Alignment = BoxContainer.AlignmentMode.Begin;
-        AddButton("Close", Close);
+        AddButton(L10n.T("Close"), Close);
 
-        _exportPicker = Picker(FileDialog.FileModeEnum.SaveFile, "Export Session");
+        _exportPicker = Picker(FileDialog.FileModeEnum.SaveFile, L10n.T("Export Session"));
         _exportPicker.CurrentFile = "session.json";
         _exportPicker.FileSelected += Export;
-        _importPicker = Picker(FileDialog.FileModeEnum.OpenFile, "Import Session");
+        _importPicker = Picker(FileDialog.FileModeEnum.OpenFile, L10n.T("Import Session"));
         _importPicker.FileSelected += Import;
         Refresh();
     }
@@ -94,7 +95,7 @@ public partial class SavedSessionsPanel : AppPanel
     {
         if (_shelf.PlanReplay() is not { } plan) return;
         if (plan.MustAsk)
-            Confirm.Ask(_host, "Some of the files are gone", SavedSessionsShelf.MissingFilesQuestion(plan), () => Start(true), noLabel: "Cancel");
+            Confirm.Ask(_host, L10n.T("Some of the files are gone"), SavedSessionsShelf.MissingFilesQuestion(plan), () => Start(true), noLabel: L10n.T("Cancel"));
         else
             Start(plan.IgnorePaths);
     }
@@ -103,8 +104,8 @@ public partial class SavedSessionsPanel : AppPanel
     {
         if (!_shelf.Replay(ignorePaths))
         {
-            Confirm.Tell(_host, "Nothing to play it with",
-                "This session has to be replayed against your own collection, and none is loaded. Load a folder first, then replay it.");
+            Confirm.Tell(_host, L10n.T("Nothing to play it with"),
+                L10n.T("This session has to be replayed against your own collection, and none is loaded. Load a folder first, then replay it."));
             return;
         }
         // Out of the way, so the session is what is on screen.
@@ -119,8 +120,8 @@ public partial class SavedSessionsPanel : AppPanel
     private void AskAboutPaths()
     {
         if (!_shelf.CanAct) return;
-        var question = new AppPanel("Include the media paths?", new Vector2(520, 0));
-        question.AddText("Should this export carry the paths of the media it showed?", 15, wrap: true);
+        var question = new AppPanel(L10n.T("Include the media paths?"), new Vector2(520, 0));
+        question.AddText(L10n.T("Should this export carry the paths of the media it showed?"), 15, wrap: true);
         question.AddText(SavedSessionsShelf.PathsWarning, 13, wrap: true);
         void Choose(bool withPaths)
         {
@@ -128,9 +129,9 @@ public partial class SavedSessionsPanel : AppPanel
             _withPaths = withPaths;
             _exportPicker.PopupCentered(new Vector2I(900, 600));
         }
-        question.AddButton("Include them", () => Choose(true));
-        question.AddButton("Cancel", question.Close);
-        question.AddButton("Leave them out", () => Choose(false), primary: true);
+        question.AddButton(L10n.T("Include them"), () => Choose(true));
+        question.AddButton(L10n.T("Cancel"), question.Close);
+        question.AddButton(L10n.T("Leave them out"), () => Choose(false), primary: true);
         _host.Show(question);
     }
 
@@ -138,10 +139,10 @@ public partial class SavedSessionsPanel : AppPanel
     {
         if (!_shelf.Export(target, _withPaths))
         {
-            Confirm.Tell(_host, "Could not export", "That session could not be written. Try somewhere else.");
+            Confirm.Tell(_host, L10n.T("Could not export"), L10n.T("That session could not be written. Try somewhere else."));
             return;
         }
-        Confirm.Tell(_host, "Session exported", "Exported. Whoever opens it can put it on their own shelf with Import.");
+        Confirm.Tell(_host, L10n.T("Session exported"), L10n.T("Exported. Whoever opens it can put it on their own shelf with Import."));
     }
 
     // --- importing ---
@@ -150,7 +151,7 @@ public partial class SavedSessionsPanel : AppPanel
     {
         if (_shelf.Import(source) is { } problem)
         {
-            Confirm.Tell(_host, "Could not import", problem);
+            Confirm.Tell(_host, L10n.T("Could not import"), problem);
             return;
         }
         Refresh();
@@ -161,7 +162,7 @@ public partial class SavedSessionsPanel : AppPanel
     private void AskToDelete()
     {
         if (!_shelf.CanAct) return;
-        Confirm.Ask(_host, "Delete this session?", "This removes the saved session for good. Exported copies are not touched.", () =>
+        Confirm.Ask(_host, L10n.T("Delete this session?"), L10n.T("This removes the saved session for good. Exported copies are not touched."), () =>
         {
             _shelf.DeleteSelected();
             Refresh();

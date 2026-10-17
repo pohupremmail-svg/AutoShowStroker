@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Media;
 using Gooner.Core.Panels;
 using Gooner.Core.Randomness;
@@ -39,7 +40,7 @@ public partial class FolderPickerPanel : AppPanel
     private int _builtGeneration = -1;
 
     public FolderPickerPanel(MediaFolderPicker picker, Action<IReadOnlyList<string>> start, IRandomSource random, ClockScheduler scheduler)
-        : base("Select Gooning Folders", new Vector2(900, 650))
+        : base(L10n.T("Select Gooning Folders"), new Vector2(900, 650))
     {
         _picker = picker;
         _start = start;
@@ -51,7 +52,7 @@ public partial class FolderPickerPanel : AppPanel
             return grabber;
         }, scheduler);
 
-        Body.AddChild(new Label { Text = "Folders" });
+        Body.AddChild(new Label { Text = L10n.T("Folders") });
         _folders = new ItemList { CustomMinimumSize = new Vector2(0, 110) };
         _folders.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6, 6));
         _folders.ItemSelected += _ => _remove!.Disabled = false;
@@ -62,16 +63,16 @@ public partial class FolderPickerPanel : AppPanel
             FileMode = FileDialog.FileModeEnum.OpenDir,
             Access = FileDialog.AccessEnum.Filesystem,
             UseNativeDialog = true,
-            Title = "Add Gooning Folder",
+            Title = L10n.T("Add Gooning Folder"),
         };
         chooser.DirSelected += folder =>
         {
             if (_picker.Add(folder)) Refresh();
         };
         AddChild(chooser);
-        var add = new Button { Text = "Add Folder...", FocusMode = FocusModeEnum.None };
+        var add = new Button { Text = L10n.T("Add Folder..."), FocusMode = FocusModeEnum.None };
         add.Pressed += () => chooser.PopupCentered(new Vector2I(900, 600));
-        _remove = new Button { Text = "Remove Selected", Disabled = true, FocusMode = FocusModeEnum.None };
+        _remove = new Button { Text = L10n.T("Remove Selected"), Disabled = true, FocusMode = FocusModeEnum.None };
         _remove.Pressed += () =>
         {
             var selected = _folders.GetSelectedItems();
@@ -83,9 +84,9 @@ public partial class FolderPickerPanel : AppPanel
         folderButtons.AddChild(_remove);
         Body.AddChild(folderButtons);
 
-        Body.AddChild(new Label { Text = "Preview" });
+        Body.AddChild(new Label { Text = L10n.T("Preview") });
         // Never remembered: a still, not a live decode, is what every opening starts with.
-        _animate = new CheckBox { Text = "Animate video clips (5s loop)", FocusMode = FocusModeEnum.None };
+        _animate = new CheckBox { Text = L10n.T("Animate video clips (5s loop)"), FocusMode = FocusModeEnum.None };
         _animate.Toggled += _ => BuildCells(force: true);
         Body.AddChild(_animate);
         _scroll = new ScrollContainer
@@ -108,8 +109,8 @@ public partial class FolderPickerPanel : AppPanel
         AddChild(_resize);
         _scroll.Resized += () => _resize.Start();
 
-        AddButton("Cancel", Close);
-        _startButton = AddButton("Start", () =>
+        AddButton(L10n.T("Cancel"), Close);
+        _startButton = AddButton(L10n.T("Start"), () =>
         {
             var files = _picker.Start();
             Close();

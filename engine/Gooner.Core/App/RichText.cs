@@ -14,6 +14,17 @@ public static partial class RichText
     [GeneratedRegex("<(/?)([a-zA-Z0-9]+)[^>]*>")]
     private static partial Regex Tag();
 
+    [GeneratedRegex(@"<(h3|p|ul|ol)>.*?</\1>", RegexOptions.Singleline)]
+    private static partial Regex Block();
+
+    // A page cut into its blocks - every heading, paragraph and list, in order: what the Guide is
+    // translated by. The Guide's pages are nothing but blocks, which GuideTests holds them to.
+    public static IReadOnlyList<string> Blocks(string html)
+    {
+        ArgumentNullException.ThrowIfNull(html);
+        return [.. Block().Matches(html).Select(match => match.Value)];
+    }
+
     public static string ToBbcode(string html, int headingSize = 16)
     {
         ArgumentNullException.ThrowIfNull(html);

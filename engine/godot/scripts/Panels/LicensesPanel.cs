@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -14,7 +15,7 @@ namespace Gooner.Engine.Panels;
 public partial class LicensesPanel : AppPanel
 {
     public LicensesPanel(string? shelf, string? show = null)
-        : base("Third-Party Licenses", new Vector2(760, 620))
+        : base(L10n.T("Third-Party Licenses"), new Vector2(760, 620))
     {
         var entries = new List<(string Name, Func<string> Text)>();
         if (shelf is not null)
@@ -41,7 +42,7 @@ public partial class LicensesPanel : AppPanel
         var first = Math.Max(0, entries.FindIndex(entry => entry.Name == show));
         chooser.Select(first);
         text.Text = entries[first].Text();
-        AddButton("Close", Close);
+        AddButton(L10n.T("Close"), Close);
     }
 
     // Engine.get_copyright_info and get_license_info, as one page: who wrote each piece built into

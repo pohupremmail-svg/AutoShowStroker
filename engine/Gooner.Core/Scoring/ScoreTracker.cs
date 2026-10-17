@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Gooner.Core.Data;
 using Gooner.Core.Formatting;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Sessions;
 
@@ -32,18 +33,18 @@ public sealed class ScoreTracker : App.IRecordChaseSource
 
     public static readonly IReadOnlyDictionary<string, string> PrMetricLabels = new Dictionary<string, string>
     {
-        ["total_dur_sec"] = "Total Duration",
-        ["total_num_beat"] = "Total Beats",
-        ["average_beat_speed_active"] = "Active Beat Speed",
-        ["fakeout_count"] = "Fakeouts Survived",
+        ["total_dur_sec"] = L10n.N("Total Duration"),
+        ["total_num_beat"] = L10n.N("Total Beats"),
+        ["average_beat_speed_active"] = L10n.N("Active Beat Speed"),
+        ["fakeout_count"] = L10n.N("Fakeouts Survived"),
     };
 
     public static readonly IReadOnlyDictionary<string, string> PrMetricUnits = new Dictionary<string, string>
     {
-        ["total_dur_sec"] = "s",
-        ["total_num_beat"] = "beats",
-        ["average_beat_speed_active"] = "beats/sec",
-        ["fakeout_count"] = "fakeouts",
+        ["total_dur_sec"] = L10n.N("s"),
+        ["total_num_beat"] = L10n.N("beats"),
+        ["average_beat_speed_active"] = L10n.N("beats/sec"),
+        ["fakeout_count"] = L10n.N("fakeouts"),
     };
 
     // Bounded because the long-term statistics render every entry into a table, not because the
@@ -100,7 +101,7 @@ public sealed class ScoreTracker : App.IRecordChaseSource
     public static string FormatMetricValue(string metric, double value) => metric switch
     {
         "total_dur_sec" => Clock.FormatDuration(value),
-        "average_beat_speed_active" => value.ToString("F2", CultureInfo.InvariantCulture) + " beats/sec",
+        "average_beat_speed_active" => L10n.F("{0} beats/sec", value.ToString("F2", CultureInfo.InvariantCulture)),
         // Python prints its int as is; counts are whole numbers here, which print the same.
         _ => value.ToString(CultureInfo.InvariantCulture),
     };

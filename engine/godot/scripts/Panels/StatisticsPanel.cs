@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -13,7 +14,7 @@ namespace Gooner.Engine.Panels;
 public partial class StatisticsPanel : AppPanel
 {
     public StatisticsPanel(StatisticsReport report, Action? openExplorer)
-        : base("Session Statistics", new Vector2(560, 760), scrolls: true)
+        : base(L10n.T("Session Statistics"), new Vector2(560, 760), scrolls: true)
     {
         Body.AddChild(Widgets.Text(report.Title, 24, Palette.Accent, bold: true));
         Body.AddChild(Widgets.Text(report.Conclusion, 14, italic: true, wrap: true));
@@ -36,14 +37,14 @@ public partial class StatisticsPanel : AppPanel
             Body.AddChild(card);
         }
 
-        Body.AddChild(Widgets.Table(["metric", "value"], report.Rows.Select(row => new[] { row.Metric, row.Value }),
+        Body.AddChild(Widgets.Table([L10n.T("metric"), L10n.T("value")], report.Rows.Select(row => new[] { row.Metric, row.Value }),
             [HorizontalAlignment.Left, HorizontalAlignment.Center]));
 
         if (report.HasExplorer && openExplorer is not null)
         {
-            var explorer = AddButton("Session Explorer", openExplorer);
-            explorer.TooltipText = "Scroll back through this session - every rhythm, and what was on screen during it";
+            var explorer = AddButton(L10n.T("Session Explorer"), openExplorer);
+            explorer.TooltipText = L10n.T("Scroll back through this session - every rhythm, and what was on screen during it");
         }
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Close"), Close, primary: true);
     }
 }

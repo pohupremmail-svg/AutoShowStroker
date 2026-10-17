@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 
 namespace Gooner.Core.App;
@@ -19,12 +20,12 @@ namespace Gooner.Core.App;
 // frame would otherwise put a panel up every frame. Every occurrence is still logged.
 public sealed partial class CrashReporter
 {
-    public const string Title = "GoonerApp hit a problem";
+    public static string Title => L10n.T("GoonerApp hit a problem");
 
-    public const string Message =
+    public static string Message => L10n.T(
         "Something went wrong that the app did not expect.\n\n" +
         "It may keep working, or it may close. If you want to report this, the details below have the " +
-        "technical part - copy it into the Discord.";
+        "technical part - copy it into the Discord.");
 
     private const string Log = "crash_handler";
 

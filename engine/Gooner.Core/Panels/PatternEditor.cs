@@ -1,4 +1,5 @@
 using Gooner.Core.Beat;
+using Gooner.Core.Localization;
 
 namespace Gooner.Core.Panels;
 
@@ -38,9 +39,9 @@ public sealed class PatternStep
         }
     }
 
-    public string ButtonText => Muted ? "Pause" : "Beat";
+    public string ButtonText => Muted ? L10n.T("Pause") : L10n.T("Beat");
 
-    public string Tooltip => $"Duration weight {Weight} (1 = longest step, {MaxWeight} = shortest)";
+    public string Tooltip => L10n.F("Duration weight {0} (1 = longest step, {1} = shortest)", Weight, MaxWeight);
 
     // How much of the bar is filled: weight 1, the longest step, draws tallest.
     public double BarRatio => (MaxWeight - Weight) / (double)(MaxWeight - MinWeight);

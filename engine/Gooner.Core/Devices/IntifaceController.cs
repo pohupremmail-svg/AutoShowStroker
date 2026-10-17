@@ -1,3 +1,4 @@
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Settings;
 
@@ -52,7 +53,7 @@ public sealed class IntifaceController : ISettingsOwner, IDeviceTarget
         }
         catch (ArgumentException)
         {
-            Status = "Invalid saved device settings; Intiface disabled";
+            Status = L10n.N("Invalid saved device settings; Intiface disabled");
             AppLog.Warning(Log, "Invalid saved Intiface settings; starting with device output disabled");
         }
     }
@@ -67,7 +68,8 @@ public sealed class IntifaceController : ISettingsOwner, IDeviceTarget
 
     public double MaxPosition { get; private set; } = (double)Defaults["max_position"];
 
-    public string Status { get; private set; } = "Intiface disabled";
+    // In English, as it is logged; the tab translates it where it shows it.
+    public string Status { get; private set; } = L10n.N("Intiface disabled");
 
     public string DeviceName { get; private set; } = "";
 
@@ -93,13 +95,13 @@ public sealed class IntifaceController : ISettingsOwner, IDeviceTarget
             || string.IsNullOrEmpty(uri.Host)
             || uri.Fragment.Length > 0
             || uri.UserInfo.Length > 0)
-            throw new ArgumentException("Enter the WebSocket address Intiface Central shows for its server (it starts with ws:// or wss://).");
+            throw new ArgumentException(L10n.T("Enter the WebSocket address Intiface Central shows for its server (it starts with ws:// or wss://)."));
     }
 
     public static void ValidatePositions(double low, double high)
     {
         if (!(double.IsFinite(low) && double.IsFinite(high) && 0 <= low && low < high && high <= 1))
-            throw new ArgumentException("Stroke positions must satisfy 0% ≤ minimum < maximum ≤ 100%.");
+            throw new ArgumentException(L10n.T("Stroke positions must satisfy 0% ≤ minimum < maximum ≤ 100%."));
     }
 
     // Applies and stores the connection settings. The address only has to be a real one when the
@@ -119,7 +121,7 @@ public sealed class IntifaceController : ISettingsOwner, IDeviceTarget
         _settings?.SetValue(Key("max_position"), MaxPosition);
         if (enabled) EnsureWorker();
         if (_worker is { } worker) worker.Post(() => worker.Configure(enabled, url));
-        else Status = "Intiface disabled";
+        else Status = L10n.N("Intiface disabled");
         StateChanged?.Invoke();
     }
 

@@ -1,4 +1,5 @@
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -9,7 +10,7 @@ namespace Gooner.Engine.Panels;
 public partial class LongTermStatisticsPanel : AppPanel
 {
     public LongTermStatisticsPanel(LongTermStatistics view)
-        : base("Your Long-term Statistics", new Vector2(960, 720))
+        : base(L10n.T("Your Long-term Statistics"), new Vector2(960, 720))
     {
         Body.AddChild(Widgets.Text(view.SessionsPlayed, 13, Palette.Text));
         foreach (var line in view.BestLines.Values)
@@ -26,12 +27,12 @@ public partial class LongTermStatisticsPanel : AppPanel
         }
         selector.ItemSelected += Show;
         var row = new HBoxContainer();
-        row.AddChild(new Label { Text = "Chart metric:" });
+        row.AddChild(new Label { Text = L10n.T("Chart metric:") });
         row.AddChild(selector);
         Body.AddChild(row);
         Body.AddChild(chart);
         Show(0);
 
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Close"), Close, primary: true);
     }
 }

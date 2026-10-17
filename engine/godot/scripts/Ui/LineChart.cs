@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Godot;
 
@@ -66,7 +67,7 @@ public partial class LineChart : Control
         }
         DrawLine(new Vector2(plot.Position.X, plot.End.Y), plot.End, text);
         DrawLine(plot.Position, new Vector2(plot.Position.X, plot.End.Y), text);
-        DrawString(font, new Vector2(plot.Position.X, Size.Y - 8), "Session #", HorizontalAlignment.Center, plot.Size.X, FontSize, text);
+        DrawString(font, new Vector2(plot.Position.X, Size.Y - 8), L10n.T("Session #"), HorizontalAlignment.Center, plot.Size.X, FontSize, text);
         // The y label, turned on its side as pyqtgraph had it.
         DrawSetTransform(new Vector2(14, plot.Position.Y + plot.Size.Y), -Mathf.Pi / 2, Vector2.One);
         DrawString(font, Vector2.Zero, _yLabel, HorizontalAlignment.Center, plot.Size.Y, FontSize, text);

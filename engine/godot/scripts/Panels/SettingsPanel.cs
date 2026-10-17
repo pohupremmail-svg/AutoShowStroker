@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -21,13 +22,14 @@ public partial class SettingsPanel : AppPanel
     private readonly Dictionary<string, CheckBox> _tones = [];
     private readonly Dictionary<string, List<Button>> _choices = [];
     private readonly List<GridContainer> _rhythmGrids = [];
+    private readonly List<Button> _uiLanguages = [];
     private readonly TabContainer _tabs;
     private OptionButton? _language;
     private Label? _toneHint;
 
     // openPatternEditor gets what to do once the editor is closed again: show its patterns.
     public SettingsPanel(SettingsForm form, PanelHost host, Action<Action> openPatternEditor, Action openPhraseFiles)
-        : base("Settings", new Vector2(620, 660))
+        : base(L10n.T("Settings"), new Vector2(620, 660))
     {
         _form = form;
         _host = host;
@@ -47,9 +49,11 @@ public partial class SettingsPanel : AppPanel
             var scroll = new ScrollContainer { Name = tab.Title, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
             scroll.AddChild(margin);
             tabs.AddChild(scroll);
+            // The node keeps the tab's name; what the tab says is its title in the language in use.
+            tabs.SetTabTitle(tabs.GetTabCount() - 1, tab.DisplayTitle);
         }
         Body.AddChild(tabs);
-        var save = AddButton("Save & Close Settings", Save, primary: true);
+        var save = AddButton(L10n.T("Save & Close Settings"), Save, primary: true);
         save.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         Buttons.Alignment = BoxContainer.AlignmentMode.Center;
         Buttons.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -66,12 +70,13 @@ public partial class SettingsPanel : AppPanel
         ToggleRow toggle => Toggle(_form.Toggles[toggle.Name]),
         ChoiceRow choice => Choice(_form.Choices[choice.Name]),
         RhythmsRow => Rhythms(),
-        ManagePatternsRow => Action("Manage Custom Patterns...", () => _openPatternEditor(RefreshRhythms)),
+        ManagePatternsRow => Action(L10n.T("Manage Custom Patterns..."), () => _openPatternEditor(RefreshRhythms)),
         LanguageRow => Language(),
+        UiLanguageRow => UiLanguage(),
         TonesRow => Tones(),
-        ManagePhraseFilesRow => Action("Manage Custom Phrase Files...", _openPhraseFiles),
+        ManagePhraseFilesRow => Action(L10n.T("Manage Custom Phrase Files..."), _openPhraseFiles),
         DeviceRow => new DeviceTab(_form.Device!, _host),
-        ResetRow reset => Action("Reset to defaults", () =>
+        ResetRow reset => Action(L10n.T("Reset to defaults"), () =>
         {
             _form.Reset(reset.Tab);
             Pull();
@@ -162,6 +167,33 @@ public partial class SettingsPanel : AppPanel
         return row;
     }
 
+    // The app's own language: a button per language, each in its own name, the chosen one lit -
+    // drawn like a look choice, but written to the form's own draft of it.
+    private HBoxContainer UiLanguage()
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 4);
+        var group = new ButtonGroup();
+        _uiLanguages.Clear();
+        foreach (var option in _form.UiLanguages)
+        {
+            var button = new Button
+            {
+                Text = option.Label,
+                ToggleMode = true,
+                ButtonGroup = group,
+                FocusMode = FocusModeEnum.None,
+                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            };
+            button.Toggled += on => button.ThemeTypeVariation = on ? "PrimaryButton" : "";
+            button.ButtonPressed = option.Value == _form.UiLanguage;
+            button.Pressed += () => _form.UiLanguage = option.Value;
+            _uiLanguages.Add(button);
+            row.AddChild(button);
+        }
+        return row;
+    }
+
     private GridContainer Rhythms()
     {
         var grid = new GridContainer { Columns = 2 };
@@ -192,7 +224,8 @@ public partial class SettingsPanel : AppPanel
     private OptionButton Language()
     {
         _language = new OptionButton { FocusMode = FocusModeEnum.None };
-        foreach (var lang in _form.Languages) _language.AddItem(lang);
+        // Each under its own name, as the app's own languages are offered.
+        foreach (var lang in _form.Languages) _language.AddItem(Catalogue.NativeName(lang));
         _language.Select(_form.Languages.ToList().IndexOf(_form.Language));
         _language.ItemSelected += index =>
         {
@@ -268,9 +301,9 @@ public partial class SettingsPanel : AppPanel
                 Close();
             return;
         }
-        var refusal = new AppPanel("Can't save these settings", new Vector2(460, 0));
+        var refusal = new AppPanel(L10n.T("Can't save these settings"), new Vector2(460, 0));
         refusal.AddText(_form.ValidationError() ?? "", 14, wrap: true);
-        refusal.AddButton("OK", refusal.Close, primary: true);
+        refusal.AddButton(L10n.T("OK"), refusal.Close, primary: true);
         _host.Show(refusal);
     }
 }

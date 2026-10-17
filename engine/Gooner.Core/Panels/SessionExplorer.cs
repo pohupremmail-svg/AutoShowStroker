@@ -1,5 +1,7 @@
 using System.Globalization;
+using Gooner.Core.Beat;
 using Gooner.Core.Formatting;
+using Gooner.Core.Localization;
 using Gooner.Core.Media;
 using Gooner.Core.Sessions;
 
@@ -25,25 +27,26 @@ public sealed class SessionExplorer
     // until its reveal a few seconds later, so this is the window it was "happening" in.
     public const double FakeWindowSec = 4.0;
 
-    public const string SavedMessage =
+    public static string SavedMessage => L10n.T(
         "Saved under Saved Sessions on the start screen, where it can be played again.\n\n" +
         "It records the paths of the media it showed, so replaying finds them again. Delete saved sessions " +
-        "under Privacy & Data, and leave the paths out when exporting one to somebody else.";
+        "under Privacy & Data, and leave the paths out when exporting one to somebody else.");
 
-    public const string SaveFailedMessage = "This session could not be saved. There may be no room left on the disk.";
+    public static string SaveFailedMessage => L10n.T("This session could not be saved. There may be no room left on the disk.");
 
+    // Translated where they are shown.
     public static IReadOnlyDictionary<string, string> KindLabels { get; } = new Dictionary<string, string>
     {
-        ["beat"] = "Beat",
-        ["pause"] = "Pause",
-        ["finale"] = "Finale",
+        ["beat"] = L10n.N("Beat"),
+        ["pause"] = L10n.N("Pause"),
+        ["finale"] = L10n.N("Finale"),
     };
 
     public static IReadOnlyDictionary<string, string> OutcomeLabels { get; } = new Dictionary<string, string>
     {
-        ["real"] = "Climax",
-        ["ruined"] = "Ruined climax",
-        ["denied"] = "Denied",
+        ["real"] = L10n.N("Climax"),
+        ["ruined"] = L10n.N("Ruined climax"),
+        ["denied"] = L10n.N("Denied"),
     };
 
     private readonly double _start;
@@ -121,24 +124,25 @@ public sealed class SessionExplorer
         var segment = _timeline.Segments.FirstOrDefault(s => s.Start <= moment && moment < s.End)
             ?? (_timeline.Segments.Count > 0 ? _timeline.Segments[^1] : null);
         if (segment is null) return parts[0];
-        parts.Add(KindLabels.GetValueOrDefault(segment.Kind, segment.Kind));
+        parts.Add(KindLabels.TryGetValue(segment.Kind, out var kind) ? L10n.T(kind) : segment.Kind);
         if (segment.Freq is { } freq && freq != 0) parts.Add(freq.ToString("F2", CultureInfo.InvariantCulture) + " Hz");
-        if (!string.IsNullOrEmpty(segment.Pattern)) parts.Add(segment.Pattern);
-        if (_timeline.FakeClimaxes.Any(at => Math.Abs(moment - at) <= FakeWindowSec)) parts.Add("- Fake-out");
+        if (!string.IsNullOrEmpty(segment.Pattern)) parts.Add(BeatPatterns.DisplayName(segment.Pattern));
+        if (_timeline.FakeClimaxes.Any(at => Math.Abs(moment - at) <= FakeWindowSec)) parts.Add(L10n.T("- Fake-out"));
         if (_timeline.ClimaxAt is { } climax && segment.Start <= climax && climax < segment.End)
-            parts.Add($"- {OutcomeLabel(_timeline.ClimaxOutcome)} landed here");
+            parts.Add(L10n.F("- {0} landed here", OutcomeLabel(_timeline.ClimaxOutcome)));
         return string.Join("   ", parts);
     }
 
     private static string OutcomeLabel(string? outcome) =>
-        outcome is null ? "None" : OutcomeLabels.GetValueOrDefault(outcome, outcome);
+        outcome is null ? L10n.T("None") : OutcomeLabels.TryGetValue(outcome, out var label) ? L10n.T(label) : outcome;
 
     private static string HeadingFor(SessionTimeline timeline)
     {
         var duration = Math.Max(0.0, (timeline.EndedAt ?? 0.0) - (timeline.StartedAt ?? 0.0));
-        var parts = new List<string> { $"{timeline.Segments.Count} segments over {Clock.FormatClock(duration)}" };
+        // "1 segments": the Python side's wording, kept - a translation words it so a count of one reads too.
+        var parts = new List<string> { L10n.F("{0} segments over {1}", timeline.Segments.Count, Clock.FormatClock(duration)) };
         if (timeline.FakeClimaxes.Count is var count and > 0)
-            parts.Add($"{count} fake-out{(count > 1 ? "s" : "")} survived");
+            parts.Add(L10n.P(count, "{0} fake-out survived", "{0} fake-outs survived"));
         if (!string.IsNullOrEmpty(timeline.ClimaxOutcome)) parts.Add(OutcomeLabel(timeline.ClimaxOutcome));
         return string.Join("  -  ", parts);
     }

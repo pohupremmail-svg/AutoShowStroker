@@ -4,6 +4,7 @@ using Gooner.Core.Beat;
 using Gooner.Core.Callouts;
 using Gooner.Core.Climax;
 using Gooner.Core.Devices;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 
@@ -143,12 +144,18 @@ public sealed record ChoiceRow(string Name) : SettingsRow;
 public sealed record RhythmsRow : SettingsRow;
 public sealed record ManagePatternsRow : SettingsRow;
 public sealed record LanguageRow : SettingsRow;
+// The language of the app's own words. Not one of its tab's values: resetting the tab leaves it.
+public sealed record UiLanguageRow : SettingsRow;
 public sealed record TonesRow : SettingsRow;
 public sealed record ManagePhraseFilesRow : SettingsRow;
 public sealed record DeviceRow : SettingsRow;
 public sealed record ResetRow(string Tab) : SettingsRow;
 
-public sealed record SettingsTab(string Title, IReadOnlyList<SettingsRow> Rows);
+// The title is the tab's name, which the form and the window find it by; it is shown translated.
+public sealed record SettingsTab(string Title, IReadOnlyList<SettingsRow> Rows)
+{
+    public string DisplayTitle => L10n.T(Title);
+}
 
 // Port of src/SettingsDialog.py without its widgets: every setting as a draft, read from the live
 // objects when the form is made, changed freely, reset per tab, and only applied - to the objects
@@ -163,18 +170,18 @@ public sealed class SettingsForm
 {
     private const string Log = "SettingsDialog";
 
-    // Pairs where the first must not exceed the second, with the label of the refusal. Only the
-    // pause pair would crash (a random draw between them), but every one of these is an inverted,
-    // meaningless range if saved that way.
+    // Pairs where the first must not exceed the second, with the label of the refusal (translated
+    // where the refusal is worded). Only the pause pair would crash (a random draw between them),
+    // but every one of these is an inverted, meaningless range if saved that way.
     public static IReadOnlyList<(string Min, string Max, string Label)> MinMaxPairs { get; } =
     [
-        ("min_dur", "max_dur", "Slideshow duration"),
-        ("min_beat_freq", "max_beat_freq", "Beat frequency"),
-        ("min_beat_dur", "max_beat_dur", "Beat duration"),
-        ("min_pause_dur", "max_pause_dur", "Pause duration"),
-        ("min_ramp_duration", "max_ramp_duration", "Ramp duration"),
-        ("min_climax_after", "max_climax_after", "Climax time"),
-        ("min_fake_climax_delay", "max_fake_climax_delay", "Fake climax reveal delay"),
+        ("min_dur", "max_dur", L10n.N("Slideshow duration")),
+        ("min_beat_freq", "max_beat_freq", L10n.N("Beat frequency")),
+        ("min_beat_dur", "max_beat_dur", L10n.N("Beat duration")),
+        ("min_pause_dur", "max_pause_dur", L10n.N("Pause duration")),
+        ("min_ramp_duration", "max_ramp_duration", L10n.N("Ramp duration")),
+        ("min_climax_after", "max_climax_after", L10n.N("Climax time")),
+        ("min_fake_climax_delay", "max_fake_climax_delay", L10n.N("Fake climax reveal delay")),
     ];
 
     private readonly GoonerApp _app;
@@ -208,86 +215,89 @@ public sealed class SettingsForm
         }
         ChoiceRow LookChoice(string name, string label, string value, Action<string> write)
         {
-            _choices[name] = new ChoiceSetting(name, label, Look.SettingsGroup, Look.Choices[name], (string)Look.Defaults[name], value, write);
+            var options = Look.Choices[name].Select(option => option with { Label = L10n.T(option.Label) }).ToList();
+            _choices[name] = new ChoiceSetting(name, label, Look.SettingsGroup, options, (string)Look.Defaults[name], value, write);
             return new ChoiceRow(name);
         }
 
         const string AppGroup = "GoonerApp";
         var tabs = new List<SettingsTab>
         {
-            new("Playback",
+            new(L10n.N("Playback"),
             [
-                new HeaderRow("Slideshow Timing (Pictures/GIFs)"),
-                Num("min_dur", "Min. duration (s):", PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.1, 60.0, 0.1, () => player.MinDur, v => player.MinDur = v),
-                Num("max_dur", "Max. duration (s):", PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.1, 60.0, 0.1, () => player.MaxDur, v => player.MaxDur = v),
-                Num("video_min_dur", "Video Min. duration (s):", PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.5, 30.0, 0.1, () => player.VideoMinDur, v => player.VideoMinDur = v),
-                new HeaderRow("General Settings"),
-                Num("beat_loudness", "Beat Volume", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.0, 1.0, 0.1, () => beat.BeatLoudness, v => beat.BeatLoudness = v),
-                Num("vid_loudness", "Video Volume", PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.0, 1.0, 0.1, () => player.VidLoudness, v => player.VidLoudness = v),
-                Toggle("show_startup_splash", "Show startup splash animation", AppGroup, GoonerApp.Defaults, app.ShowStartupSplash, v => app.ShowStartupSplash = v),
-                Toggle("show_record_chase", "Show live personal-record chase", SessionHud.SettingsGroup, SessionHud.Defaults, hud.ShowRecordChase, v => hud.ShowRecordChase = v),
-                Toggle("show_session_timer", "Show session timer", SessionHud.SettingsGroup, SessionHud.Defaults, hud.ShowSessionTimer, v => hud.ShowSessionTimer = v),
+                new HeaderRow(L10n.T("App Language")),
+                new UiLanguageRow(),
+                new HeaderRow(L10n.T("Slideshow Timing (Pictures/GIFs)")),
+                Num("min_dur", L10n.T("Min. duration (s):"), PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.1, 60.0, 0.1, () => player.MinDur, v => player.MinDur = v),
+                Num("max_dur", L10n.T("Max. duration (s):"), PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.1, 60.0, 0.1, () => player.MaxDur, v => player.MaxDur = v),
+                Num("video_min_dur", L10n.T("Video Min. duration (s):"), PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.5, 30.0, 0.1, () => player.VideoMinDur, v => player.VideoMinDur = v),
+                new HeaderRow(L10n.T("General Settings")),
+                Num("beat_loudness", L10n.T("Beat Volume"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.0, 1.0, 0.1, () => beat.BeatLoudness, v => beat.BeatLoudness = v),
+                Num("vid_loudness", L10n.T("Video Volume"), PlaylistPlayer.SettingsGroup, PlaylistPlayer.Defaults, false, 0.0, 1.0, 0.1, () => player.VidLoudness, v => player.VidLoudness = v),
+                Toggle("show_startup_splash", L10n.T("Show startup splash animation"), AppGroup, GoonerApp.Defaults, app.ShowStartupSplash, v => app.ShowStartupSplash = v),
+                Toggle("show_record_chase", L10n.T("Show live personal-record chase"), SessionHud.SettingsGroup, SessionHud.Defaults, hud.ShowRecordChase, v => hud.ShowRecordChase = v),
+                Toggle("show_session_timer", L10n.T("Show session timer"), SessionHud.SettingsGroup, SessionHud.Defaults, hud.ShowSessionTimer, v => hud.ShowSessionTimer = v),
                 new ResetRow("Playback"),
             ]),
-            new("Beat & Rhythm",
+            new(L10n.N("Beat & Rhythm"),
             [
-                new HeaderRow("Beat Timing (BeatHandler)"),
-                Num("min_beat_freq", "Beat Min. frequency (Hz):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.1, 20.0, 0.1, () => beat.MinBeatFreq, v => beat.MinBeatFreq = v),
-                Num("max_beat_freq", "Beat Max. frequency (Hz):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.1, 20.0, 0.1, () => beat.MaxBeatFreq, v => beat.MaxBeatFreq = v),
-                Num("min_beat_dur", "Beat Min. duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 1.0, 120.0, 1.0, () => beat.MinBeatDur, v => beat.MinBeatDur = v),
-                Num("max_beat_dur", "Beat Max. duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 1.0, 120.0, 1.0, () => beat.MaxBeatDur, v => beat.MaxBeatDur = v),
-                Num("min_pause_dur", "Pause Min. duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 1, 180, 1, () => beat.MinPauseDur, v => beat.MinPauseDur = (int)v),
-                Num("max_pause_dur", "Pause Max. duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 1, 180, 1, () => beat.MaxPauseDur, v => beat.MaxPauseDur = (int)v),
-                Num("pause_chance", "Pause chance (per beat change)", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.001, 1, 0.001, () => beat.PauseChance, v => beat.PauseChance = v),
-                new HeaderRow("Edge Relief"),
-                Toggle("edge_relief_active", "\"I reached my Edge\" button active", BeatHandler.SettingsGroup, BeatHandler.Defaults, beat.EdgeReliefActive, v => beat.EdgeReliefActive = v,
-                    "Press E during a session for a pause now and a gentler rhythm behind it. The climax waits out the break rather than being paid for with it."),
-                Num("edge_pause_dur", "Edge pause duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 5, 300, 5, () => beat.EdgePauseDur, v => beat.EdgePauseDur = (int)v),
-                Num("edge_cooldown_sec", "Edge cooldown (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 0, 900, 10, () => beat.EdgeCooldownSec, v => beat.EdgeCooldownSec = (int)v),
-                new HeaderRow("Difficulty Ramping"),
-                Toggle("ramping_active", "Difficulty ramping active", BeatHandler.SettingsGroup, BeatHandler.Defaults, beat.RampingActive, v => beat.RampingActive = v),
-                Num("min_ramp_duration", "Ramp Min. duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 10.0, 7200.0, 10.0, () => beat.MinRampDuration, v => beat.MinRampDuration = v),
-                Num("max_ramp_duration", "Ramp Max. duration (s):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 10.0, 7200.0, 10.0, () => beat.MaxRampDuration, v => beat.MaxRampDuration = v),
-                Num("ramp_window_width", "Ramp window width (0-1):", BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.05, 1.0, 0.05, () => beat.RampWindowWidth, v => beat.RampWindowWidth = v),
-                new HeaderRow("Active Rhythms"),
+                new HeaderRow(L10n.T("Beat Timing (BeatHandler)")),
+                Num("min_beat_freq", L10n.T("Beat Min. frequency (Hz):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.1, 20.0, 0.1, () => beat.MinBeatFreq, v => beat.MinBeatFreq = v),
+                Num("max_beat_freq", L10n.T("Beat Max. frequency (Hz):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.1, 20.0, 0.1, () => beat.MaxBeatFreq, v => beat.MaxBeatFreq = v),
+                Num("min_beat_dur", L10n.T("Beat Min. duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 1.0, 120.0, 1.0, () => beat.MinBeatDur, v => beat.MinBeatDur = v),
+                Num("max_beat_dur", L10n.T("Beat Max. duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 1.0, 120.0, 1.0, () => beat.MaxBeatDur, v => beat.MaxBeatDur = v),
+                Num("min_pause_dur", L10n.T("Pause Min. duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 1, 180, 1, () => beat.MinPauseDur, v => beat.MinPauseDur = (int)v),
+                Num("max_pause_dur", L10n.T("Pause Max. duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 1, 180, 1, () => beat.MaxPauseDur, v => beat.MaxPauseDur = (int)v),
+                Num("pause_chance", L10n.T("Pause chance (per beat change)"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.001, 1, 0.001, () => beat.PauseChance, v => beat.PauseChance = v),
+                new HeaderRow(L10n.T("Edge Relief")),
+                Toggle("edge_relief_active", L10n.T("\"I reached my Edge\" button active"), BeatHandler.SettingsGroup, BeatHandler.Defaults, beat.EdgeReliefActive, v => beat.EdgeReliefActive = v,
+                    L10n.T("Press E during a session for a pause now and a gentler rhythm behind it. The climax waits out the break rather than being paid for with it.")),
+                Num("edge_pause_dur", L10n.T("Edge pause duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 5, 300, 5, () => beat.EdgePauseDur, v => beat.EdgePauseDur = (int)v),
+                Num("edge_cooldown_sec", L10n.T("Edge cooldown (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, true, 0, 900, 10, () => beat.EdgeCooldownSec, v => beat.EdgeCooldownSec = (int)v),
+                new HeaderRow(L10n.T("Difficulty Ramping")),
+                Toggle("ramping_active", L10n.T("Difficulty ramping active"), BeatHandler.SettingsGroup, BeatHandler.Defaults, beat.RampingActive, v => beat.RampingActive = v),
+                Num("min_ramp_duration", L10n.T("Ramp Min. duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 10.0, 7200.0, 10.0, () => beat.MinRampDuration, v => beat.MinRampDuration = v),
+                Num("max_ramp_duration", L10n.T("Ramp Max. duration (s):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 10.0, 7200.0, 10.0, () => beat.MaxRampDuration, v => beat.MaxRampDuration = v),
+                Num("ramp_window_width", L10n.T("Ramp window width (0-1):"), BeatHandler.SettingsGroup, BeatHandler.Defaults, false, 0.05, 1.0, 0.05, () => beat.RampWindowWidth, v => beat.RampWindowWidth = v),
+                new HeaderRow(L10n.T("Active Rhythms")),
                 new RhythmsRow(),
                 new ManagePatternsRow(),
                 new ResetRow("Beat & Rhythm"),
             ]),
-            new("Climax",
+            new(L10n.N("Climax"),
             [
-                new HeaderRow("Climax"),
-                Toggle("climax_active", "Climax prompts active", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.ClimaxActive, v => climax.ClimaxActive = v),
-                Num("min_climax_after", "Climax earliest (s into session):", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 10.0, 7200.0, 10.0, () => climax.MinClimaxAfter, v => climax.MinClimaxAfter = v),
-                Num("max_climax_after", "Climax latest (s into session):", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 10.0, 7200.0, 10.0, () => climax.MaxClimaxAfter, v => climax.MaxClimaxAfter = v),
-                Toggle("climax_only_after_ramp", "Climax only after ramping finishes", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.ClimaxOnlyAfterRamp, v => climax.ClimaxOnlyAfterRamp = v,
-                    "Holds the climax back until the difficulty ramp has topped out, however early the window above allows it. Has no effect while difficulty ramping is off."),
-                Toggle("ruined_orgasm_active", "Allow ruined orgasm outcome", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.RuinedOrgasmActive, v => climax.RuinedOrgasmActive = v),
-                Num("ruined_orgasm_chance", "Ruined orgasm chance (of this session's climax)", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 0.0, 1.0, 0.01, () => climax.RuinedOrgasmChance, v => climax.RuinedOrgasmChance = v),
-                Toggle("denied_orgasm_active", "Allow full denial outcome", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.DeniedOrgasmActive, v => climax.DeniedOrgasmActive = v),
-                Num("denied_orgasm_chance", "Denied orgasm chance (of this session's climax)", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 0.0, 1.0, 0.01, () => climax.DeniedOrgasmChance, v => climax.DeniedOrgasmChance = v),
-                Toggle("fake_climax_active", "Fake climax cues active", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.FakeClimaxActive, v => climax.FakeClimaxActive = v),
-                Num("fake_climax_chance", "Fake climax chance (per beat change)", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 0.0, 1.0, 0.01, () => climax.FakeClimaxChance, v => climax.FakeClimaxChance = v),
-                Num("min_fake_climax_delay", "Fake climax reveal delay Min. (s)", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 1.0, 30.0, 0.5, () => climax.MinFakeClimaxDelay, v => climax.MinFakeClimaxDelay = v),
-                Num("max_fake_climax_delay", "Fake climax reveal delay Max. (s)", ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 1.0, 30.0, 0.5, () => climax.MaxFakeClimaxDelay, v => climax.MaxFakeClimaxDelay = v),
-                Toggle("ask_for_outcome", "Ask what actually happened", AppGroup, GoonerApp.Defaults, app.AskForOutcome, v => app.AskForOutcome = v,
-                    "Offers I Came / I Ruined It / I Stopped at every climax cue, and asks once when you stop a session yourself - otherwise the app only ever records what it told you to do."),
+                new HeaderRow(L10n.T("Climax")),
+                Toggle("climax_active", L10n.T("Climax prompts active"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.ClimaxActive, v => climax.ClimaxActive = v),
+                Num("min_climax_after", L10n.T("Climax earliest (s into session):"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 10.0, 7200.0, 10.0, () => climax.MinClimaxAfter, v => climax.MinClimaxAfter = v),
+                Num("max_climax_after", L10n.T("Climax latest (s into session):"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 10.0, 7200.0, 10.0, () => climax.MaxClimaxAfter, v => climax.MaxClimaxAfter = v),
+                Toggle("climax_only_after_ramp", L10n.T("Climax only after ramping finishes"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.ClimaxOnlyAfterRamp, v => climax.ClimaxOnlyAfterRamp = v,
+                    L10n.T("Holds the climax back until the difficulty ramp has topped out, however early the window above allows it. Has no effect while difficulty ramping is off.")),
+                Toggle("ruined_orgasm_active", L10n.T("Allow ruined orgasm outcome"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.RuinedOrgasmActive, v => climax.RuinedOrgasmActive = v),
+                Num("ruined_orgasm_chance", L10n.T("Ruined orgasm chance (of this session's climax)"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 0.0, 1.0, 0.01, () => climax.RuinedOrgasmChance, v => climax.RuinedOrgasmChance = v),
+                Toggle("denied_orgasm_active", L10n.T("Allow full denial outcome"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.DeniedOrgasmActive, v => climax.DeniedOrgasmActive = v),
+                Num("denied_orgasm_chance", L10n.T("Denied orgasm chance (of this session's climax)"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 0.0, 1.0, 0.01, () => climax.DeniedOrgasmChance, v => climax.DeniedOrgasmChance = v),
+                Toggle("fake_climax_active", L10n.T("Fake climax cues active"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, climax.FakeClimaxActive, v => climax.FakeClimaxActive = v),
+                Num("fake_climax_chance", L10n.T("Fake climax chance (per beat change)"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 0.0, 1.0, 0.01, () => climax.FakeClimaxChance, v => climax.FakeClimaxChance = v),
+                Num("min_fake_climax_delay", L10n.T("Fake climax reveal delay Min. (s)"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 1.0, 30.0, 0.5, () => climax.MinFakeClimaxDelay, v => climax.MinFakeClimaxDelay = v),
+                Num("max_fake_climax_delay", L10n.T("Fake climax reveal delay Max. (s)"), ClimaxHandler.SettingsGroup, ClimaxHandler.Defaults, false, 1.0, 30.0, 0.5, () => climax.MaxFakeClimaxDelay, v => climax.MaxFakeClimaxDelay = v),
+                Toggle("ask_for_outcome", L10n.T("Ask what actually happened"), AppGroup, GoonerApp.Defaults, app.AskForOutcome, v => app.AskForOutcome = v,
+                    L10n.T("Offers I Came / I Ruined It / I Stopped at every climax cue, and asks once when you stop a session yourself - otherwise the app only ever records what it told you to do.")),
                 new ResetRow("Climax"),
             ]),
         };
         if (app.Callouts is { } callouts)
         {
-            tabs.Add(new SettingsTab("Callouts",
+            tabs.Add(new SettingsTab(L10n.N("Callouts"),
             [
-                new HeaderRow("Callouts"),
-                Toggle("active_callout", "Callouts active", CalloutHandler.SettingsGroup, CalloutHandler.Defaults, callouts.ActiveCallout, v => callouts.ActiveCallout = v),
+                new HeaderRow(L10n.T("Callouts")),
+                Toggle("active_callout", L10n.T("Callouts active"), CalloutHandler.SettingsGroup, CalloutHandler.Defaults, callouts.ActiveCallout, v => callouts.ActiveCallout = v),
                 new LanguageRow(),
                 // Tone is the second axis next to language, and unlike language it is a mix -
                 // hence check boxes, laid out like the Active Rhythms grid.
-                new HeaderRow("Tone"),
-                new NoteRow("Pick one or more. Ticking several mixes them evenly."),
+                new HeaderRow(L10n.T("Tone")),
+                new NoteRow(L10n.T("Pick one or more. Ticking several mixes them evenly.")),
                 new TonesRow(),
-                Num("talking_chance", "Chance for callouts to happen during events", CalloutHandler.SettingsGroup, CalloutHandler.Defaults, false, 0, 1, 0.01, () => callouts.TalkingChance, v => callouts.TalkingChance = v),
+                Num("talking_chance", L10n.T("Chance for callouts to happen during events"), CalloutHandler.SettingsGroup, CalloutHandler.Defaults, false, 0, 1, 0.01, () => callouts.TalkingChance, v => callouts.TalkingChance = v),
                 new ManagePhraseFilesRow(),
                 new ResetRow("Callouts"),
             ]));
@@ -295,18 +305,18 @@ public sealed class SettingsForm
             _tones = callouts.AvailableTones.ToDictionary(t => t, t => callouts.SelectedTones.Contains(t));
         }
         // The engine's own: the note track, the colours, the effects - nothing the Python app had.
-        tabs.Add(new SettingsTab("Look",
+        tabs.Add(new SettingsTab(L10n.N("Look"),
         [
-            new HeaderRow("Note Track"),
-            LookChoice("note_track", "Note track:", look.NoteTrack, v => look.NoteTrack = v),
-            new HeaderRow("Hypno Ring"),
-            Toggle("focus_wanders", "The ring wanders across the picture", Look.SettingsGroup, Look.Defaults, look.FocusWanders, v => look.FocusWanders = v,
-                "It drifts to a new spot every few seconds and at every change of rhythm, and your eyes go with it."),
-            LookChoice("censor", "Around the ring:", look.Censor, v => look.Censor = v),
-            new NoteRow("Only the ring stays clear - the rest of the picture is blurred, pixelated or darkened."),
-            new HeaderRow("Colours & Effects"),
-            LookChoice("color_scheme", "Colours:", look.ColorScheme, v => look.ColorScheme = v),
-            LookChoice("effects", "Effects:", look.Effects, v => look.Effects = v),
+            new HeaderRow(L10n.T("Note Track")),
+            LookChoice("note_track", L10n.T("Note track:"), look.NoteTrack, v => look.NoteTrack = v),
+            new HeaderRow(L10n.T("Hypno Ring")),
+            Toggle("focus_wanders", L10n.T("The ring wanders across the picture"), Look.SettingsGroup, Look.Defaults, look.FocusWanders, v => look.FocusWanders = v,
+                L10n.T("It drifts across the picture the whole time, slowly and in smooth curves, and your eyes go with it.")),
+            LookChoice("censor", L10n.T("Around the ring:"), look.Censor, v => look.Censor = v),
+            new NoteRow(L10n.T("Only the ring stays clear - the rest of the picture is blurred, pixelated or darkened.")),
+            new HeaderRow(L10n.T("Colours & Effects")),
+            LookChoice("color_scheme", L10n.T("Colours:"), look.ColorScheme, v => look.ColorScheme = v),
+            LookChoice("effects", L10n.T("Effects:"), look.Effects, v => look.Effects = v),
             new ResetRow("Look"),
         ]));
         // The device's tab only when there is device output - the tab is its UI, not the form's.
@@ -316,6 +326,8 @@ public sealed class SettingsForm
             tabs.Add(new SettingsTab(IntifacePlugin.TabTitle, [new DeviceRow()]));
         }
         Tabs = tabs;
+        UiLanguages = app.UiLanguage.Options;
+        UiLanguage = app.UiLanguage.Language;
         RefreshRhythms();
     }
 
@@ -342,7 +354,7 @@ public sealed class SettingsForm
     }
 
     public string RhythmLabel(string name) =>
-        $"({name} [{string.Join(", ", _app.Beat.AvailableBeatPatterns[name])}])";
+        $"({BeatPatterns.DisplayName(name)} [{string.Join(", ", _app.Beat.AvailableBeatPatterns[name])}])";
 
     // After the pattern editor: a pattern added there appears, one deleted there goes. A rhythm
     // still listed keeps the tick the draft gave it; a new one is ticked if the handler has it.
@@ -353,6 +365,22 @@ public sealed class SettingsForm
             name => name,
             name => before.TryGetValue(name, out var ticked) ? ticked : _app.Beat.SelectedBeatPatterns.Contains(name));
     }
+
+    // --- the app's own language ---
+
+    // Every language the app's own words come in, each under its own name.
+    public IReadOnlyList<LookOption> UiLanguages { get; }
+
+    public string UiLanguage
+    {
+        get => _uiLanguage;
+        set
+        {
+            if (UiLanguages.Any(o => o.Value == value)) _uiLanguage = value;
+        }
+    }
+
+    private string _uiLanguage = "";
 
     // --- callouts ---
 
@@ -372,7 +400,7 @@ public sealed class SettingsForm
     // and keeps its tick: the user may well switch back to the language that has it.
     public bool ToneUsable(string tone) => _app.Callouts?.TonesFor(Language).Contains(tone) ?? false;
 
-    public string ToneTooltip(string tone) => ToneUsable(tone) ? "" : $"No phrases for this tone in {Language} yet.";
+    public string ToneTooltip(string tone) => ToneUsable(tone) ? "" : L10n.F("No phrases for this tone in {0} yet.", Language);
 
     // Greyed out alone only says "no". Saying why once under the grid beats a parenthetical on
     // every second row.
@@ -381,7 +409,7 @@ public sealed class SettingsForm
         get
         {
             var unavailable = _tones.Keys.Where(t => !ToneUsable(t)).Select(CalloutHandler.ToneLabel).ToList();
-            return unavailable.Count == 0 ? "" : $"Greyed out: no {Language} phrases yet for {string.Join(", ", unavailable)}.";
+            return unavailable.Count == 0 ? "" : L10n.F("Greyed out: no {0} phrases yet for {1}.", Language, string.Join(", ", unavailable));
         }
     }
 
@@ -425,10 +453,10 @@ public sealed class SettingsForm
     {
         if (Device?.ValidationError() is { } deviceError) return deviceError;
         if (!_rhythms.Values.Any(ticked => ticked))
-            return "At least one rhythm has to stay active under 'Active Rhythms'.";
+            return L10n.T("At least one rhythm has to stay active under 'Active Rhythms'.");
         foreach (var (min, max, label) in MinMaxPairs)
             if (_numbers[min].Value > _numbers[max].Value)
-                return $"{label}: the minimum must not be higher than the maximum.";
+                return L10n.F("{0}: the minimum must not be higher than the maximum.", L10n.T(label));
         return null;
     }
 
@@ -469,6 +497,8 @@ public sealed class SettingsForm
             callouts.SetTones(TickedTones());
             settings?.SetValue($"{CalloutHandler.SettingsGroup}/selected_tones", new JsonArray([.. callouts.SelectedTones.Select(t => (JsonNode)t)]));
         }
+
+        _app.UiLanguage.Choose(UiLanguage);
 
         _app.SettingsSaved();
         AppLog.Info(Log, "Settings saved ({0} active rhythms)", selected.Count);

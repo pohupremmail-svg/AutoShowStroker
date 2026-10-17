@@ -5,6 +5,7 @@ using System.Linq;
 using Gooner.Core.App;
 using Gooner.Core.Data;
 using Gooner.Core.Formatting;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 using Gooner.Core.Migration;
@@ -62,6 +63,7 @@ public partial class Main : Control
     private readonly StageFilter _filter = new();
     private readonly Random _shake = new();
     private string _scheme = "";
+    private string _language = "";
     private bool _wasMaximized;
     private int _hits;
     private double _smokeUntil;
@@ -131,6 +133,7 @@ public partial class Main : Control
             DataStore = data,
             Migration = migration,
             CalloutDir = Path.Combine(res, "callouts"),
+            LocaleDir = Path.Combine(res, "locales"),
             Version = ReadVersion(res),
             DeviceOutput = true,
             // The device connection reports from its own thread; the window hears it on its own.
@@ -202,6 +205,7 @@ public partial class Main : Control
         if (_smokeUntil == double.MaxValue) BeginSmoke();
         _app.Frame();
         if (_scheme != _app.Look.ColorScheme) ApplyScheme();
+        if (_language != L10n.Language) ApplyLanguage();
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
         click.Schedule(notes.Where(n => n.Audible).Select(n => n.At));
@@ -289,6 +293,29 @@ public partial class Main : Control
         _background.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = UiTheme.Of(Palette.SurfaceDarkest) });
         _start.Restyle();
         _dock.Restyle();
+    }
+
+    // A change of language, saved in the settings: what stays up between panels - the start screen,
+    // the dock, the answers under the climax - is built again in it. A panel is worded when it opens,
+    // and the settings close themselves on Save. Each goes back where it was in the drawing order.
+    private void ApplyLanguage()
+    {
+        _language = L10n.Language;
+        _outcome = Replace(_outcome, BuildOutcome());
+        _dock = Replace(_dock, BuildDock());
+        _start = Replace(_start, BuildStart());
+        _stage?.Reword();
+        Sync();
+    }
+
+    private T Replace<T>(T old, T fresh) where T : Node
+    {
+        var index = old.GetIndex();
+        RemoveChild(old);
+        old.QueueFree();
+        AddChild(fresh);
+        MoveChild(fresh, index);
+        return fresh;
     }
 
     // --- input ---
@@ -511,6 +538,7 @@ public partial class Main : Control
     {
         var app = _app!;
         _scheme = app.Look.ColorScheme;
+        _language = L10n.Language;
         Palette.Use(_scheme);
         Theme = UiTheme.Build();
         _background = new Panel { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };
@@ -564,7 +592,7 @@ public partial class Main : Control
         Glass.Apply(card, 22, 14, opacity: Glass.CardOpacity);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
-        foreach (var (label, answer) in new[] { ("I Came", "came"), ("I Ruined It", "ruined"), ("I Stopped", "stopped") })
+        foreach (var (label, answer) in new[] { (L10n.T("I Came"), "came"), (L10n.T("I Ruined It"), "ruined"), (L10n.T("I Stopped"), "stopped") })
         {
             var button = Button(label, () => _app!.ReportOutcome(answer));
             button.CustomMinimumSize = new Vector2(150, 44);

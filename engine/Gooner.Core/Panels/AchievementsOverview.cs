@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Achievements;
+using Gooner.Core.Localization;
 
 namespace Gooner.Core.Panels;
 
@@ -30,17 +31,17 @@ public sealed class AchievementTile
         // what was being kept back.
         var hidden = achievement.Secret && !Unlocked;
 
-        Title = hidden ? secretTitle : achievement.Track ?? achievement.Name;
+        Title = hidden ? secretTitle : L10n.T(achievement.Track ?? achievement.Name);
         Pips = LevelCount > 1 && !hidden
             ? new string(PipEarned, LevelsEarned) + new string(PipLocked, LevelCount - LevelsEarned)
             : null;
-        Detail = hidden ? "Not everything announces itself in advance." : (next ?? levels[^1]).Description;
+        Detail = hidden ? L10n.T("Not everything announces itself in advance.") : L10n.T((next ?? levels[^1]).Description);
         // The highest level's date, which is the most recent one: levels are only ever earned in
         // order, since a higher one implies every lower one.
         var when = earned.Count > 0 ? tracker.UnlockedAt(earned[^1].Id) ?? "" : "";
         Status = earned.Count == 0 ? ""
-            : LevelCount == 1 ? $"Earned {when}"
-            : $"Level {LevelsEarned} of {LevelCount} - earned {when}";
+            : LevelCount == 1 ? L10n.F("Earned {0}", when)
+            : L10n.F("Level {0} of {1} - earned {2}", LevelsEarned, LevelCount, when);
         if (next is not null && !hidden && AchievementTracker.ProgressFor(next, played, history) is { } progress)
             Progress = ((int)progress.Current, (int)progress.Target);
     }
@@ -88,7 +89,7 @@ public sealed class AchievementsOverview
         ArgumentNullException.ThrowIfNull(history);
         var latest = history.Count > 0 ? history[^1] : [];
         Tiles = [.. AchievementCatalogue.Grouped(tracker.Catalogue).Select(levels => new AchievementTile(levels, tracker, latest, history, SecretTitle))];
-        Summary = $"{tracker.Catalogue.Count(a => tracker.IsUnlocked(a.Id))} of {tracker.Catalogue.Count} earned";
+        Summary = L10n.F("{0} of {1} earned", tracker.Catalogue.Count(a => tracker.IsUnlocked(a.Id)), tracker.Catalogue.Count);
     }
 
     public string Summary { get; }

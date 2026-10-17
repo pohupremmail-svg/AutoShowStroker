@@ -1,4 +1,5 @@
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -16,7 +17,7 @@ public partial class PhraseFilesPanel : AppPanel
     private readonly OptionButton _tone;
 
     public PhraseFilesPanel(CustomPhraseFiles files)
-        : base("Manage Custom Phrase Files", new Vector2(560, 360))
+        : base(L10n.T("Manage Custom Phrase Files"), new Vector2(560, 360))
     {
         _files = files;
         var row = new HBoxContainer();
@@ -29,12 +30,12 @@ public partial class PhraseFilesPanel : AppPanel
             FileMode = FileDialog.FileModeEnum.OpenFile,
             Access = FileDialog.AccessEnum.Filesystem,
             UseNativeDialog = true,
-            Title = "Select a Custom Callout File",
-            Filters = ["*.json ; JSON Files"],
+            Title = L10n.T("Select a Custom Callout File"),
+            Filters = ["*.json ; " + L10n.T("JSON Files")],
         };
         picker.FileSelected += Add;
         AddChild(picker);
-        var add = new Button { Text = "Add File...", FocusMode = FocusModeEnum.None };
+        var add = new Button { Text = L10n.T("Add File..."), FocusMode = FocusModeEnum.None };
         add.Pressed += () => picker.PopupCentered(new Vector2I(900, 600));
         row.AddChild(_lang);
         row.AddChild(_tone);
@@ -47,7 +48,7 @@ public partial class PhraseFilesPanel : AppPanel
         _list.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6, 6));
         _list.AddThemeColorOverride("font_color", UiTheme.Of(Palette.Text));
         Body.AddChild(_list);
-        var remove = new Button { Text = "Remove Selected", FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        var remove = new Button { Text = L10n.T("Remove Selected"), FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
         remove.Pressed += () =>
         {
             var selected = _list.GetSelectedItems();
@@ -55,7 +56,7 @@ public partial class PhraseFilesPanel : AppPanel
             Refresh();
         };
         Body.AddChild(remove);
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Close"), Close, primary: true);
         Refresh();
     }
 

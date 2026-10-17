@@ -1,4 +1,5 @@
 using Gooner.Core.Callouts;
+using Gooner.Core.Localization;
 
 namespace Gooner.Core.Panels;
 
@@ -10,7 +11,7 @@ public sealed record ToneChoice(string Label, string? Tone);
 // before tones existed. Only calls the CalloutHandler; it stores its list itself on every change.
 public sealed class CustomPhraseFiles
 {
-    public const string AnyTone = "Any tone";
+    public static string AnyTone => L10n.T("Any tone");
 
     private readonly CalloutHandler _handler;
 

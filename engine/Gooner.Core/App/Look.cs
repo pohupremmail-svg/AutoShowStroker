@@ -1,3 +1,4 @@
+using Gooner.Core.Localization;
 using Gooner.Core.Settings;
 
 namespace Gooner.Core.App;
@@ -22,13 +23,13 @@ public sealed class Look : ISettingsOwner
         ["censor"] = "off",
     };
 
-    // Every choice, in the order the settings offer it.
+    // Every choice, in the order the settings offer it; the settings show the label translated.
     public static IReadOnlyDictionary<string, IReadOnlyList<LookOption>> Choices { get; } = new Dictionary<string, IReadOnlyList<LookOption>>
     {
-        ["note_track"] = [new("highway", "Highway"), new("ring", "Hypno Ring"), new("stream", "Stream"), new("tunnel", "Tunnel")],
-        ["color_scheme"] = [new("neon", "Neon Pink"), new("boudoir", "Boudoir")],
-        ["effects"] = [new("subtle", "Subtle"), new("normal", "Normal"), new("wild", "Wild")],
-        ["censor"] = [new("off", "Clear"), new("blur", "Blur"), new("mosaic", "Mosaic"), new("dark", "Dark")],
+        ["note_track"] = [new("highway", L10n.N("Highway")), new("ring", L10n.N("Hypno Ring")), new("stream", L10n.N("Stream")), new("tunnel", L10n.N("Tunnel"))],
+        ["color_scheme"] = [new("neon", L10n.N("Neon Pink")), new("boudoir", L10n.N("Boudoir"))],
+        ["effects"] = [new("subtle", L10n.N("Subtle")), new("normal", L10n.N("Normal")), new("wild", L10n.N("Wild"))],
+        ["censor"] = [new("off", L10n.N("Clear")), new("blur", L10n.N("Blur")), new("mosaic", L10n.N("Mosaic")), new("dark", L10n.N("Dark"))],
     };
 
     public Look(ISettingsStore? settings)

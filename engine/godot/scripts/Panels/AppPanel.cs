@@ -1,4 +1,5 @@
 using System;
+using Gooner.Core.Localization;
 using Gooner.Engine.Ui;
 using Godot;
 
@@ -34,7 +35,7 @@ public partial class AppPanel : PanelContainer
         var heading = new Label { Text = title, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         heading.ThemeTypeVariation = "PanelTitle";
         header.AddChild(heading);
-        var cross = new Button { Text = "✕", Flat = true, FocusMode = FocusModeEnum.None, TooltipText = "Close (Esc)" };
+        var cross = new Button { Text = "✕", Flat = true, FocusMode = FocusModeEnum.None, TooltipText = L10n.T("Close (Esc)") };
         cross.Pressed += Reject;
         header.AddChild(cross);
         header.MouseFilter = MouseFilterEnum.Stop;

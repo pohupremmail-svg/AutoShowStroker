@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Gooner.Core.Localization;
 
 namespace Gooner.Engine.Panels;
 
@@ -13,21 +14,21 @@ public static class Confirm
         ArgumentNullException.ThrowIfNull(host);
         var panel = new AppPanel(title, new Vector2(460, 0));
         panel.AddText(text, 14, wrap: true);
-        panel.AddButton("OK", panel.Close, primary: true);
+        panel.AddButton(L10n.T("OK"), panel.Close, primary: true);
         host.Show(panel);
     }
 
-    public static void Ask(PanelHost host, string title, string text, Action yes, string yesLabel = "Yes", string noLabel = "No")
+    public static void Ask(PanelHost host, string title, string text, Action yes, string? yesLabel = null, string? noLabel = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         var panel = new AppPanel(title, new Vector2(460, 0));
         panel.AddText(text, 14, wrap: true);
-        panel.AddButton(yesLabel, () =>
+        panel.AddButton(yesLabel ?? L10n.T("Yes"), () =>
         {
             panel.Close();
             yes();
         });
-        panel.AddButton(noLabel, panel.Close, primary: true);
+        panel.AddButton(noLabel ?? L10n.T("No"), panel.Close, primary: true);
         host.Show(panel);
     }
 }

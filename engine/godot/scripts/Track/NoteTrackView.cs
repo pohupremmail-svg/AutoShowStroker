@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Gooner.Core.App;
 using Gooner.Core.Beat;
+using Gooner.Core.Localization;
 using Gooner.Core.Randomness;
 using Gooner.Core.Track;
 using Gooner.Engine.Fx;
@@ -173,10 +174,10 @@ public partial class NoteTrackView : Control
     {
         if (span.Kind == "pause")
         {
-            RhythmArrived?.Invoke("Pause");
+            RhythmArrived?.Invoke(L10n.T("Pause"));
             return;
         }
-        RhythmArrived?.Invoke(span.PatternName ?? "");
+        RhythmArrived?.Invoke(span.PatternName is { } pattern ? BeatPatterns.DisplayName(pattern) : "");
         var (at, _, _) = HitPoint(new ScheduledNote(now, true, 1), _landed, now);
         _particles.Emit(at, Of(Palette.Cool), 26 * Strength, 520, direction: -MathF.PI / 2, spread: MathF.PI * 1.2f, life: 0.7f);
     }
@@ -405,7 +406,7 @@ public partial class NoteTrackView : Control
             if (z0 > 0.001)
             {
                 var front = lane.At(z0, _now);
-                c.DrawCentred(UiTheme.Bold, new Vector2(front.X, front.Y - 8 * front.Scale), "PAUSE", (int)Math.Max(9, 30 * front.Scale), Fade(Colors.White, 0.85f * (1 - (float)z0)));
+                c.DrawCentred(UiTheme.Bold, new Vector2(front.X, front.Y - 8 * front.Scale), L10n.T("PAUSE"), (int)Math.Max(9, 30 * front.Scale), Fade(Colors.White, 0.85f * (1 - (float)z0)));
             }
         }
         foreach (var change in Changes())
@@ -489,7 +490,7 @@ public partial class NoteTrackView : Control
             var k = Fading(pause);
             c.DrawCentred(UiTheme.Bold, Focus + new Vector2(0, ring.Radius * 0.2f), Math.Ceiling(pause.End - _now).ToString(System.Globalization.CultureInfo.InvariantCulture),
                 (int)(ring.Radius * 0.55f), Fade(Colors.White, 0.9f * k));
-            c.DrawCentred(UiTheme.Bold, Focus - new Vector2(0, ring.Radius * 0.3f), "PAUSE", 13, Fade(Colors.White, 0.8f * k));
+            c.DrawCentred(UiTheme.Bold, Focus - new Vector2(0, ring.Radius * 0.3f), L10n.T("PAUSE"), 13, Fade(Colors.White, 0.8f * k));
         }
     }
 
@@ -553,7 +554,7 @@ public partial class NoteTrackView : Control
             if (x1 - x0 < 1) continue;
             var h = lane.Height * 0.6f;
             c.DrawStyleBox(UiTheme.Box(Fade(Of(Palette.Pause), 0.45f), 10), new Rect2(x0, lane.CenterY - h / 2, x1 - x0, h));
-            if (x1 - x0 > 70) c.DrawString(UiTheme.Bold, new Vector2(x0 + 12, lane.CenterY + 5), "PAUSE", HorizontalAlignment.Left, -1, 13, Fade(Colors.White, 0.85f));
+            if (x1 - x0 > 70) c.DrawString(UiTheme.Bold, new Vector2(x0 + 12, lane.CenterY + 5), L10n.T("PAUSE"), HorizontalAlignment.Left, -1, 13, Fade(Colors.White, 0.85f));
         }
         foreach (var change in Changes())
             c.DrawString(UiTheme.Bold, new Vector2(lane.X(Ahead(change.Start)) + 6, lane.Top - 8), (change.PatternName ?? "").ToUpperInvariant(),
@@ -652,7 +653,7 @@ public partial class NoteTrackView : Control
     {
         if (RunningPause is not { } pause) return;
         var left = Math.Ceiling(pause.End - _now).ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var text = centred ? left : $"PAUSE  {left}";
+        var text = centred ? left : L10n.T("PAUSE") + "  " + left;
         c.DrawCentred(UiTheme.Bold, at, text, 26, Fade(Colors.White, 0.9f * Fading(pause)));
     }
 

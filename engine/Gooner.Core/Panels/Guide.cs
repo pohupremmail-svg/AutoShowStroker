@@ -1,3 +1,6 @@
+using Gooner.Core.App;
+using Gooner.Core.Localization;
+
 namespace Gooner.Core.Panels;
 
 public sealed record GuideTopic(string Title, string Html);
@@ -335,6 +338,12 @@ public static class Guide
             EngineEdits.Where(edit => edit.Topic == DisplayTitle(topic.Title))
                 .Aggregate(topic.Html, (html, edit) => html.Replace(edit.Old, edit.New, StringComparison.Ordinal)))),
     ];
+
+    // The topics in the language in use: the title, and every block of the page - a heading, a
+    // paragraph, a list - looked up on its own, so a sentence reworded on the Python side costs the
+    // translation of its paragraph rather than of the whole topic.
+    public static IReadOnlyList<GuideTopic> Translated() =>
+        [.. Topics.Select(topic => new GuideTopic(L10n.T(topic.Title), string.Concat(RichText.Blocks(topic.Html).Select(L10n.T))))];
 
     public static string DisplayTitle(string qtTitle)
     {

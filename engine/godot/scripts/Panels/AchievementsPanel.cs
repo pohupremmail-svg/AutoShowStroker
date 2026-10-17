@@ -1,5 +1,6 @@
 using System.IO;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -14,7 +15,7 @@ public partial class AchievementsPanel : AppPanel
     private const string LockedColour = "#6a6175";
 
     public AchievementsPanel(AchievementsOverview overview, string root)
-        : base("Achievements", new Vector2(820, 600))
+        : base(L10n.T("Achievements"), new Vector2(820, 600))
     {
         Body.AddChild(Widgets.Text(overview.Summary, 15, Palette.Text));
         var grid = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -29,7 +30,7 @@ public partial class AchievementsPanel : AppPanel
         };
         scroll.AddChild(grid);
         Body.AddChild(scroll);
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Close"), Close, primary: true);
     }
 
     private static PanelContainer Tile(AchievementTile tile, string root)

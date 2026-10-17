@@ -1,3 +1,4 @@
+using Gooner.Core.App;
 using Gooner.Core.Panels;
 
 namespace Gooner.Core.Tests.Panels;
@@ -21,6 +22,20 @@ public sealed class GuideTests
     [Fact]
     public void a_tab_title_shows_a_single_ampersand() =>
         Assert.Equal(["Beats & Rhythm", "On-Screen Display", "Languages & Tones", "Keyboard Shortcuts", "Privacy"], Titles);
+
+    // Translated a block at a time - a heading, a paragraph, a list - so a sentence reworded on the
+    // Python side costs the translation of its paragraph rather than of the whole topic.
+    [Fact]
+    public void every_topic_is_cut_into_its_blocks_without_a_character_lost()
+    {
+        foreach (var topic in Guide.Topics)
+        {
+            var blocks = RichText.Blocks(topic.Html);
+
+            Assert.Equal(topic.Html, string.Concat(blocks));
+            Assert.All(blocks, block => Assert.Matches(new System.Text.RegularExpressions.Regex(@"^<(h3|p|ul|ol)>.*</\1>$", System.Text.RegularExpressions.RegexOptions.Singleline), block));
+        }
+    }
 
     [Fact]
     public void beats_tab_explains_pattern_number_meaning()

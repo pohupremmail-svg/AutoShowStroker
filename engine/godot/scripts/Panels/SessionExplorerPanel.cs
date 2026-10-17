@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Media;
 using Gooner.Core.Panels;
 using Gooner.Core.Timing;
@@ -31,7 +32,7 @@ public partial class SessionExplorerPanel : AppPanel
     private Button? _save;
 
     public SessionExplorerPanel(SessionExplorer explorer, PanelHost host, ClockScheduler scheduler)
-        : base("Session Explorer", new Vector2(940, 640))
+        : base(L10n.T("Session Explorer"), new Vector2(940, 640))
     {
         _explorer = explorer;
         _host = host;
@@ -50,10 +51,10 @@ public partial class SessionExplorerPanel : AppPanel
         {
             _save = new Button
             {
-                Text = "Save this session",
+                Text = L10n.T("Save this session"),
                 ThemeTypeVariation = "PrimaryButton",
                 FocusMode = FocusModeEnum.None,
-                TooltipText = "Keeps the beats, the climax and the media pacing so this session can be played again.",
+                TooltipText = L10n.T("Keeps the beats, the climax and the media pacing so this session can be played again."),
             };
             _save.Pressed += Save;
             heading.AddChild(_save);
@@ -70,7 +71,7 @@ public partial class SessionExplorerPanel : AppPanel
         };
         _placeholder = new Label
         {
-            Text = "Move along the timeline below to see what was on screen.",
+            Text = L10n.T("Move along the timeline below to see what was on screen."),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
@@ -89,12 +90,12 @@ public partial class SessionExplorerPanel : AppPanel
         _file = Widgets.Text("", 12, Palette.Text);
         _file.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _file.ClipText = true;
-        _play = new Button { Text = "Open in player", Visible = false, FocusMode = FocusModeEnum.None };
+        _play = new Button { Text = L10n.T("Open in player"), Visible = false, FocusMode = FocusModeEnum.None };
         _play.Pressed += () =>
         {
             if (_explorer.SelectedPath is { } path) OS.ShellOpen(path);
         };
-        _reveal = new Button { Text = "Show in folder", Disabled = true, FocusMode = FocusModeEnum.None };
+        _reveal = new Button { Text = L10n.T("Show in folder"), Disabled = true, FocusMode = FocusModeEnum.None };
         _reveal.Pressed += () =>
         {
             if (_explorer.RevealFolder is { } folder) OS.ShellOpen(folder);
@@ -106,7 +107,7 @@ public partial class SessionExplorerPanel : AppPanel
 
         // Anything still decoding is for a panel that is going away.
         Closed += _thumbnails.CancelAll;
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Close"), Close, primary: true);
     }
 
     // A smoke run has no mouse to scrub with.
@@ -122,7 +123,7 @@ public partial class SessionExplorerPanel : AppPanel
         if (moment.Path is not { } path)
         {
             _file.Text = "";
-            ShowText("Nothing was on screen yet at this point.");
+            ShowText(L10n.T("Nothing was on screen yet at this point."));
             return;
         }
         _file.Text = Path.GetFileName(path);
@@ -133,7 +134,7 @@ public partial class SessionExplorerPanel : AppPanel
         }
         if (moment.RequestFrame) _thumbnails.Request(path, VideoFrameReady);
         if (_videoFrames.TryGetValue(path, out var frame)) ShowPicture(frame, path);
-        else ShowText($"{Path.GetFileName(path)}\n\nGrabbing a frame...");
+        else ShowText(Path.GetFileName(path) + "\n\n" + L10n.T("Grabbing a frame..."));
     }
 
     private void VideoFrameReady(string path, object? image)
@@ -153,7 +154,7 @@ public partial class SessionExplorerPanel : AppPanel
     {
         if (texture is null)
         {
-            ShowText($"{Path.GetFileName(path)}\n\nNo preview available for this file.");
+            ShowText(Path.GetFileName(path) + "\n\n" + L10n.T("No preview available for this file."));
             return;
         }
         _picture.Texture = texture;
@@ -171,13 +172,13 @@ public partial class SessionExplorerPanel : AppPanel
     {
         if (!_explorer.Save())
         {
-            Confirm.Tell(_host, "Could not save", SessionExplorer.SaveFailedMessage);
+            Confirm.Tell(_host, L10n.T("Could not save"), SessionExplorer.SaveFailedMessage);
             return;
         }
         // Disabled rather than hidden: a button that vanishes reads as a failure.
         _save!.Disabled = true;
-        _save.Text = "Saved";
-        Confirm.Tell(_host, "Session saved", SessionExplorer.SavedMessage);
+        _save.Text = L10n.T("Saved");
+        Confirm.Tell(_host, L10n.T("Session saved"), SessionExplorer.SavedMessage);
     }
 
     // The session end to end: every segment a block as wide as it lasted, a seam at each boundary,

@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Gooner.Core.Beat;
 using Gooner.Core.Data;
 using Gooner.Core.Formatting;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 
 namespace Gooner.Core.Sessions;
@@ -49,9 +50,9 @@ public static class SessionFiles
 
     private static readonly Dictionary<string, string> OutcomeLabels = new()
     {
-        ["real"] = "Climax",
-        ["ruined"] = "Ruined",
-        ["denied"] = "Denied",
+        ["real"] = L10n.N("Climax"),
+        ["ruined"] = L10n.N("Ruined"),
+        ["denied"] = L10n.N("Denied"),
     };
 
     private static readonly JsonSerializerOptions WriteOptions = new()
@@ -163,14 +164,14 @@ public static class SessionFiles
     public static List<string> ValidateSession(JsonObject saved)
     {
         if (saved["segments"] is not JsonArray segments || segments.Count == 0)
-            return ["The session has no segments."];
+            return [L10n.T("The session has no segments.")];
 
         var problems = new List<string>();
         var durationNode = saved["duration_sec"];
         double duration;
         if (!PyJson.IsNumber(durationNode) || PyJson.Number(durationNode) <= 0)
         {
-            problems.Add("duration_sec has to be a positive number of seconds.");
+            problems.Add(L10n.T("duration_sec has to be a positive number of seconds."));
             duration = double.PositiveInfinity;
         }
         else
@@ -198,20 +199,20 @@ public static class SessionFiles
         if (!PyJson.Truthy(node)) return [];
         if (node is not JsonObject custom)
         {
-            problems.Add("custom_patterns has to be an object of name -> list of steps.");
+            problems.Add(L10n.T("custom_patterns has to be an object of name -> list of steps."));
             return [];
         }
         foreach (var (name, steps) in custom)
         {
             if (steps is not JsonArray list || list.Count == 0)
             {
-                problems.Add($"The rhythm '{name}' has no steps.");
+                problems.Add(L10n.F("The rhythm '{0}' has no steps.", name));
             }
             else if (!list.All(step => PyJson.IsInteger(step) && PyJson.Number(step) != 0 && Math.Abs(PyJson.Number(step)) <= 4))
             {
                 // Same rule the pattern editor enforces: 1-4 for a beat, negative for a silent
                 // step of the same length, and never 0.
-                problems.Add($"The rhythm '{name}' has steps outside 1..4 (negative for silence, never 0).");
+                problems.Add(L10n.F("The rhythm '{0}' has steps outside 1..4 (negative for silence, never 0).", name));
             }
         }
         // Every name counts as known, playable or not - the broken one is reported above.
@@ -220,39 +221,38 @@ public static class SessionFiles
 
     private static List<string> SegmentProblems(JsonNode? node, int index, HashSet<string> knownPatterns)
     {
-        var where = $"Segment {index}";
-        if (node is not JsonObject segment) return [$"{where} is not an object."];
+        if (node is not JsonObject segment) return [L10n.F("Segment {0} is not an object.", index)];
 
         var problems = new List<string>();
         var kind = segment["kind"];
         var kindText = kind is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : null;
         if (kindText is null || !SegmentKinds.Contains(kindText))
-            problems.Add($"{where} has kind '{PyJson.Str(kind)}' - expected one of {string.Join(", ", SegmentKinds)}.");
+            problems.Add(L10n.F("Segment {0} has kind '{1}' - expected one of {2}.", index, PyJson.Str(kind), string.Join(", ", SegmentKinds)));
 
         var duration = segment["duration_sec"];
         if (!PyJson.IsNumber(duration) || PyJson.Number(duration) <= 0)
-            problems.Add($"{where} needs a positive duration_sec.");
+            problems.Add(L10n.F("Segment {0} needs a positive duration_sec.", index));
 
         var pattern = segment["pattern"];
         var freq = segment["freq"];
         if (kindText == "pause")
         {
             if (pattern is not null || freq is not null)
-                problems.Add($"{where} is a pause, so it carries no pattern and no freq.");
+                problems.Add(L10n.F("Segment {0} is a pause, so it carries no pattern and no freq.", index));
             return problems;
         }
 
         if (!PyJson.IsNumber(freq) || PyJson.Number(freq) <= 0)
-            problems.Add($"{where} needs a freq in beats per second.");
+            problems.Add(L10n.F("Segment {0} needs a freq in beats per second.", index));
         if (pattern is null)
         {
-            problems.Add($"{where} needs a pattern name.");
+            problems.Add(L10n.F("Segment {0} needs a pattern name.", index));
         }
         else
         {
             var name = pattern is JsonValue p && p.GetValueKind() == JsonValueKind.String ? p.GetValue<string>() : null;
             if (name is null || !knownPatterns.Contains(name))
-                problems.Add($"{where} plays '{PyJson.Str(pattern)}', which is neither built in nor defined in custom_patterns.");
+                problems.Add(L10n.F("Segment {0} plays '{1}', which is neither built in nor defined in custom_patterns.", index, PyJson.Str(pattern)));
         }
         return problems;
     }
@@ -260,42 +260,42 @@ public static class SessionFiles
     private static List<string> ClimaxProblems(JsonNode? node, double duration)
     {
         if (node is null) return []; // stopped before one - see Describe
-        if (node is not JsonObject climax) return ["climax has to be an object with at_sec and outcome."];
+        if (node is not JsonObject climax) return [L10n.T("climax has to be an object with at_sec and outcome.")];
 
         var problems = new List<string>();
         var at = climax["at_sec"];
         if (!PyJson.IsNumber(at) || PyJson.Number(at) < 0)
-            problems.Add("The climax needs an at_sec in seconds from the start.");
+            problems.Add(L10n.T("The climax needs an at_sec in seconds from the start."));
         else if (PyJson.Number(at) > duration)
-            problems.Add($"The climax is at {PyJson.F0(PyJson.Number(at))}s but the session is only {PyJson.F0(duration)}s long, so it would never arrive.");
+            problems.Add(L10n.F("The climax is at {0}s but the session is only {1}s long, so it would never arrive.", PyJson.F0(PyJson.Number(at)), PyJson.F0(duration)));
 
         var outcome = climax["outcome"];
         var outcomeText = outcome is JsonValue o && o.GetValueKind() == JsonValueKind.String ? o.GetValue<string>() : null;
         if (outcomeText is null || !ClimaxOutcomes.Contains(outcomeText))
-            problems.Add($"The climax outcome '{PyJson.Str(outcome)}' is not one of {string.Join(", ", ClimaxOutcomes)}.");
+            problems.Add(L10n.F("The climax outcome '{0}' is not one of {1}.", PyJson.Str(outcome), string.Join(", ", ClimaxOutcomes)));
         return problems;
     }
 
     private static List<string> MomentProblems(JsonNode moments, double duration, string field)
     {
-        if (moments is not JsonArray list) return [$"{field} has to be a list of seconds."];
+        if (moments is not JsonArray list) return [L10n.F("{0} has to be a list of seconds.", field)];
         foreach (var moment in list)
             if (!PyJson.IsNumber(moment) || PyJson.Number(moment) < 0 || PyJson.Number(moment) > duration)
-                return [$"{field} contains {PyJson.Str(moment)}, which is outside the session."];
+                return [L10n.F("{0} contains {1}, which is outside the session.", field, PyJson.Str(moment))];
         return [];
     }
 
     private static List<string> MediaProblems(JsonNode media, double duration)
     {
-        if (media is not JsonArray list) return ["media has to be a list."];
+        if (media is not JsonArray list) return [L10n.T("media has to be a list.")];
         var previous = -1.0;
         foreach (var entry in list)
         {
             if (entry is not JsonObject obj || !PyJson.IsNumber(obj["at_sec"]))
-                return ["Every media entry needs an at_sec in seconds from the start."];
+                return [L10n.T("Every media entry needs an at_sec in seconds from the start.")];
             var at = PyJson.Number(obj["at_sec"]);
-            if (at < previous) return ["The media moments have to run forwards - one of them goes backwards."];
-            if (at > duration) return [$"A medium is shown at {PyJson.F0(at)}s, past the end of the session."];
+            if (at < previous) return [L10n.T("The media moments have to run forwards - one of them goes backwards.")];
+            if (at > duration) return [L10n.F("A medium is shown at {0}s, past the end of the session.", PyJson.F0(at))];
             previous = at;
         }
         return [];
@@ -316,22 +316,22 @@ public static class SessionFiles
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
             AppLog.Warning(Log, "Could not read the session file: {0}", e.Message);
-            throw new UnsupportedSessionFileException("The file could not be read.", e);
+            throw new UnsupportedSessionFileException(L10n.T("The file could not be read."), e);
         }
 
         // A format that is not a number is refused as "not a session" (Python raises a TypeError
         // there instead; recorded in parity/allowlist.json).
         if (node is not JsonObject data || !data.ContainsKey("format") || !data.ContainsKey("segments") || !PyJson.IsNumber(data["format"]))
-            throw new UnsupportedSessionFileException("That is not a saved session.");
+            throw new UnsupportedSessionFileException(L10n.T("That is not a saved session."));
         if (PyJson.Number(data["format"]) > FormatVersion)
-            throw new UnsupportedSessionFileException("That session was saved by a newer version of GoonerApp.");
+            throw new UnsupportedSessionFileException(L10n.T("That session was saved by a newer version of GoonerApp."));
 
         var problems = ValidateSession(data);
         if (problems.Count > 0)
         {
             AppLog.Warning(Log, "Refused a session file with {0} problem(s)", problems.Count);
             throw new UnsupportedSessionFileException(
-                "That session cannot be played:\n\n" + string.Join("\n", problems.Select(p => "- " + p)));
+                L10n.F("That session cannot be played:\n\n{0}", string.Join("\n", problems.Select(p => "- " + p))));
         }
         return data;
     }
@@ -365,17 +365,17 @@ public static class SessionFiles
         {
             var outcome = saved["climax"]!["outcome"];
             var key = outcome is JsonValue o && o.GetValueKind() == JsonValueKind.String ? o.GetValue<string>() : null;
-            parts.Add(key is not null && OutcomeLabels.TryGetValue(key, out var label) ? label : PyJson.Str(outcome));
+            parts.Add(key is not null && OutcomeLabels.TryGetValue(key, out var label) ? L10n.T(label) : PyJson.Str(outcome));
         }
         else
         {
             // Worth calling out, because it replays differently: the recording plays out and the
             // session then carries on and draws a climax of its own.
-            parts.Add("Stopped early");
+            parts.Add(L10n.T("Stopped early"));
         }
         var fakes = saved["fake_climaxes"] is JsonArray fakeList ? fakeList.Count : 0;
-        if (fakes > 0) parts.Add($"{fakes} fake-out{(fakes > 1 ? "s" : "")}");
-        if (!HasPaths(saved)) parts.Add("no media paths");
+        if (fakes > 0) parts.Add(L10n.P(fakes, "{0} fake-out", "{0} fake-outs"));
+        if (!HasPaths(saved)) parts.Add(L10n.T("no media paths"));
         return string.Join("  -  ", parts);
     }
 

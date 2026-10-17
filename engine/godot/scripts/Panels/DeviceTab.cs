@@ -1,6 +1,7 @@
 using System;
 using Gooner.Core.App;
 using Gooner.Core.Devices;
+using Gooner.Core.Localization;
 using Gooner.Engine.Ui;
 using Godot;
 
@@ -33,21 +34,21 @@ public partial class DeviceTab : VBoxContainer
         AddThemeConstantOverride("separation", 8);
         SizeFlagsHorizontal = SizeFlags.ExpandFill;
         AddChild(Widgets.Text(DeviceSettings.BetaNotice, 13, Palette.Text, wrap: true));
-        _enabled = new CheckBox { Text = "Enable device output", ButtonPressed = device.Enabled, FocusMode = FocusModeEnum.None };
+        _enabled = new CheckBox { Text = L10n.T("Enable device output"), ButtonPressed = device.Enabled, FocusMode = FocusModeEnum.None };
         _enabled.Toggled += EnableClicked;
         AddChild(_enabled);
         AddChild(Widgets.Text(DeviceSettings.AddressHint, 13, Palette.Text, wrap: true));
 
         var form = new GridContainer { Columns = 2 };
         form.AddThemeConstantOverride("h_separation", 10);
-        form.AddChild(new Label { Text = "Server:" });
+        form.AddChild(new Label { Text = L10n.T("Server:") });
         _server = new LineEdit { Text = device.Server, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _server.TextChanged += text => _device.Server = text;
         form.AddChild(_server);
-        form.AddChild(new Label { Text = "Minimum position (DOWN):" });
+        form.AddChild(new Label { Text = L10n.T("Minimum position (DOWN):") });
         _minimum = Percent(device.MinimumPercent, value => _device.MinimumPercent = value);
         form.AddChild(_minimum);
-        form.AddChild(new Label { Text = "Maximum position (UP):" });
+        form.AddChild(new Label { Text = L10n.T("Maximum position (UP):") });
         _maximum = Percent(device.MaximumPercent, value => _device.MaximumPercent = value);
         form.AddChild(_maximum);
         AddChild(form);
@@ -59,15 +60,15 @@ public partial class DeviceTab : VBoxContainer
         foreach (var label in new[] { _error, _status, _deviceLine, _syncLine }) AddChild(label);
 
         var buttons = new HBoxContainer();
-        _testUp = Button("Test Up", device.TestUp);
-        _testDown = Button("Test Down", device.TestDown);
+        _testUp = Button(L10n.T("Test Up"), device.TestUp);
+        _testDown = Button(L10n.T("Test Down"), device.TestDown);
         buttons.AddChild(_testUp);
         buttons.AddChild(_testDown);
-        buttons.AddChild(Button("Emergency Stop", device.EmergencyStop));
+        buttons.AddChild(Button(L10n.T("Emergency Stop"), device.EmergencyStop));
         AddChild(buttons);
-        _resume = Button("Resume Device Sync", device.Resume);
+        _resume = Button(L10n.T("Resume Device Sync"), device.Resume);
         AddChild(_resume);
-        _scan = Button("Scan for Devices", device.Scan);
+        _scan = Button(L10n.T("Scan for Devices"), device.Scan);
         AddChild(_scan);
         AddChild(Widgets.Text(DeviceSettings.SyncNote, 13, Palette.Text, wrap: true));
 
@@ -131,9 +132,9 @@ public static class DeviceConsent
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(device);
-        var panel = new AppPanel("Enable Device Output?", new Vector2(520, 0));
+        var panel = new AppPanel(L10n.T("Enable Device Output?"), new Vector2(520, 0));
         panel.AddText(device.ConsentText, 14, wrap: true);
-        var remember = new CheckBox { Text = "Don't ask me this again", FocusMode = Control.FocusModeEnum.None };
+        var remember = new CheckBox { Text = L10n.T("Don't ask me this again"), FocusMode = Control.FocusModeEnum.None };
         panel.Body.AddChild(remember);
         void Decline()
         {
@@ -141,13 +142,13 @@ public static class DeviceConsent
             device.ConsentDeclined();
             answered();
         }
-        panel.AddButton("Yes", () =>
+        panel.AddButton(L10n.T("Yes"), () =>
         {
             panel.Close();
             device.ConsentGiven(remember.ButtonPressed);
             answered();
         });
-        panel.AddButton("No", Decline, primary: true);
+        panel.AddButton(L10n.T("No"), Decline, primary: true);
         panel.OnReject = Decline;
         host.Show(panel);
     }

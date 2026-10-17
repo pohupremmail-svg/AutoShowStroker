@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Channels;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 
 namespace Gooner.Core.Devices;
@@ -87,7 +88,7 @@ internal sealed class IntifaceWorker
         _deviceChanged = deviceChanged;
         _finished = finished;
         _retry = new ActorTimer(this, Open);
-        _connectTimeout = new ActorTimer(this, () => Fail("Intiface connection timed out; retrying"));
+        _connectTimeout = new ActorTimer(this, () => Fail(L10n.N("Intiface connection timed out; retrying")));
         _moveTimer = new ActorTimer(this, FlushMove);
         _shutdownTimer = new ActorTimer(this, FinishShutdown);
         _scanTimer = new ActorTimer(this, async () => await Send("StopScanning").ConfigureAwait(false));
@@ -119,7 +120,7 @@ internal sealed class IntifaceWorker
 #pragma warning restore CA1031
             {
                 AppLog.Error(Log, "Unexpected failure in the device connection: {0}", e.GetType().Name);
-                await Fail("Invalid Intiface response; device sync stopped").ConfigureAwait(false);
+                await Fail(L10n.N("Invalid Intiface response; device sync stopped")).ConfigureAwait(false);
             }
         }
     }
@@ -140,12 +141,12 @@ internal sealed class IntifaceWorker
         if (enabled)
         {
             _retry.Start(100);
-            _statusChanged("Connecting to Intiface…");
+            _statusChanged(L10n.N("Connecting to Intiface…"));
         }
         else
         {
             AppLog.Info(Log, "Device output disabled; closing the Intiface connection");
-            _statusChanged("Intiface disabled");
+            _statusChanged(L10n.N("Intiface disabled"));
         }
     }
 
@@ -208,7 +209,7 @@ internal sealed class IntifaceWorker
         }
         catch (Exception e) when (e is WebSocketException or HttpRequestException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
         {
-            Post(() => generation == _socketGeneration ? Fail("Intiface unavailable; retrying") : Task.CompletedTask);
+            Post(() => generation == _socketGeneration ? Fail(L10n.N("Intiface unavailable; retrying")) : Task.CompletedTask);
             return;
         }
         Post(() => generation == _socketGeneration ? Connected(socket, generation) : Task.CompletedTask);
@@ -238,7 +239,7 @@ internal sealed class IntifaceWorker
                 message.Write(buffer, 0, result.Count);
                 if (message.Length > MaxMessageBytes)
                 {
-                    Post(() => generation == _socketGeneration ? Fail("Invalid Intiface response; device sync stopped") : Task.CompletedTask);
+                    Post(() => generation == _socketGeneration ? Fail(L10n.N("Invalid Intiface response; device sync stopped")) : Task.CompletedTask);
                     return;
                 }
                 if (!result.EndOfMessage) continue;
@@ -277,7 +278,7 @@ internal sealed class IntifaceWorker
         else if (_enabled)
         {
             AppLog.Info(Log, "Intiface connection closed; device sync stopped");
-            _statusChanged(_failureStatus.Length > 0 ? _failureStatus : "Disconnected; retrying — device sync stopped");
+            _statusChanged(_failureStatus.Length > 0 ? _failureStatus : L10n.N("Disconnected; retrying — device sync stopped"));
             _retry.Start(ReconnectMs);
         }
     }
@@ -356,7 +357,7 @@ internal sealed class IntifaceWorker
         }
         catch (Exception e) when (e is WebSocketException or ObjectDisposedException or InvalidOperationException or IOException)
         {
-            if (!_failing) Post(() => Fail("Intiface unavailable; retrying"));
+            if (!_failing) Post(() => Fail(L10n.N("Intiface unavailable; retrying")));
         }
         return id;
     }
@@ -365,7 +366,7 @@ internal sealed class IntifaceWorker
     {
         var now = Monotonic.Now;
         return _pending.Values.Any(p => now - p.SentAt > _requestTimeoutMs / 1000.0)
-            ? Fail("Intiface stopped responding; reconnecting — device sync stopped")
+            ? Fail(L10n.N("Intiface stopped responding; reconnecting — device sync stopped"))
             : Task.CompletedTask;
     }
 
@@ -379,7 +380,7 @@ internal sealed class IntifaceWorker
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException or KeyNotFoundException or InvalidCastException or OverflowException or ArgumentException)
         {
-            await Fail("Invalid Intiface response; device sync stopped").ConfigureAwait(false);
+            await Fail(L10n.N("Invalid Intiface response; device sync stopped")).ConfigureAwait(false);
         }
     }
 
@@ -397,10 +398,10 @@ internal sealed class IntifaceWorker
             {
                 if (request is { Kind: "StartScanning" or "StopScanning" })
                 {
-                    _statusChanged("Connected; scan unavailable — scan in Intiface Central");
+                    _statusChanged(L10n.N("Connected; scan unavailable — scan in Intiface Central"));
                     continue;
                 }
-                await Fail("Intiface rejected a command; device sync stopped").ConfigureAwait(false);
+                await Fail(L10n.N("Intiface rejected a command; device sync stopped")).ConfigureAwait(false);
                 return;
             }
             if (request is { } sent && kind != ExpectedAnswers.GetValueOrDefault(sent.Kind, "Ok"))
@@ -419,7 +420,7 @@ internal sealed class IntifaceWorker
                 if (maxPing > 0) _ping.Start((int)Math.Clamp(maxPing / 2, MinPingMs, MaxPingMs));
                 await Send("RequestDeviceList").ConfigureAwait(false);
                 await Scan().ConfigureAwait(false);
-                _statusChanged("Connected; looking for a linear device");
+                _statusChanged(L10n.N("Connected; looking for a linear device"));
             }
             else if (kind == "DeviceList" && _ready && request is { Kind: "RequestDeviceList" })
             {
@@ -474,7 +475,7 @@ internal sealed class IntifaceWorker
             ?? (available.Count > 0 ? available[0] : null);
         if (Same(chosen, _device))
         {
-            if (chosen is null) _statusChanged("Connected; no linear device found");
+            if (chosen is null) _statusChanged(L10n.N("Connected; no linear device found"));
             return;
         }
         _gate.Invalidate();
@@ -492,7 +493,7 @@ internal sealed class IntifaceWorker
         // is not the place to write down what someone owns.
         AppLog.Info(Log, "Linear device {0}", chosen is null ? "lost" : "selected");
         _deviceChanged(name);
-        _statusChanged(chosen is null ? "Connected; no linear device found" : "Connected");
+        _statusChanged(chosen is null ? L10n.N("Connected; no linear device found") : L10n.N("Connected"));
     }
 
     private static bool Same((long Index, int Feature, JsonObject Device)? a, (long Index, int Feature, JsonObject Device)? b) =>

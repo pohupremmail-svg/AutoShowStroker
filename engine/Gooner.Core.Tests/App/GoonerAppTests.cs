@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Gooner.Core.App;
 using Gooner.Core.Callouts;
 using Gooner.Core.Data;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 using Gooner.Core.Sessions;
@@ -1262,5 +1263,30 @@ public sealed class GoonerAppTests : IDisposable
         Assert.True(App.DiagnosticLog);
         Assert.Equal("ERROR", App.DiagnosticLogLevel);
         Assert.True(AppLog.IsFileLoggingActive);
+    }
+
+    // --- the app's own language ---
+
+    // Applied while the app is built, before anything it says is worded: the edge button is the
+    // first text a session shows.
+    [Fact]
+    public void the_app_starts_in_the_language_it_was_left_in()
+    {
+        var locales = Path.Combine(_tmp.FullName, "locales");
+        Directory.CreateDirectory(Path.Combine(locales, "de"));
+        File.WriteAllText(Path.Combine(locales, "de", "ui.json"), """{ "I reached my Edge": "Ich bin kurz davor" }""");
+        _settings.SetValue("Ui/language", "de");
+        try
+        {
+            var app = new GoonerApp(_stage, _clock, new GoonerAppOptions { Settings = _settings, LocaleDir = locales });
+
+            Assert.Equal("de", app.UiLanguage.Language);
+            Assert.Equal("de", L10n.Language);
+            Assert.Equal("Ich bin kurz davor", app.EdgeButtonText);
+        }
+        finally
+        {
+            L10n.Use(null);
+        }
     }
 }

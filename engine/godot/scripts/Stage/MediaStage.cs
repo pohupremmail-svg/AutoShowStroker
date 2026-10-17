@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Media;
 using Gooner.Engine.Ui;
@@ -33,7 +34,7 @@ public partial class MediaStage : Control, IMediaStage
         GetChild<Panel>(0).AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 12));
         _message = new Label
         {
-            Text = "No Gooning files selected yet.",
+            Text = IdleText,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
             AnchorRight = 1,
@@ -59,7 +60,7 @@ public partial class MediaStage : Control, IMediaStage
             // The file name only - never the folder.
             AppLog.Warning(Log, "Could not show {0}", Path.GetFileName(path));
             image.Dispose();
-            ShowMessage("This picture could not be opened.");
+            ShowMessage(L10n.T("This picture could not be opened."));
             return;
         }
         FitInto(image, Size);
@@ -80,7 +81,7 @@ public partial class MediaStage : Control, IMediaStage
         Clear();
         var view = new GifView(path, new Vector2I((int)Size.X, (int)Size.Y));
         Show(view, "gif");
-        if (!view.Started) ShowMessage("This GIF could not be opened.");
+        if (!view.Started) ShowMessage(L10n.T("This GIF could not be opened."));
     }
 
     public void PlayVideo(string path, double volume)
@@ -91,7 +92,7 @@ public partial class MediaStage : Control, IMediaStage
         view.Failed += reason =>
         {
             // The reason only - the file's folder never reaches the log, and the player logs it.
-            if (_shown == view) ShowMessage("This clip could not be played.");
+            if (_shown == view) ShowMessage(L10n.T("This clip could not be played."));
             Player?.VideoFailed(reason);
         };
         Show(view, "video");
@@ -99,8 +100,20 @@ public partial class MediaStage : Control, IMediaStage
 
     public void ReplayVideo() => (_shown as VideoView)?.Replay();
 
+    // What the stage says before anything has been loaded.
+    private static string IdleText => L10n.T("No Gooning files selected yet.");
+
+    // After a change of language: the words up before anything was loaded, in the new one.
+    public void Reword()
+    {
+        if (Showing == "message" && _wordedIdle) _message.Text = IdleText;
+    }
+
+    private bool _wordedIdle = true;
+
     public void ShowMessage(string text)
     {
+        _wordedIdle = false;
         Clear();
         _message.Text = text;
         _message.Visible = true;

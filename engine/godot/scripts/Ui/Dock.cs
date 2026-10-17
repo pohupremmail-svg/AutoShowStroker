@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Gooner.Core.Localization;
 
 namespace Gooner.Engine.Ui;
 
@@ -33,25 +34,25 @@ public partial class Dock : PanelContainer
             CustomMinimumSize = new Vector2(22, 44),
             MouseFilter = MouseFilterEnum.Stop,
             MouseDefaultCursorShape = CursorShape.Move,
-            TooltipText = "Drag the controls anywhere - or throw them",
+            TooltipText = L10n.T("Drag the controls anywhere - or throw them"),
             Modulate = new Color(1, 1, 1, 0.6f),
         };
         grip.GuiInput += Drag;
         row.AddChild(grip);
 
-        Previous = Icon(row, "previous", "Previous (Left Arrow)");
-        Stop = Icon(row, "stop", "Stop (Ctrl+Space)");
-        Next = Icon(row, "next", "Skip (Right Arrow)");
+        Previous = Icon(row, "previous", L10n.T("Previous (Left Arrow)"));
+        Stop = Icon(row, "stop", L10n.T("Stop (Ctrl+Space)"));
+        Next = Icon(row, "next", L10n.T("Skip (Right Arrow)"));
         Separator(row);
-        Edge = new Button { FocusMode = FocusModeEnum.None, ThemeTypeVariation = "EdgeButton", TooltipText = "E - a pause now, and a gentler beat behind it" };
+        Edge = new Button { FocusMode = FocusModeEnum.None, ThemeTypeVariation = "EdgeButton", TooltipText = L10n.T("E - a pause now, and a gentler beat behind it") };
         row.AddChild(Edge);
         Separator(row);
-        Mute = Icon(row, "sound", "Sound (M)");
+        Mute = Icon(row, "sound", L10n.T("Sound (M)"));
         Device = new Button { FocusMode = FocusModeEnum.None, ThemeTypeVariation = "DockButton", Visible = false };
         row.AddChild(Device);
-        Folder = Icon(row, "folder", "Change Gooning Folder (Ctrl+O)");
-        Settings = Icon(row, "settings", "Settings (Ctrl+S)");
-        Menu = Icon(row, "menu", "Menu");
+        Folder = Icon(row, "folder", L10n.T("Change Gooning Folder (Ctrl+O)"));
+        Settings = Icon(row, "settings", L10n.T("Settings (Ctrl+S)"));
+        Menu = Icon(row, "menu", L10n.T("Menu"));
     }
 
     public Button Previous { get; }

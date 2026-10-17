@@ -1,4 +1,5 @@
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Engine.Ui;
 using Godot;
 
@@ -24,12 +25,12 @@ public partial class CrashPanel : AppPanel
         text.AddThemeFontSizeOverride("font_size", 12);
         Body.AddChild(text);
         Button toggle = null!;
-        toggle = AddButton("Show Details...", () =>
+        toggle = AddButton(L10n.T("Show Details..."), () =>
         {
             text.Visible = !text.Visible;
-            toggle.Text = text.Visible ? "Hide Details" : "Show Details...";
+            toggle.Text = text.Visible ? L10n.T("Hide Details") : L10n.T("Show Details...");
         });
-        AddButton("Copy Details", () => DisplayServer.ClipboardSet(details));
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Copy Details"), () => DisplayServer.ClipboardSet(details));
+        AddButton(L10n.T("Close"), Close, primary: true);
     }
 }

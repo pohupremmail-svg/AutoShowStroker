@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
@@ -18,12 +19,11 @@ public partial class PrivacyPanel : AppPanel
     private readonly Button _delete;
 
     public PrivacyPanel(PrivacyData privacy, PanelHost host)
-        : base("Your Data", new Vector2(620, 640), scrolls: true)
+        : base(L10n.T("Your Data"), new Vector2(620, 640), scrolls: true)
     {
         _privacy = privacy;
         _host = host;
-        Body.AddChild(Widgets.Text(
-            "GoonerApp never sends any of this anywhere. It does have to keep some of it on disk, though - here is exactly what, and where.",
+        Body.AddChild(Widgets.Text(L10n.T("GoonerApp never sends any of this anywhere. It does have to keep some of it on disk, though - here is exactly what, and where."),
             15, Palette.Text, wrap: true));
 
         // Selectable, so a path can be copied out rather than retyped.
@@ -41,7 +41,7 @@ public partial class PrivacyPanel : AppPanel
         locations.AddThemeStyleboxOverride("normal", box);
         Body.AddChild(locations);
 
-        var open = new Button { Text = "Open data folder", SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        var open = new Button { Text = L10n.T("Open data folder"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
         open.Pressed += () =>
         {
             if (privacy.DataFolderToOpen() is { } folder) OS.ShellOpen(folder);
@@ -52,10 +52,10 @@ public partial class PrivacyPanel : AppPanel
         if (privacy.DeviceOutputNote is { } note)
             Body.AddChild(Widgets.Text(note, 15, Palette.Text, wrap: true));
 
-        Body.AddChild(Header("Delete my data"));
+        Body.AddChild(Header(L10n.T("Delete my data")));
         foreach (var category in PrivacyData.Categories)
         {
-            var check = new CheckBox { TooltipText = category.Description, FocusMode = FocusModeEnum.None };
+            var check = new CheckBox { TooltipText = L10n.T(category.Description), FocusMode = FocusModeEnum.None };
             check.Toggled += on =>
             {
                 privacy.Select(category.Key, on);
@@ -64,11 +64,11 @@ public partial class PrivacyPanel : AppPanel
             _boxes[category.Key] = check;
             Body.AddChild(check);
         }
-        _delete = new Button { Text = "Delete selected...", Disabled = true, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        _delete = new Button { Text = L10n.T("Delete selected..."), Disabled = true, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
         _delete.Pressed += AskToDelete;
         Body.AddChild(_delete);
 
-        AddButton("Close", Close, primary: true);
+        AddButton(L10n.T("Close"), Close, primary: true);
         RefreshCounts();
     }
 
@@ -82,13 +82,12 @@ public partial class PrivacyPanel : AppPanel
 
     private void BuildDiagnosticLog()
     {
-        Body.AddChild(Header("Diagnostic log"));
-        Body.AddChild(Widgets.Text(
-            "Off unless you switch it on. Records what the app is doing so a problem can be traced - which also means it records when you used it. It never writes down the folders you play from; a file that fails to load is named, nothing else is.",
+        Body.AddChild(Header(L10n.T("Diagnostic log")));
+        Body.AddChild(Widgets.Text(L10n.T("Off unless you switch it on. Records what the app is doing so a problem can be traced - which also means it records when you used it. It never writes down the folders you play from; a file that fails to load is named, nothing else is."),
             15, Palette.Text, wrap: true));
-        var enabled = new CheckBox { Text = "Write a diagnostic log file", ButtonPressed = _privacy.DiagnosticLog, FocusMode = FocusModeEnum.None };
+        var enabled = new CheckBox { Text = L10n.T("Write a diagnostic log file"), ButtonPressed = _privacy.DiagnosticLog, FocusMode = FocusModeEnum.None };
         var level = new OptionButton { FocusMode = FocusModeEnum.None };
-        foreach (var name in AppLog.Levels) level.AddItem(PrivacyData.LevelLabels[name]);
+        foreach (var name in AppLog.Levels) level.AddItem(L10n.T(PrivacyData.LevelLabels[name]));
         var saved = AppLog.Levels.ToList().IndexOf(_privacy.DiagnosticLogLevel);
         if (saved >= 0) level.Select(saved);
         level.Disabled = !enabled.ButtonPressed;
@@ -103,7 +102,7 @@ public partial class PrivacyPanel : AppPanel
         level.ItemSelected += _ => Apply();
         Body.AddChild(enabled);
         var row = new HBoxContainer();
-        row.AddChild(new Label { Text = "Record:" });
+        row.AddChild(new Label { Text = L10n.T("Record:") });
         row.AddChild(level);
         Body.AddChild(row);
     }
@@ -116,7 +115,7 @@ public partial class PrivacyPanel : AppPanel
     private void AskToDelete()
     {
         if (!_privacy.CanDelete) return;
-        Confirm.Ask(_host, "Delete this data?", _privacy.ConfirmationText(), () =>
+        Confirm.Ask(_host, L10n.T("Delete this data?"), _privacy.ConfirmationText(), () =>
         {
             _privacy.DeleteSelected();
             foreach (var check in _boxes.Values) check.SetPressedNoSignal(false);

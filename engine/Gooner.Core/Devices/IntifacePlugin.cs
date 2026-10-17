@@ -1,4 +1,5 @@
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Settings;
 
 namespace Gooner.Core.Devices;
@@ -17,9 +18,10 @@ public sealed record DeviceButton(bool Visible, string Text, bool Enabled, strin
 // session starting, or the device arriving during one, arms it; rhythm pauses resume on their own.
 public sealed class IntifacePlugin
 {
-    public const string TabTitle = "Device (Beta)";
-    public const string ResumeText = "Resume Device";
-    public const string StopText = "Stop Device";
+    // The settings tab's name; shown translated.
+    public static string TabTitle => L10n.N("Device (Beta)");
+    public static string ResumeText => L10n.T("Resume Device");
+    public static string StopText => L10n.T("Stop Device");
 
     internal IntifacePlugin(GoonerApp app, IntifaceController controller)
     {
@@ -91,12 +93,12 @@ public sealed class IntifacePlugin
             if (Armed)
             {
                 return new DeviceButton(true, StopText, true,
-                    Paused ? "Device sync is running on a rhythm pause - it comes back on its own" : "Stop the device without ending the session",
+                    Paused ? L10n.T("Device sync is running on a rhythm pause - it comes back on its own") : L10n.T("Stop the device without ending the session"),
                     false);
             }
             if (CanResume)
-                return new DeviceButton(true, ResumeText, true, "Device sync stopped. It stays stopped until you say so.", true);
-            return new DeviceButton(true, Controller.DeviceName.Length == 0 ? "No device" : "Device ready", false, Controller.Status, false);
+                return new DeviceButton(true, ResumeText, true, L10n.T("Device sync stopped. It stays stopped until you say so."), true);
+            return new DeviceButton(true, Controller.DeviceName.Length == 0 ? L10n.T("No device") : L10n.T("Device ready"), false, L10n.T(Controller.Status), false);
         }
     }
 
@@ -127,8 +129,8 @@ public static class IntifaceConsent
 
     // The address is quoted back rather than checked against a list of local ones: the user typed
     // it, only they know whether it is this machine, and the app ships no addresses to compare with.
-    public static string Text(string url) =>
-        $"This will open a WebSocket connection to {url} and keep it open for as long as " +
+    public static string Text(string url) => L10n.F(
+        "This will open a WebSocket connection to {0} and keep it open for as long as " +
         "device output stays enabled.\n\n" +
         "Over it, GoonerApp sends the client name \"GoonerApp\", device discovery and " +
         "heartbeat messages, and movement and stop commands. Those commands are a live " +
@@ -140,7 +142,7 @@ public static class IntifaceConsent
         "the clear.\n\n" +
         "Device output switches itself off again at every launch, so you will be asked " +
         "for it the next time too.\n\n" +
-        "Enable device output?";
+        "Enable device output?", url);
 
     public static bool Acknowledged(ISettingsStore? settings) => settings?.GetBool(Key, false) ?? false;
 
@@ -163,21 +165,21 @@ public enum DeviceStep
 // which is also where consent is asked, the moment something would leave the machine.
 public sealed class DeviceSettings
 {
-    public const string BetaNotice =
+    public static string BetaNotice => L10n.T(
         "Beta. Device output has not been tested against physical hardware yet. Space is the panic key: it " +
-        "minimizes the window, mutes the sound and stops the device on the spot. Tell us how it went on the Discord.";
+        "minimizes the window, mutes the sound and stops the device on the spot. Tell us how it went on the Discord.");
 
-    public const string AddressHint =
+    public static string AddressHint => L10n.T(
         "Start Intiface Central, start its server and connect your device there. Intiface Central shows the " +
         "address its server is listening on - put that in below. The first device it offers with linear " +
-        "movement support is the one that gets used.";
+        "movement support is the one that gets used.");
 
-    public const string SyncNote =
+    public static string SyncNote => L10n.T(
         "Panic, Emergency Stop, losing the device and losing the connection all leave device sync stopped, and " +
         "it stays stopped until you say otherwise - the window often comes back by accident, and a device that " +
         "starts moving on its own at that moment is the worst thing this app could do. The Resume Device button " +
         "next to Mute in the main window is the way back; so is starting a new session, or the button below. " +
-        "Rhythm pauses resume on their own.";
+        "Rhythm pauses resume on their own.");
 
     private readonly IntifacePlugin _plugin;
     private readonly ISettingsStore? _settings;
@@ -293,15 +295,15 @@ public sealed class DeviceSettings
 
     // --- what the tab shows ---
 
-    public string Status => Controller.Status;
+    public string Status => L10n.T(Controller.Status);
 
-    public string DeviceLine => $"Device: {(Controller.DeviceName.Length > 0 ? Controller.DeviceName : "No linear device connected")}";
+    public string DeviceLine => L10n.F("Device: {0}", Controller.DeviceName.Length > 0 ? Controller.DeviceName : L10n.T("No linear device connected"));
 
     public string SyncLine =>
-        !_plugin.SessionActive ? "Device sync: waiting for a session"
-        : !_plugin.Armed ? "Device sync: stopped"
-        : _plugin.Paused ? "Device sync: rhythm pause"
-        : "Device sync: active";
+        !_plugin.SessionActive ? L10n.T("Device sync: waiting for a session")
+        : !_plugin.Armed ? L10n.T("Device sync: stopped")
+        : _plugin.Paused ? L10n.T("Device sync: rhythm pause")
+        : L10n.T("Device sync: active");
 
     public bool CanTest => Controller.Enabled && Controller.DeviceName.Length > 0;
 

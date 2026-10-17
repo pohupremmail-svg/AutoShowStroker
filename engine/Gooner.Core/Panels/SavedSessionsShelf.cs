@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Data;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Sessions;
 
@@ -26,21 +27,21 @@ public sealed class SavedSessionsShelf
 {
     private const string Log = "SavedSessionsDialog";
 
-    public const string Intro =
+    public static string Intro => L10n.T(
         "A saved session plays again exactly as it went: the same rhythms, the same pauses, the same climax, " +
         "the same pacing. The callouts stay random, so two runs of the same session are still comparable.\n\n" +
         "One marked Stopped early was saved before it ever climaxed - usually because you did not last that long. " +
-        "It replays as recorded and then carries on as an ordinary session, so this time you can finish it.";
+        "It replays as recorded and then carries on as an ordinary session, so this time you can finish it.");
 
-    public const string EmptyText = "Nothing saved yet. Save a session from the Session Explorer at the end of one.";
+    public static string EmptyText => L10n.T("Nothing saved yet. Save a session from the Session Explorer at the end of one.");
 
     // The whole reason exporting asks every time. Deliberately concrete: "includes paths" means
     // nothing to someone who has not thought about what a path contains.
-    public const string PathsWarning =
+    public static string PathsWarning => L10n.T(
         "A session exported with paths tells whoever opens it your Windows user name, how your collection is " +
         "laid out in folders, and the file name of everything it showed.\n\n" +
         "Without them it still replays every beat, the climax and the pacing - against whatever collection the " +
-        "other person has.";
+        "other person has.");
 
     private readonly UserDataStore _store;
     private readonly Func<JsonObject, bool, bool> _replay;
@@ -97,9 +98,9 @@ public sealed class SavedSessionsShelf
     public static string MissingFilesQuestion(ReplayPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        return $"{plan.Missing} of {plan.Total} files this session showed are no longer where they were.\n\n" +
+        return L10n.F("{0} of {1} files this session showed are no longer where they were.\n\n" +
             "Replay it against your own loaded collection instead? The rhythms, the climax and the pacing stay " +
-            "exactly the same - only the pictures are yours.";
+            "exactly the same - only the pictures are yours.", plan.Missing, plan.Total);
     }
 
     // Whether it started; the one way it does not is own-library mode with nothing loaded.
@@ -134,7 +135,7 @@ public sealed class SavedSessionsShelf
             return e.Message;
         }
         if (!SessionFiles.StoreSession(_store, session))
-            return "That session could not be saved to your shelf.";
+            return L10n.T("That session could not be saved to your shelf.");
         AppLog.Info(Log, "Session imported");
         Refresh();
         return null;

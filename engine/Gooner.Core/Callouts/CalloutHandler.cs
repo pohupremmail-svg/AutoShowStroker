@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Gooner.Core.Climax;
 using Gooner.Core.Data;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Randomness;
 using Gooner.Core.Sessions;
@@ -71,17 +72,17 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
     // Ordered soft to harsh, with the detached one last - the order the settings offer them in.
     public static readonly IReadOnlyDictionary<string, string> ToneLabels = new OrderedDictionary<string, string>
     {
-        ["flirty"] = "Flirty",
-        ["shy"] = "Shy",
-        ["bratty"] = "Bratty",
-        ["drunk"] = "Drunk",
-        ["girlfriend"] = "Girlfriend Experience",
-        ["nurturing"] = "Nurturing",
-        ["dominant"] = "Dominant",
-        ["sadistic"] = "Sadistic",
-        ["degrading"] = "Degrading",
-        ["hard_degrading"] = "Degrading (Hard)",
-        ["clinical"] = "Clinical",
+        ["flirty"] = L10n.N("Flirty"),
+        ["shy"] = L10n.N("Shy"),
+        ["bratty"] = L10n.N("Bratty"),
+        ["drunk"] = L10n.N("Drunk"),
+        ["girlfriend"] = L10n.N("Girlfriend Experience"),
+        ["nurturing"] = L10n.N("Nurturing"),
+        ["dominant"] = L10n.N("Dominant"),
+        ["sadistic"] = L10n.N("Sadistic"),
+        ["degrading"] = L10n.N("Degrading"),
+        ["hard_degrading"] = L10n.N("Degrading (Hard)"),
+        ["clinical"] = L10n.N("Clinical"),
     };
 
     // What the app said before there was a tone axis, so it stays the default for everyone who
@@ -256,7 +257,7 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
     public static string ToneLabel(string tone)
     {
         ArgumentNullException.ThrowIfNull(tone);
-        return ToneLabels.TryGetValue(tone, out var label) ? label : PyTitle(tone.Replace('_', ' '));
+        return ToneLabels.TryGetValue(tone, out var label) ? L10n.T(label) : PyTitle(tone.Replace('_', ' '));
     }
 
     // Every tone any installed language ships - the set the settings offer.
@@ -301,14 +302,14 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or DecoderFallbackException)
         {
-            throw new PhraseFileException($"Couldn't read {path}: {e.Message}", e);
+            throw new PhraseFileException(L10n.F("Couldn't read {0}: {1}", path, e.Message), e);
         }
         catch (JsonException e)
         {
-            throw new PhraseFileException($"{path} isn't valid JSON: {e.Message}", e);
+            throw new PhraseFileException(L10n.F("{0} isn't valid JSON: {1}", path, e.Message), e);
         }
         return data as JsonObject
-            ?? throw new PhraseFileException($"{path} must contain a JSON object of trigger key -> phrase list.");
+            ?? throw new PhraseFileException(L10n.F("{0} must contain a JSON object of trigger key -> phrase list.", path));
     }
 
     // Tolerant like the shipped files: anything malformed - an unknown or typo'd trigger key, a
@@ -357,11 +358,11 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
     public void LoadCustomFile(string path, string lang, string? tone = null)
     {
         if (!_availableLanguages.Contains(lang))
-            throw new PhraseFileException($"Unknown language: {PyJson.Quote(lang)}");
+            throw new PhraseFileException(L10n.F("Unknown language: {0}", PyJson.Quote(lang)));
         if (tone is not null && !AvailableTones.Contains(tone))
-            throw new PhraseFileException($"Unknown tone: {PyJson.Quote(tone)}");
+            throw new PhraseFileException(L10n.F("Unknown tone: {0}", PyJson.Quote(tone)));
         if (_customPhraseFiles.Any(entry => entry.Path == path))
-            throw new PhraseFileException("That file is already loaded.");
+            throw new PhraseFileException(L10n.T("That file is already loaded."));
         var data = ReadCustomFile(path);  // throws before anything changes
         MergeCustomPhrases(lang, tone, data);
         _customPhraseFiles.Add(new CustomPhraseFile(path, lang, tone));

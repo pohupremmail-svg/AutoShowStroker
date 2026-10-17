@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Engine.Fx;
 using Godot;
 
@@ -28,7 +29,7 @@ public partial class StartScreen : Control
     private double _time;
 
     // The line under the name when the phrase files have none for the language and tones picked.
-    public const string DefaultLine = "Lean back. I set the pace tonight.";
+    public static string DefaultLine => L10n.T("Lean back. I set the pace tonight.");
 
     // `line` is asked each time the screen comes up: a main_menu line of the callouts, in the
     // voice the app speaks in.

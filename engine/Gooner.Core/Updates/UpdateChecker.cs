@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 
 namespace Gooner.Core.Updates;
@@ -30,7 +31,7 @@ public sealed class UpdateChecker
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
     private const string Log = "UpdateChecker";
-    private const string Unreadable = "Couldn't understand GitHub's response.";
+    private static readonly string Unreadable = L10n.N("Couldn't understand GitHub's response.");
 
     private readonly string _currentVersion;
     private readonly HttpMessageHandler? _handler;
@@ -101,18 +102,19 @@ public static class UpdateTexts
     // sent" flat out, which was not quite true: the request carries a User-Agent naming the app,
     // so GitHub's access logs tie an IP to "runs GoonerApp". Small, but a privacy promise is worth
     // nothing unless it is exact.
-    public static string Consent { get; } =
+    public static string Consent => L10n.F(
         "This will send one request to GitHub.com to check the latest release version.\n\n" +
         "It carries your IP address (unavoidable for any web request) and a User-Agent of " +
-        $"\"{UpdateChecker.UserAgent}\", which identifies the app to GitHub. Nothing " +
+        "\"{0}\", which identifies the app to GitHub. Nothing " +
         "else is sent - no folders, no filenames, no statistics, nothing identifying you or " +
         "your machine - and this never runs on its own.\n\n" +
-        "Continue?";
+        "Continue?", UpdateChecker.UserAgent);
 
     public static string Available(string latestTag, string currentVersion) =>
-        $"A new version is available: {latestTag} (you're on v{currentVersion}).";
+        L10n.F("A new version is available: {0} (you're on v{1}).", latestTag, currentVersion);
 
-    public static string UpToDate(string currentVersion) => $"You're on the latest version (v{currentVersion}).";
+    public static string UpToDate(string currentVersion) => L10n.F("You're on the latest version (v{0}).", currentVersion);
 
-    public static string Failed(string message) => $"Couldn't check for updates:\n{message}";
+    // The reason is the system's own words, or GitHub's; the one the app words itself is translated.
+    public static string Failed(string message) => L10n.F("Couldn't check for updates:\n{0}", L10n.T(message));
 }

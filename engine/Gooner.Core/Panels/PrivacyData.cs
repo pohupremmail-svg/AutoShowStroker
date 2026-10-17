@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Logging;
 using Gooner.Core.Sessions;
 
@@ -28,23 +29,23 @@ public sealed class PrivacyData
     // the settings are handled on their own.
     public static IReadOnlyList<PrivacyCategory> Categories { get; } =
     [
-        new("session_history", "Session history", "every recorded session and your personal records"),
-        new("saved_sessions", "Saved sessions",
-            "the sessions you saved to replay - the one thing here that stores the paths of your media files"),
-        new("achievements", "Achievements", "which achievements you have unlocked, and when"),
-        new("custom_patterns", "Custom rhythm patterns", "the patterns you built in the pattern editor"),
-        new("custom_phrase_files", "Custom phrase files", "the callout files you added"),
-        new("last_selected_folders", "Last used media folders", "the folder paths the picker remembers"),
-        new("diagnostic_log", "Diagnostic log", "the opt-in log file, if you turned it on"),
-        new("settings", "All settings", "every slider, toggle and the selected language"),
+        new("session_history", L10n.N("Session history"), L10n.N("every recorded session and your personal records")),
+        new("saved_sessions", L10n.N("Saved sessions"),
+            L10n.N("the sessions you saved to replay - the one thing here that stores the paths of your media files")),
+        new("achievements", L10n.N("Achievements"), L10n.N("which achievements you have unlocked, and when")),
+        new("custom_patterns", L10n.N("Custom rhythm patterns"), L10n.N("the patterns you built in the pattern editor")),
+        new("custom_phrase_files", L10n.N("Custom phrase files"), L10n.N("the callout files you added")),
+        new("last_selected_folders", L10n.N("Last used media folders"), L10n.N("the folder paths the picker remembers")),
+        new("diagnostic_log", L10n.N("Diagnostic log"), L10n.N("the opt-in log file, if you turned it on")),
+        new("settings", L10n.N("All settings"), L10n.N("every slider, toggle and the selected language")),
     ];
 
     // Plain-language names for AppLog.Levels - the stored value stays the level name.
     public static IReadOnlyDictionary<string, string> LevelLabels { get; } = new Dictionary<string, string>
     {
-        ["INFO"] = "Everything (recommended)",
-        ["WARNING"] = "Problems only",
-        ["ERROR"] = "Errors only",
+        ["INFO"] = L10n.N("Everything (recommended)"),
+        ["WARNING"] = L10n.N("Problems only"),
+        ["ERROR"] = L10n.N("Errors only"),
     };
 
     private readonly GoonerApp _app;
@@ -59,7 +60,7 @@ public sealed class PrivacyData
     // --- disclosure ---
 
     public string LocationsText =>
-        $"Data files:\n{_app.DataStore?.BaseDir}\n\nSettings:\n{_app.Settings?.Location}";
+        L10n.F("Data files:\n{0}\n\nSettings:\n{1}", _app.DataStore?.BaseDir, _app.Settings?.Location);
 
     // The data folder, created first if nothing has been saved yet - opening Explorer on a path that
     // does not exist just fails silently. Null when it cannot be.
@@ -82,12 +83,12 @@ public sealed class PrivacyData
     // the settings: this is where the app says what it keeps and what it sends, and a promise that
     // nothing leaves the machine has to name its own exception. The switch stays in the settings,
     // beside the address and the test buttons it needs. Null without device output.
-    public string? DeviceOutputNote => _app.Intiface is null ? null :
+    public string? DeviceOutputNote => _app.Intiface is null ? null : L10n.T(
         "Device output (Settings > Device) is the one part of GoonerApp that opens a " +
         "network connection. It is off every time the app starts and has to be turned " +
         "on deliberately, it only ever goes to the address you type in yourself, and " +
         "it sends movement and stop commands and nothing else - no media, no paths, no " +
-        "history. Deleting All settings below also disconnects it.";
+        "history. Deleting All settings below also disconnects it.");
 
     // --- the diagnostic log ---
 
@@ -121,8 +122,8 @@ public sealed class PrivacyData
     public string LabelFor(string key)
     {
         var count = CategoryCounts()[key];
-        var stored = count == 0 ? "nothing stored" : $"{count} stored";
-        return $"{Categories.Single(c => c.Key == key).Label} ({stored})";
+        var stored = count == 0 ? L10n.T("nothing stored") : L10n.F("{0} stored", count);
+        return L10n.F("{0} ({1})", L10n.T(Categories.Single(c => c.Key == key).Label), stored);
     }
 
     // --- deleting ---
@@ -139,8 +140,8 @@ public sealed class PrivacyData
 
     public string ConfirmationText()
     {
-        var listed = string.Join("\n", SelectedKeys.Select(key => $"  - {Categories.Single(c => c.Key == key).Label}"));
-        return $"This permanently deletes:\n\n{listed}\n\nThis cannot be undone.";
+        var listed = string.Join("\n", SelectedKeys.Select(key => $"  - {L10n.T(Categories.Single(c => c.Key == key).Label)}"));
+        return L10n.F("This permanently deletes:\n\n{0}\n\nThis cannot be undone.", listed);
     }
 
     // What Delete selected... does once the user has said yes: the ticked categories go, and the

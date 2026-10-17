@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Gooner.Core.Data;
+using Gooner.Core.Localization;
 using Gooner.Core.Media;
 using Gooner.Core.Randomness;
 
@@ -49,7 +50,7 @@ public sealed class MediaFolderPicker
 
     // What the folder list says about each folder.
     public IReadOnlyList<string> Rows =>
-        [.. _folders.Select(f => Directory.Exists(f) ? $"{f}  ({_files[f].Count} files)" : $"{f}  (folder not found)")];
+        [.. _folders.Select(f => Directory.Exists(f) ? L10n.F("{0}  ({1} files)", f, _files[f].Count) : L10n.F("{0}  (folder not found)", f))];
 
     public bool CanStart => _files.Values.Any(files => files.Count > 0);
 

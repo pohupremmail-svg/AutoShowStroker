@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Gooner.Core.App;
+using Gooner.Core.Localization;
 using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
 using Godot;
@@ -22,7 +23,7 @@ public partial class PatternEditorPanel : AppPanel
     private readonly List<StepBar> _bars = [];
 
     public PatternEditorPanel(PatternEditor editor, Action click)
-        : base("Manage Custom Patterns", new Vector2(640, 360))
+        : base(L10n.T("Manage Custom Patterns"), new Vector2(640, 360))
     {
         _editor = editor;
         _click = click;
@@ -31,7 +32,7 @@ public partial class PatternEditorPanel : AppPanel
         Body.AddChild(columns);
 
         var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1 };
-        left.AddChild(new Label { Text = "Your Patterns" });
+        left.AddChild(new Label { Text = L10n.T("Your Patterns") });
         _list = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill };
         _list.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6, 6));
         _list.ItemSelected += index =>
@@ -41,12 +42,12 @@ public partial class PatternEditorPanel : AppPanel
         };
         left.AddChild(_list);
         var listButtons = new HBoxContainer();
-        listButtons.AddChild(Button("New", () =>
+        listButtons.AddChild(Button(L10n.T("New"), () =>
         {
             _editor.StartNew();
             Pull();
         }));
-        listButtons.AddChild(Button("Delete", () =>
+        listButtons.AddChild(Button(L10n.T("Delete"), () =>
         {
             _editor.DeleteSelected();
             Pull();
@@ -56,7 +57,7 @@ public partial class PatternEditorPanel : AppPanel
 
         var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
         var nameRow = new HBoxContainer();
-        nameRow.AddChild(new Label { Text = "Name:" });
+        nameRow.AddChild(new Label { Text = L10n.T("Name:") });
         _name = new LineEdit { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _name.TextChanged += text => _editor.Name = text;
         nameRow.AddChild(_name);
@@ -67,12 +68,12 @@ public partial class PatternEditorPanel : AppPanel
         stepsScroll.AddChild(_stepsRow);
         right.AddChild(stepsScroll);
         var stepButtons = new HBoxContainer();
-        stepButtons.AddChild(Button("+ Step", () =>
+        stepButtons.AddChild(Button(L10n.T("+ Step"), () =>
         {
             _editor.AddStep();
             PullSteps();
         }));
-        stepButtons.AddChild(Button("- Step", () =>
+        stepButtons.AddChild(Button(L10n.T("- Step"), () =>
         {
             _editor.RemoveStep();
             PullSteps();
@@ -81,9 +82,9 @@ public partial class PatternEditorPanel : AppPanel
         _error = Widgets.Text("", 13, Palette.Denied, wrap: true);
         right.AddChild(_error);
         var actions = new HBoxContainer();
-        _preview = Button("Preview", TogglePreview);
+        _preview = Button(L10n.T("Preview"), TogglePreview);
         actions.AddChild(_preview);
-        var save = Button("Save", () =>
+        var save = Button(L10n.T("Save"), () =>
         {
             _editor.Save();
             Pull();
@@ -98,7 +99,7 @@ public partial class PatternEditorPanel : AppPanel
         AddChild(_timer);
         // However it closes - Esc, the cross, Close - a preview left running would go on clicking.
         Closed += StopPreview;
-        AddButton("Close", Close);
+        AddButton(L10n.T("Close"), Close);
         Pull();
     }
 
@@ -157,7 +158,7 @@ public partial class PatternEditorPanel : AppPanel
             return;
         }
         _editor.StartPreview();
-        _preview.Text = "Stop";
+        _preview.Text = L10n.T("Stop");
         Tick();
     }
 
@@ -165,7 +166,7 @@ public partial class PatternEditorPanel : AppPanel
     {
         _editor.StopPreview();
         _timer.Stop();
-        _preview.Text = "Preview";
+        _preview.Text = L10n.T("Preview");
         foreach (var bar in _bars) bar.Lit = false;
     }
 
