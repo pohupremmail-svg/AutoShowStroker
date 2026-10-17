@@ -249,8 +249,8 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
-"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--screenshot=PNG]
-"$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S]
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--size=WxH] [--screenshot=PNG]
+"$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S] [--size=WxH]
 "$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
 dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)
 dotnet run --project engine/Gooner.Build -- verify [--dir DIR]
@@ -263,7 +263,9 @@ app's key.
 `--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
 `settings`, `settings-look`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`,
 `crash`, `splash`, `menu`, `start` - the start screen alone - ...), waits for it to fade in and saves
-the window - how every panel was checked by eye.
+the window - how every panel was checked by eye. `--size=1280x720` checks a small laptop screen
+(a panel of a set height scrolls its body rather than run off the window); `--panel=NAME` on a
+smoke session opens the panel over a running session, to see the glass over a picture.
 
 The smoke runs never touch a real data folder when given `--data-dir`; give them one. A look to
 check by eye goes into that folder's `settings.json` first (`{"Look/note_track":"ring",

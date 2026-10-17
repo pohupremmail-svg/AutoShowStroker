@@ -22,7 +22,7 @@ public partial class Dock : PanelContainer
 
     public Dock()
     {
-        Glass.Apply(this, 20, 7, opacity: 0.42f);
+        Glass.Apply(this, 20, 7, opacity: Glass.DockOpacity);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 2);
         AddChild(row);

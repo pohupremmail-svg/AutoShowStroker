@@ -38,8 +38,8 @@ public sealed class HypnoRing(float width, float height, bool wandering)
 {
     private float Short => Math.Min(width, height);
 
-    public float Radius => Short * (wandering ? 0.085f : 0.105f);
-    public float Reach => Short * (wandering ? 0.31f : 0.43f);
+    public float Radius => Short * (wandering ? 0.1f : 0.125f);
+    public float Reach => Short * (wandering ? 0.35f : 0.45f);
 
     public float RadiusAt(double ahead) => Radius + (Reach - Radius) * (float)Math.Pow(Math.Max(0, ahead), 0.9);
 

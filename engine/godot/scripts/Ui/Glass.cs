@@ -12,6 +12,13 @@ namespace Gooner.Engine.Ui;
 // reaches every pane of glass at once (Refresh).
 public static class Glass
 {
+    // How much of the tint covers the blurred picture behind: a panel full of text a little more than
+    // the dock, the captions least.
+    public const float PanelOpacity = 0.4f;
+    public const float CardOpacity = 0.36f;
+    public const float DockOpacity = 0.3f;
+    public const float ChipOpacity = 0.26f;
+
     private static Shader? _shader;
     private static readonly Dictionary<float, ShaderMaterial> Materials = [];
 
@@ -24,8 +31,8 @@ public static class Glass
         box.SetContentMarginAll(margin);
         if (shadow)
         {
-            box.ShadowColor = new Color(0, 0, 1, 0.35f);
-            box.ShadowSize = 18;
+            box.ShadowColor = new Color(0, 0, 1, 1);
+            box.ShadowSize = 22;
             box.ShadowOffset = new Vector2(0, 8);
         }
         return box;
@@ -58,6 +65,6 @@ public static class Glass
     private static void Tint(ShaderMaterial material, float opacity)
     {
         material.SetShaderParameter("tint", UiTheme.Of(Palette.Background, opacity));
-        material.SetShaderParameter("rim", UiTheme.Of(Palette.Text, 0.18f));
+        material.SetShaderParameter("rim", UiTheme.Of(Palette.Text, 0.26f));
     }
 }

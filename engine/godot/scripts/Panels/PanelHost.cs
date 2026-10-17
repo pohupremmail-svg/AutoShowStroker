@@ -28,7 +28,7 @@ public partial class PanelHost : Control
             foreach (var (_, panel) in _open)
             {
                 panel.FitInto(Room);
-                if (!panel.Moved) Centre(panel);
+                Fit(panel);
             }
         };
     }
@@ -44,17 +44,16 @@ public partial class PanelHost : Control
     public void Show(AppPanel panel)
     {
         if (panel.IsOpen) return;
-        var layer = new ColorRect { Color = new Color(0, 0, 0, 0.3f), AnchorRight = 1, AnchorBottom = 1 };
+        var layer = new ColorRect { Color = new Color(0, 0, 0, 0.18f), AnchorRight = 1, AnchorBottom = 1 };
         layer.AddChild(panel);
         AddChild(layer);
         panel.Host = this;
         panel.FitInto(Room);
-        panel.Resized += () =>
-        {
-            panel.PivotOffset = panel.Size / 2;
-            if (!panel.Moved) Centre(panel);
-        };
-        Centre(panel);
+        panel.Resized += () => panel.PivotOffset = panel.Size / 2;
+        // Outside a container nothing shrinks a control back to what its content needs - and a
+        // wrapped text measures itself at no width first, so a question grew taller than the window.
+        panel.MinimumSizeChanged += () => Fit(panel);
+        Fit(panel);
         _open.Add((layer, panel));
 
         layer.Modulate = new Color(1, 1, 1, 0);
@@ -66,10 +65,17 @@ public partial class PanelHost : Control
         tween.TweenProperty(panel, "rotation", 0f, FadeSec * 2.2f);
     }
 
-    private void Centre(AppPanel panel)
+    // Exactly as big as its content, and in the middle until it is moved - then kept on the window.
+    private void Fit(AppPanel panel)
     {
-        var size = panel.Size == Vector2.Zero ? panel.GetCombinedMinimumSize() : panel.Size;
-        panel.Position = ((Size - size) / 2).Round();
+        panel.Size = Vector2.Zero;
+        if (!panel.Moved)
+        {
+            panel.Position = ((Size - panel.Size) / 2).Round();
+            return;
+        }
+        var max = Size - panel.Size;
+        panel.Position = new Vector2(Mathf.Clamp(panel.Position.X, 0, Mathf.Max(0, max.X)), Mathf.Clamp(panel.Position.Y, 0, Mathf.Max(0, max.Y)));
     }
 
     public void Close(AppPanel panel)

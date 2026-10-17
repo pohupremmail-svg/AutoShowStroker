@@ -160,8 +160,6 @@ public partial class NoteTrackView : Control
         RhythmArrived?.Invoke(span.PatternName ?? "");
         var (at, _, _) = HitPoint(new ScheduledNote(now, true, 1), _landed, now);
         _particles.Emit(at, Of(Palette.Cool), 26 * Strength, 520, direction: -MathF.PI / 2, spread: MathF.PI * 1.2f, life: 0.7f);
-        // A new rhythm, a new place to look.
-        if (Style == "ring" && _look.FocusWanders) _focus.MoveOn(now);
     }
 
     // The audible notes still to come within the lead time, each with its ordinal.

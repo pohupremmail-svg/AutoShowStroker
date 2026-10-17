@@ -15,7 +15,7 @@ namespace Gooner.Engine.Panels;
 // above it whatever was on screen at that moment, and the line saying what was playing.
 public partial class SessionExplorerPanel : AppPanel
 {
-    private const int PreviewMinHeight = 340;
+    private const int PreviewMinHeight = 220;
 
     private readonly SessionExplorer _explorer;
     private readonly PanelHost _host;

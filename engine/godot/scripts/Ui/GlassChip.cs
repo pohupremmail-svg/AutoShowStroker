@@ -11,7 +11,7 @@ public partial class GlassChip : PanelContainer
 
     public GlassChip()
     {
-        Glass.Apply(this, 18, 0, opacity: 0.42f, shadow: false);
+        Glass.Apply(this, 18, 0, opacity: Glass.ChipOpacity, shadow: false);
         var box = (StyleBoxFlat)GetThemeStylebox("panel");
         box.ContentMarginLeft = box.ContentMarginRight = 14;
         box.ContentMarginTop = box.ContentMarginBottom = 6;

@@ -64,6 +64,10 @@ public static class UiTheme
         theme.SetFont("font", "PrimaryButton", Bold);
 
         theme.SetColor("font_color", "Label", Of(Palette.Text));
+        // A faint shadow under every label: text on glass sits over whatever the picture is.
+        theme.SetColor("font_shadow_color", "Label", new Color(0, 0, 0, 0.45f));
+        theme.SetConstant("shadow_offset_x", "Label", 0);
+        theme.SetConstant("shadow_offset_y", "Label", 1);
         theme.SetStylebox("panel", "PanelContainer", Box(Of(Palette.Surface), 12, 18));
 
         // A panel's heading: the title WhatsNewDialog and its siblings drew in their own body.

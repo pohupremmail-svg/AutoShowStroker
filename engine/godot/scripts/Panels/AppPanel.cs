@@ -25,7 +25,7 @@ public partial class AppPanel : PanelContainer
     {
         _wanted = size;
         CustomMinimumSize = size;
-        Glass.Apply(this, 22, 18, opacity: 0.62f);
+        Glass.Apply(this, 22, 18, opacity: Glass.PanelOpacity);
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", 12);
         AddChild(column);
@@ -44,7 +44,9 @@ public partial class AppPanel : PanelContainer
 
         Body = new VBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         Body.AddThemeConstantOverride("separation", 10);
-        if (scrolls)
+        // A panel of a set height never outgrows a small window: its body scrolls instead. One that
+        // sizes itself to its text does not need to.
+        if (scrolls || size.Y > 0)
         {
             var scroll = new ScrollContainer
             {

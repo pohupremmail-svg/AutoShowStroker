@@ -43,6 +43,8 @@ namespace Gooner.Engine;
 //                         --device=<ws://...> switches device output on against a server of your
 //                         own (no consent question - a development run only).
 //   -- --smoke-panel=<n>  opens one panel by name (see SmokePanels) and quits; with --screenshot.
+//   -- --size=WxH         the window size of a smoke run (1280x800 otherwise).
+//   -- --panel=<n>        with --smoke-session: opens that panel over the running session.
 //                         The explorer's sample is built over --media=<folder>, scrubbed to
 //                         --scrub=<s>. --wait=<s> waits that long before the screenshot (0.4).
 //   -- --data-dir=<path>  where the history, settings and saved sessions go (see AppPaths).
@@ -108,7 +110,9 @@ public partial class Main : Control
         if (OS.GetCmdlineUserArgs().Any(arg => arg.StartsWith("--smoke", StringComparison.Ordinal)))
         {
             DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
-            DisplayServer.WindowSetSize(new Vector2I(1280, 800));
+            // --size=WxH for a check at another size - a small laptop screen, say.
+            var size = AppPaths.UserArg("size")?.Split('x') is [var w, var h] ? new Vector2I(int.Parse(w, System.Globalization.CultureInfo.InvariantCulture), int.Parse(h, System.Globalization.CultureInfo.InvariantCulture)) : new Vector2I(1280, 800);
+            DisplayServer.WindowSetSize(size);
         }
 
         _audio = new SessionAudio();
@@ -446,6 +450,8 @@ public partial class Main : Control
         {
             app.Start();
         }
+        // --panel=<name> opens one of SmokePanels over the running session: the glass over a picture.
+        if (AppPaths.UserArg("panel") is { } panel && SmokePanels().TryGetValue(panel, out var open)) open();
     }
 
     // Opens one panel, waits for it to fade in, saves the window and quits: 0 when the name was known.
@@ -548,7 +554,7 @@ public partial class Main : Control
     private PanelContainer BuildOutcome()
     {
         var card = new PanelContainer { Visible = false };
-        Glass.Apply(card, 22, 14, opacity: 0.55f);
+        Glass.Apply(card, 22, 14, opacity: Glass.CardOpacity);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 10);
         foreach (var (label, answer) in new[] { ("I Came", "came"), ("I Ruined It", "ruined"), ("I Stopped", "stopped") })
