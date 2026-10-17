@@ -736,6 +736,14 @@ public sealed class SettingsFormTests : IDisposable
         Assert.Equal(Look.Choices["note_track"], Form.Choices["note_track"].Options);
     }
 
+    // Someone may keep a great many models; a row of buttons would run out of room.
+    [Fact]
+    public void the_character_is_picked_from_a_list_the_look_from_buttons()
+    {
+        Assert.True(Form.Choices["character"].Dropdown);
+        Assert.False(Form.Choices["note_track"].Dropdown);
+    }
+
     [Fact]
     public void no_character_is_applied_and_stored()
     {

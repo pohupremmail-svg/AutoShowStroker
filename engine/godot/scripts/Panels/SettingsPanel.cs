@@ -21,6 +21,7 @@ public partial class SettingsPanel : AppPanel
     private readonly Dictionary<string, CheckBox> _toggles = [];
     private readonly Dictionary<string, CheckBox> _tones = [];
     private readonly Dictionary<string, List<Button>> _choices = [];
+    private readonly Dictionary<string, OptionButton> _dropdowns = [];
     private readonly List<GridContainer> _rhythmGrids = [];
     private readonly List<Button> _uiLanguages = [];
     private readonly TabContainer _tabs;
@@ -142,6 +143,16 @@ public partial class SettingsPanel : AppPanel
     {
         var row = new HBoxContainer();
         row.AddChild(new Label { Text = setting.Label, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1 });
+        if (setting.Dropdown)
+        {
+            var list = new OptionButton { FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
+            foreach (var option in setting.Options) list.AddItem(option.Label);
+            list.Select(setting.Options.ToList().FindIndex(o => o.Value == setting.Value));
+            list.ItemSelected += index => setting.Value = setting.Options[(int)index].Value;
+            _dropdowns[setting.Name] = list;
+            row.AddChild(list);
+            return row;
+        }
         var options = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
         options.AddThemeConstantOverride("separation", 4);
         var group = new ButtonGroup();
@@ -274,6 +285,11 @@ public partial class SettingsPanel : AppPanel
         foreach (var (name, spin) in _numbers) spin.SetValueNoSignal(_form.Numbers[name].Value);
         foreach (var (name, check) in _toggles) check.SetPressedNoSignal(_form.Toggles[name].Value);
         foreach (var (tone, check) in _tones) check.SetPressedNoSignal(_form.Tones[tone]);
+        foreach (var (name, list) in _dropdowns)
+        {
+            var setting = _form.Choices[name];
+            list.Select(setting.Options.ToList().FindIndex(o => o.Value == setting.Value));
+        }
         foreach (var (name, buttons) in _choices)
         {
             var setting = _form.Choices[name];

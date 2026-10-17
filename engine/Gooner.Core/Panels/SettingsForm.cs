@@ -123,6 +123,9 @@ public sealed class ChoiceSetting
     public IReadOnlyList<LookOption> Options { get; }
     public string Default { get; }
 
+    // Shown as a drop-down list rather than a row of buttons: for a choice that can grow long.
+    public bool Dropdown { get; init; }
+
     public string Value
     {
         get => _value;
@@ -224,7 +227,7 @@ public sealed class SettingsForm
         ChoiceRow CharacterRow(CharacterChoice character)
         {
             _choices["character"] = new ChoiceSetting("character", L10n.T("On the start screen:"), CharacterChoice.SettingsGroup,
-                character.Options, character.First, character.File, character.Choose);
+                character.Options, character.First, character.File, character.Choose) { Dropdown = true };
             return new ChoiceRow("character");
         }
 
