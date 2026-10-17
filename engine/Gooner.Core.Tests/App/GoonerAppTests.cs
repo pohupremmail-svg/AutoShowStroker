@@ -1109,6 +1109,26 @@ public sealed class GoonerAppTests : IDisposable
         Assert.False(App.ShowStartupSplash);
     }
 
+    [Fact]
+    public void show_startup_splash_defaults_to_true() => Assert.True(App.ShowStartupSplash);
+
+    [Fact]
+    public void show_record_chase_defaults_to_true() => Assert.True(App.Hud.ShowRecordChase);
+
+    [Fact]
+    public void show_session_timer_defaults_to_true() => Assert.True(App.Hud.ShowSessionTimer);
+
+    [Fact]
+    public void the_diagnostic_log_level_defaults_to_info() => Assert.Equal(AppLog.DefaultLevel, App.DiagnosticLogLevel);
+
+    [Fact]
+    public void a_saved_diagnostic_log_level_is_restored()
+    {
+        _settings.SetValue("GoonerApp/diagnostic_log_level", "ERROR");
+
+        Assert.Equal("ERROR", App.DiagnosticLogLevel);
+    }
+
     // --- what's new ---
 
     private GoonerApp WithChangelog(string version, params string[] versions) => new(_stage, _clock, new GoonerAppOptions
