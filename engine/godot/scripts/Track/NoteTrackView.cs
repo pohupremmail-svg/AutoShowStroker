@@ -71,6 +71,9 @@ public partial class NoteTrackView : Control
 
     public bool ShowsRing => Style == "ring";
 
+    // How bright the hit zone still is from the last note: 1 on the beat, fading.
+    public float Flare => _hit;
+
     // A new session: no note has landed yet, and nothing is switched off.
     public void Reset()
     {

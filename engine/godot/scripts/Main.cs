@@ -57,6 +57,8 @@ public partial class Main : Control
     private MediaStage? _stage;
     private NoteTrackView? _track;
     private Particles _particles = null!;
+    private readonly StageFilter _filter = new();
+    private float _aberration;
     private bool _wasMaximized;
     private int _hits;
     private double _smokeUntil;
@@ -193,6 +195,9 @@ public partial class Main : Control
         click.Muted = _app.Beat.IsMuted;
         // The same moments the click was given, with the stretches of the plan they fall in.
         _track!.Show(_app.Beat.Forecast(NoteTrackView.LeadTimeSec), _clock.Now, delta);
+        // Censoring round the Hypno Ring, wherever it has wandered; the clear circle breathes with the beat.
+        var censor = _track.ShowsRing && _app.IsRunning ? _app.Look.Censor : null;
+        _filter.Apply(censor, _track.Focus, _track.FocusRadius * 2.5f * (1 + 0.07f * _track.Flare), _aberration);
         Sync();
 
         if (_smokeUntil > 0 && _clock.Now >= _smokeUntil) EndSmoke(click);
@@ -477,7 +482,8 @@ public partial class Main : Control
         var media = new Control { SizeFlagsVertical = SizeFlags.ExpandFill };
         root.AddChild(media);
         media.AddChild(_stage);
-        // The note track lies over the picture now, under the captions.
+        // Over the picture: what the effect layer does to it, then the note track, then the captions.
+        media.AddChild(_filter);
         media.AddChild(_track);
         (_callout, _calloutText) = CaptionPanel(24, 0.9f, 10, CalloutMargin);
         _calloutText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
