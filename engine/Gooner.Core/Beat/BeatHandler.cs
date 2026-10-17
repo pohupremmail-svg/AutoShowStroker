@@ -16,6 +16,12 @@ public readonly record struct UpcomingBeat(double Offset, bool Audible, int Weig
 // One note the rhythm is about to play, at the session-clock moment it will fire.
 public readonly record struct ScheduledNote(double At, bool Audible, int Weight);
 
+// A stretch of the plan as the note track draws it - a rhythm ("beat"/"finale", with its pattern)
+// or a pause - from the moment it takes over to the moment the next one does, on the session clock.
+public readonly record struct ForecastSpan(string Kind, string? PatternName, double Start, double End);
+
+public sealed record TrackForecast(IReadOnlyList<ScheduledNote> Notes, IReadOnlyList<ForecastSpan> Spans);
+
 // The rhythm engine. Port of src/BeatHandler.py.
 //
 // The session is *planned*, not improvised: StartBeat builds a rolling buffer of Segments (a
@@ -584,6 +590,77 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
             run = run with { Due = run.Due + gapMs / 1000.0, Position = (run.Position + 1) % run.Pattern.Length };
         }
         return notes;
+    }
+
+    // What the note track draws: UpcomingNotes' notes, and the stretches of the plan they fall in -
+    // the one on the air from its start, then each one coming, with the moment it takes over. Unlike
+    // UpcomingNotes it walks on through a pause still to come, which runs its planned whole seconds
+    // exactly as StartPause will count them, so the pause flies in like the notes do and the notes
+    // behind it are there too. A stretch's end is where its last note falls once the walk gets that
+    // far, its planned end until then, and never while the final segment is held.
+    public TrackForecast Forecast(double horizonSec)
+    {
+        var until = Now + horizonSec;
+        var notes = new List<ScheduledNote>();
+        var spans = new List<ForecastSpan>();
+        if (CurrentSegment is not { } current) return new TrackForecast(notes, spans);
+        var queued = new Queue<Segment>(Plan);
+        Run? run;
+        if (IsPaused())
+        {
+            var end = PauseTimer.Due;
+            for (var tick = 1; tick < (CurPauseDur ?? 0); tick++)
+                end += 1000 / 1000.0;
+            spans.Add(new ForecastSpan("pause", null, CurBeatStartTime, end));
+            run = BeginForecastRun(queued, end, until, spans);
+        }
+        else
+        {
+            if (!NoteTimer.Active || CurFreq <= 0 || CurrentBeatPattern is not { Length: > 0 }) return new TrackForecast(notes, spans);
+            var segmentEnd = _holding ? double.PositiveInfinity : CurrentSegmentEnd;
+            spans.Add(new ForecastSpan(current.Kind, current.PatternName, CurBeatStartTime, segmentEnd));
+            run = new Run(NoteTimer.Due, CurrentBeatPattern, CurrentBeatPosition, BaseStepSec(), segmentEnd);
+        }
+
+        while (run is { } r && r.Due <= until && notes.Count < MaxLookaheadNotes)
+        {
+            var step = r.Pattern[r.Position];
+            notes.Add(new ScheduledNote(r.Due, step > 0, Math.Abs(step)));
+            if (r.Due >= r.SegmentEnd)
+            {
+                spans[^1] = spans[^1] with { End = r.Due };
+                run = BeginForecastRun(queued, r.Due, until, spans);
+                continue;
+            }
+            var gapMs = (int)(r.BaseStepSec * 1000 / Math.Abs(step));
+            run = r with { Due = r.Due + gapMs / 1000.0, Position = (r.Position + 1) % r.Pattern.Length };
+        }
+        return new TrackForecast(notes, spans);
+    }
+
+    // BeginRun for the forecast: pauses are walked through, each a stretch of its own, until a
+    // rhythm begins - or the horizon, the end of the plan or a deleted pattern ends the walk.
+    private Run? BeginForecastRun(Queue<Segment> queued, double start, double until, List<ForecastSpan> spans)
+    {
+        while (queued.Count > 0 && start <= until)
+        {
+            var segment = queued.Dequeue();
+            if (segment.Kind == "pause")
+            {
+                var seconds = Math.Max(1, (int)Math.Round(segment.DurationSec, MidpointRounding.ToEven));
+                spans.Add(new ForecastSpan("pause", null, start, start + seconds));
+                start += seconds;
+                continue;
+            }
+            if (segment.Freq is not { } freq || freq == 0 || segment.PatternName is null
+                || !AvailableBeatPatterns.TryGetValue(segment.PatternName, out var pattern) || pattern.Length == 0)
+                return null;
+            spans.Add(new ForecastSpan(segment.Kind, segment.PatternName, start, start + segment.DurationSec));
+            var baseStepSec = BaseStepSecFor(pattern, freq);
+            var gapMs = (int)(baseStepSec * 1000 / Math.Abs(pattern[0]));
+            return new Run(start + gapMs / 1000.0, pattern, 1 % pattern.Length, baseStepSec, start + segment.DurationSec);
+        }
+        return null;
     }
 
     // A rhythm as UpcomingNotes walks it: the next note's moment, and what sets the ones after.
