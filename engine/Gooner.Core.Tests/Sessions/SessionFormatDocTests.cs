@@ -49,18 +49,31 @@ public partial class SessionFormatDocTests
 
     // A name in the document that the app cannot play is worse than an omission - it reads as
     // permission.
+    //
+    // Python's version looks only at names in backticks, and the document lists its rhythms in a
+    // plain block under "Built-in rhythm names" - so there it has never found one, and passes
+    // whatever the list says. Here the block itself is read too, column by column.
     [Fact]
     public void the_spec_invents_no_rhythms_of_its_own()
     {
-        var plausible = Quoted().Matches(Spec).Select(m => m.Groups[1].Value)
+        var builtIn = BeatHandler.BeatPatternsMap.Keys.ToHashSet();
+        var quoted = Quoted().Matches(Spec).Select(m => m.Groups[1].Value)
             .Where(name => name.Contains(' ', StringComparison.Ordinal)
                 && !name.StartsWith("Sessions", StringComparison.Ordinal) && !name.StartsWith("What", StringComparison.Ordinal))
             .ToHashSet();
+        var listed = RhythmList().Match(Spec).Groups[1].Value.Split('\n')
+            .SelectMany(line => Columns().Split(line.Trim())).Where(name => name.Length > 0).ToHashSet();
 
-        // Not vacuous: the document quotes the rhythms it lists.
-        Assert.NotEmpty(plausible);
-        Assert.Subset(BeatHandler.BeatPatternsMap.Keys.ToHashSet(), plausible);
+        Assert.Subset(builtIn, quoted);
+        Assert.NotEmpty(listed);
+        Assert.Subset(builtIn, listed);
     }
+
+    [GeneratedRegex(@"### Built-in rhythm names.*?```\n(.*?)\n```", RegexOptions.Singleline)]
+    private static partial Regex RhythmList();
+
+    [GeneratedRegex(" {2,}")]
+    private static partial Regex Columns();
 
     [Fact]
     public void the_spec_states_the_current_format_version() =>
