@@ -9,7 +9,8 @@ public sealed class ClimaxBanner
 {
     public const int BlinkIntervalMs = 100;
 
-    public static IReadOnlyDictionary<string, (string On, string Off)> StatusColors { get; } =
+    // In the colour scheme in use when it is asked.
+    public static IReadOnlyDictionary<string, (string On, string Off)> StatusColors =>
         new Dictionary<string, (string On, string Off)>
         {
             ["cum"] = (Palette.Accent, Palette.AccentHover),
