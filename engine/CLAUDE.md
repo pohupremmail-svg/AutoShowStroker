@@ -177,7 +177,7 @@ here unchanged. This file only adds what is specific to this side.
 
 ## Characters (phase 8, begun)
 
-- `res/characters/*.vrm`, first by name (`CharacterFiles.First`), stands on the start screen's
+- `res/characters/*.vrm`, picked in Settings > Look (`CharacterChoice`, the first by name until then), stands on the start screen's
   pedestal (`Ui/CharacterView`); none, or one that will not load, leaves the logo there. The
   models are **gitignored** until there are ones the app may pass on: rights in writing, nothing
   explicit on GitHub, unmistakably adult. The local test model's own licence forbids passing it on.

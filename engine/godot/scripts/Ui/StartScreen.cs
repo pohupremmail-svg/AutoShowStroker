@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Gooner.Core.App;
-using Gooner.Core.Characters;
 using Gooner.Core.Localization;
 using Gooner.Engine.Fx;
 using Godot;
@@ -34,7 +33,7 @@ public partial class StartScreen : Control
 
     // `line` is asked each time the screen comes up: a main_menu line of the callouts, in the
     // voice the app speaks in.
-    public StartScreen(string? resources, IReadOnlyList<StartCard> cards, IReadOnlyList<(string Label, Action Pressed)> links,
+    public StartScreen(string? resources, string? character, IReadOnlyList<StartCard> cards, IReadOnlyList<(string Label, Action Pressed)> links,
         string version, Func<string?> line)
     {
         _line = line;
@@ -76,7 +75,7 @@ public partial class StartScreen : Control
         column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 18) });
         foreach (var card in cards) column.AddChild(Card(card));
 
-        row.AddChild(new Pedestal(LoadLogo(resources), CharacterFiles.First(resources)) { CustomMinimumSize = new Vector2(380, 0) });
+        row.AddChild(new Pedestal(LoadLogo(resources), character) { CustomMinimumSize = new Vector2(380, 0) });
 
         var foot = new HBoxContainer();
         foot.AddThemeConstantOverride("separation", 14);

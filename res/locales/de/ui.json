@@ -435,5 +435,8 @@
   "Change Gooning Folder (Ctrl+O)": "Gooning-Ordner wechseln (Strg+O)",
   "Settings (Ctrl+S)": "Einstellungen (Strg+S)",
   "Session #": "Session Nr.",
-  "Lean back. I set the pace tonight.": "Lehn dich zurück. Heute Abend bestimme ich das Tempo."
+  "Lean back. I set the pace tonight.": "Lehn dich zurück. Heute Abend bestimme ich das Tempo.",
+  "Character": "Charakter",
+  "On the start screen:": "Auf dem Startbildschirm:",
+  "Put your own .vrm files into the res/characters folder of the app to pick them here.": "Leg eigene .vrm-Dateien in den Ordner res/characters der App, dann kannst du sie hier auswählen."
 }

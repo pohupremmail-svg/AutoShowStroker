@@ -1,5 +1,6 @@
 using Gooner.Core.App;
 using Gooner.Core.Callouts;
+using Gooner.Core.Characters;
 using Gooner.Core.Climax;
 using Gooner.Core.Data;
 using Gooner.Core.Localization;
@@ -729,9 +730,21 @@ public sealed class SettingsFormTests : IDisposable
     {
         var rows = Form.Tabs.Single(t => t.Title == "Look").Rows;
 
-        Assert.Equal(Look.Choices.Keys.Order(), rows.OfType<ChoiceRow>().Select(r => r.Name).Order());
+        // Look's own choices, plus which character stands on the start screen.
+        Assert.Equal(Look.Choices.Keys.Append("character").Order(), rows.OfType<ChoiceRow>().Select(r => r.Name).Order());
         Assert.Contains(new ToggleRow("focus_wanders"), rows);
         Assert.Equal(Look.Choices["note_track"], Form.Choices["note_track"].Options);
+    }
+
+    [Fact]
+    public void no_character_is_applied_and_stored()
+    {
+        Form.Choices["character"].Value = CharacterChoice.None;
+
+        Assert.True(Form.Apply());
+
+        Assert.Null(_app.Character.Path);
+        Assert.Equal(CharacterChoice.None, _settings.GetString("Character/file", ""));
     }
 
     [Fact]

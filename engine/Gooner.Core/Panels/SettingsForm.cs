@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Gooner.Core.App;
 using Gooner.Core.Beat;
 using Gooner.Core.Callouts;
+using Gooner.Core.Characters;
 using Gooner.Core.Climax;
 using Gooner.Core.Devices;
 using Gooner.Core.Localization;
@@ -220,6 +221,13 @@ public sealed class SettingsForm
             return new ChoiceRow(name);
         }
 
+        ChoiceRow CharacterRow(CharacterChoice character)
+        {
+            _choices["character"] = new ChoiceSetting("character", L10n.T("On the start screen:"), CharacterChoice.SettingsGroup,
+                character.Options, character.First, character.File, character.Choose);
+            return new ChoiceRow("character");
+        }
+
         const string AppGroup = "GoonerApp";
         var tabs = new List<SettingsTab>
         {
@@ -317,6 +325,9 @@ public sealed class SettingsForm
             new HeaderRow(L10n.T("Colours & Effects")),
             LookChoice("color_scheme", L10n.T("Colours:"), look.ColorScheme, v => look.ColorScheme = v),
             LookChoice("effects", L10n.T("Effects:"), look.Effects, v => look.Effects = v),
+            new HeaderRow(L10n.T("Character")),
+            CharacterRow(app.Character),
+            new NoteRow(L10n.T("Put your own .vrm files into the res/characters folder of the app to pick them here.")),
             new ResetRow("Look"),
         ]));
         // The device's tab only when there is device output - the tab is its UI, not the form's.

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Gooner.Core.Achievements;
 using Gooner.Core.Beat;
 using Gooner.Core.Callouts;
+using Gooner.Core.Characters;
 using Gooner.Core.Climax;
 using Gooner.Core.Data;
 using Gooner.Core.Devices;
@@ -31,6 +32,9 @@ public sealed record GoonerAppOptions
 
     // res/locales, the translations of the app's own words; null for English alone.
     public string? LocaleDir { get; init; }
+
+    // res/characters: the .vrm figures on offer for the start screen.
+    public string? CharacterDir { get; init; }
 
     // One stream of dice for every handler, so a seed replays a whole session.
     public IRandomSource? Random { get; init; }
@@ -115,6 +119,7 @@ public sealed class GoonerApp : ISettingsOwner
         options.Migration?.WriteToLog();
         // Before anything is built that words something.
         UiLanguage = new UiLanguage(_settings, options.LocaleDir);
+        Character = new CharacterChoice(_settings, options.CharacterDir);
         UiLanguage.Apply();
         ShowStartupSplash = ReadBool("show_startup_splash");
         AskForOutcome = ReadBool("ask_for_outcome");
@@ -164,6 +169,8 @@ public sealed class GoonerApp : ISettingsOwner
     public SessionHud Hud { get; }
     public ClimaxBanner Banner { get; }
     public Look Look { get; }
+
+    public CharacterChoice Character { get; }
     public WindowState Window { get; }
     public UiLanguage UiLanguage { get; }
     public IntifacePlugin? Intiface { get; }

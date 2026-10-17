@@ -64,6 +64,7 @@ public partial class Main : Control
     private readonly Random _shake = new();
     private string _scheme = "";
     private string _language = "";
+    private string? _character;
     private bool _wasMaximized;
     private int _hits;
     private double _smokeUntil;
@@ -134,6 +135,7 @@ public partial class Main : Control
             Migration = migration,
             CalloutDir = Path.Combine(res, "callouts"),
             LocaleDir = Path.Combine(res, "locales"),
+            CharacterDir = Path.Combine(res, "characters"),
             Version = ReadVersion(res),
             DeviceOutput = true,
             // The device connection reports from its own thread; the window hears it on its own.
@@ -205,7 +207,7 @@ public partial class Main : Control
         if (_smokeUntil == double.MaxValue) BeginSmoke();
         _app.Frame();
         if (_scheme != _app.Look.ColorScheme) ApplyScheme();
-        if (_language != L10n.Language) ApplyLanguage();
+        if (_language != L10n.Language || _character != _app.Character.Path) ApplyLanguage();
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
         click.Schedule(notes.Where(n => n.Audible).Select(n => n.At));
@@ -301,6 +303,7 @@ public partial class Main : Control
     private void ApplyLanguage()
     {
         _language = L10n.Language;
+        _character = _app?.Character.Path;
         _outcome = Replace(_outcome, BuildOutcome());
         _dock = Replace(_dock, BuildDock());
         _start = Replace(_start, BuildStart());
@@ -539,6 +542,7 @@ public partial class Main : Control
         var app = _app!;
         _scheme = app.Look.ColorScheme;
         _language = L10n.Language;
+        _character = _app?.Character.Path;
         Palette.Use(_scheme);
         Theme = UiTheme.Build();
         _background = new Panel { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };

@@ -36,7 +36,7 @@ public partial class Main
             new(L10n.T("Exit"), "power", () => null, () => Quit(0)),
         };
         // Under the name, a line in the voice the app will speak in - a new one when that changes.
-        var start = new StartScreen(AppPaths.Resources, cards, MenuEntries(), app.Version, () => app.Callouts?.TitleLine());
+        var start = new StartScreen(AppPaths.Resources, app.Character.Path, cards, MenuEntries(), app.Version, () => app.Callouts?.TitleLine());
         if (app.Callouts is { } callouts)
         {
             callouts.VoiceChanged += start.RefreshLine;
