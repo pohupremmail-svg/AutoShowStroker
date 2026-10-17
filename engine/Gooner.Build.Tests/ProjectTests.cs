@@ -40,6 +40,11 @@ public class ProjectTests
         Has(rendering, "rendering_device/pipeline_cache/enable=false");
     }
 
+    // main.py: window.showMaximized().
+    [Fact]
+    public void the_window_opens_maximized_as_the_python_window_did() =>
+        Has(Section(ProjectFile, "display"), "window/size/mode=2");
+
     [Fact]
     public void the_export_is_one_executable_without_a_console_or_debug_symbols()
     {

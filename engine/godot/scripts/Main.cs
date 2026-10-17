@@ -94,6 +94,13 @@ public partial class Main : Control
         }
         DisplayServer.WindowSetTitle("Auto Hero Generation");
         DisplayServer.WindowSetMinSize(new Vector2I(800, 500));
+        // The window opens maximized (project.godot), as main.py showed it; a smoke run keeps the
+        // fixed 1280x800 its screenshots were always taken at.
+        if (OS.GetCmdlineUserArgs().Any(arg => arg.StartsWith("--smoke", StringComparison.Ordinal)))
+        {
+            DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
+            DisplayServer.WindowSetSize(new Vector2I(1280, 800));
+        }
 
         _audio = new SessionAudio();
         AddChild(_audio);
