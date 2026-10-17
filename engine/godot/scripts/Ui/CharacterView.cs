@@ -98,7 +98,14 @@ public partial class CharacterView : SubViewportContainer
         _bones = (root.Get("vrm_meta").AsGodotObject() as Resource)?.Get("humanoid_bone_mapping").AsGodotObject() as BoneMap;
         _faces = All<AnimationPlayer>(root).FirstOrDefault();
         _mood = Expression("relaxed") ?? Expression("happy");
-        if (_mood is not null) _faces!.Play(_mood);
+        // The mood is set once and the player held still: playing on, it writes every face shape of the
+        // model each frame - the lids too, so a blink never got through.
+        if (_mood is not null)
+        {
+            _faces!.Play(_mood);
+            _faces.Advance(0);
+            _faces.Pause();
+        }
         FindLids();
         Frame();
     }
@@ -205,7 +212,7 @@ public partial class CharacterView : SubViewportContainer
         }
     }
 
-    // Shut in 70 ms, held for 40, open again in 90 - and written back to nothing at the end.
+    // Shut in 80 ms, held for 60, open again in 120 - and written back to nothing at the end.
     private void Blink()
     {
         if (_lids.Count == 0) return;
@@ -216,9 +223,9 @@ public partial class CharacterView : SubViewportContainer
         }
         if (_blinkedAt < 0) return;
         var since = (float)(_time - _blinkedAt);
-        var shut = since < 0.07f ? since / 0.07f : since < 0.11f ? 1 : Math.Max(0, 1 - (since - 0.11f) / 0.09f);
+        var shut = since < 0.08f ? since / 0.08f : since < 0.14f ? 1 : Math.Max(0, 1 - (since - 0.14f) / 0.12f);
         foreach (var (mesh, shape, full) in _lids) mesh.SetBlendShapeValue(shape, full * shut);
-        if (shut <= 0) _blinkedAt = -1;
+        if (since >= 0.26f) _blinkedAt = -1;
     }
 
     private string? Expression(string name) =>
