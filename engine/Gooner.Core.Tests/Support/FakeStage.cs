@@ -7,6 +7,11 @@ internal sealed class FakeStage : IMediaStage
 {
     public List<string> Calls { get; } = [];
 
+    // What it was told comes next, kept apart from what it showed.
+    public List<string> Prepared { get; } = [];
+
+    public void Prepare(string path) => Prepared.Add(path);
+
     public void ShowImage(string path) => Calls.Add("image " + path);
 
     public void ShowGif(string path) => Calls.Add("gif " + path);

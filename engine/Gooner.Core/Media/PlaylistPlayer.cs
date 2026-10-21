@@ -25,6 +25,11 @@ public interface IMediaStage
     void StopAll();
 
     void SetMuted(bool muted);
+
+    // What comes after the medium just shown: the stage may get it ready while this one is up, so
+    // that the change costs no frame. A hint - the next Show may be something else (a key pressed,
+    // a clip that will not play), and then it simply loads that as before.
+    void Prepare(string path);
 }
 
 // What is on screen, and what replaces it. Port of src/PlaylistPlayer.py, minus the widgets: the
@@ -157,7 +162,13 @@ public sealed class PlaylistPlayer : ISettingsOwner
     {
         MediaShown?.Invoke(path);
         LoadMedia(path);
+        if (UpcomingPath() is { } next) _stage.Prepare(next);
     }
+
+    // What ShowNext would put up: the recording's next medium in a replay, while it has one, and the
+    // playlist's after that.
+    private string? UpcomingPath() =>
+        Script?.PeekNextMediaPath() ?? (_playlist.Count > 0 ? _playlist[(CurrentIndex + 1) % _playlist.Count] : null);
 
     // How long the medium now on screen stays up. A replay takes the recorded gap; once the script
     // runs out the settings take over again.

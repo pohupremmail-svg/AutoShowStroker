@@ -22,6 +22,7 @@ public partial class GifView : TextureRect
 
     private readonly string _path;
     private readonly Vector2I _target;
+    private Start? _start;
     private readonly ConcurrentQueue<(Image? Image, int DelayMs, bool LoopEnd)> _queue = new();
     private readonly List<(Image Image, int DelayMs)> _cache = [];
     private Thread? _worker;
@@ -36,10 +37,12 @@ public partial class GifView : TextureRect
     private int _cacheIndex;
 
     // `target` is the size it is shown at; frames larger than that are scaled down on the worker.
-    public GifView(string path, Vector2I target)
+    // `start`, when it is given, is the file already opened (Open) - the view takes it over.
+    public GifView(string path, Vector2I target, Start? start = null)
     {
         _path = path;
         _target = target;
+        _start = start;
         ExpandMode = ExpandModeEnum.IgnoreSize;
         StretchMode = StretchModeEnum.KeepAspectCentered;
         SetAnchorsPreset(LayoutPreset.FullRect);
@@ -51,41 +54,70 @@ public partial class GifView : TextureRect
     // Held on the frame it is showing - QMovie.stop(), what a stopped session leaves up.
     public bool Frozen { get; set; }
 
-    public override void _Ready()
+    // A GIF opened and its first frame decoded, scaled to the size it is shown at. Made when the GIF is
+    // shown, or ahead of that on a worker (MediaStage.Prepare), so that opening the file and decoding a
+    // large first frame no longer cost the frame it appears in. Disposed by whoever holds it last.
+    public sealed class Start : IDisposable
     {
-        GifDecoder decoder;
-        GifFrame? first;
+        internal Start(GifDecoder decoder, Image first, int delayMs)
+        {
+            Decoder = decoder;
+            First = first;
+            DelayMs = delayMs;
+        }
+
+        internal GifDecoder Decoder { get; }
+        internal Image First { get; }
+        internal int DelayMs { get; }
+
+        public void Dispose()
+        {
+            Decoder.Dispose();
+            First.Dispose();
+        }
+    }
+
+    // Null for a file that is no GIF, or has nothing in it - said in the log by the file's name only,
+    // the folder it sits in being nobody's business. Safe on any thread.
+    public static Start? Open(string path, Vector2I target)
+    {
+        GifDecoder? decoder = null;
         try
         {
-            decoder = new GifDecoder(_path);
-            first = decoder.ReadNextFrame();
+            decoder = new GifDecoder(path);
+            if (decoder.ReadNextFrame() is { } first)
+                return new Start(decoder, ToImage(first.Rgba, decoder.Width, decoder.Height, target), first.DelayMs);
+            AppLog.Warning(Log, "Could not play {0}: no frames", System.IO.Path.GetFileName(path));
         }
         catch (Exception e) when (e is System.IO.IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            // The file name only - the folder it sits in is nobody's business.
-            AppLog.Warning(Log, "Could not play {0}: {1}", System.IO.Path.GetFileName(_path), e.Message);
-            return;
+            AppLog.Warning(Log, "Could not play {0}: {1}", System.IO.Path.GetFileName(path), e.Message);
         }
-        if (first is null)
-        {
-            AppLog.Warning(Log, "Could not play {0}: no frames", System.IO.Path.GetFileName(_path));
-            decoder.Dispose();
-            return;
-        }
-        var image = ToImage(first.Rgba, decoder.Width, decoder.Height);
-        _texture = ImageTexture.CreateFromImage(image);
+        decoder?.Dispose();
+        return null;
+    }
+
+    public override void _Ready()
+    {
+        if ((_start ?? Open(_path, _target)) is not { } start) return;
+        _start = null;
+        _texture = ImageTexture.CreateFromImage(start.First);
         Texture = _texture;
-        _currentDelayMs = first.DelayMs;
-        Remember(image, first.DelayMs);
+        _currentDelayMs = start.DelayMs;
+        Remember(start.First, start.DelayMs);
         Started = true;
 
         _running = true;
+        var decoder = start.Decoder;
         _worker = new Thread(() => Work(decoder)) { IsBackground = true, Name = "gif-decode" };
         _worker.Start();
     }
 
     public override void _ExitTree()
     {
+        // Handed over but never shown.
+        _start?.Dispose();
+        _start = null;
         _running = false;
         _worker?.Join(500);
         // A Godot Image keeps its pixels in native memory until the C# wrapper goes - released here
@@ -95,12 +127,12 @@ public partial class GifView : TextureRect
         while (_queue.TryDequeue(out var item)) item.Image?.Dispose();
     }
 
-    private Image ToImage(byte[] rgba, int width, int height)
+    private static Image ToImage(byte[] rgba, int width, int height, Vector2I target)
     {
         var image = Image.CreateFromData(width, height, false, Image.Format.Rgba8, rgba);
-        if (_target.X > 0 && _target.Y > 0 && (_target.X < width || _target.Y < height))
+        if (target.X > 0 && target.Y > 0 && (target.X < width || target.Y < height))
         {
-            var scale = Math.Min((float)_target.X / width, (float)_target.Y / height);
+            var scale = Math.Min((float)target.X / width, (float)target.Y / height);
             image.Resize(Math.Max(1, (int)(width * scale)), Math.Max(1, (int)(height * scale)), Image.Interpolation.Bilinear);
         }
         return image;
@@ -137,7 +169,7 @@ public partial class GifView : TextureRect
                     decoder.Rewind();
                     continue;
                 }
-                _queue.Enqueue((ToImage(frame.Rgba, decoder.Width, decoder.Height), frame.DelayMs, false));
+                _queue.Enqueue((ToImage(frame.Rgba, decoder.Width, decoder.Height, _target), frame.DelayMs, false));
             }
         }
     }

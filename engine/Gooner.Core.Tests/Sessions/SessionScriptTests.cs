@@ -122,6 +122,24 @@ public class SessionScriptTests
         Assert.Equal("b.png", script.NextMediaPath());
     }
 
+    // What the player gets ready while the medium before it is up - looked at, not used up.
+    [Fact]
+    public void the_next_path_can_be_looked_at_without_using_it_up()
+    {
+        var script = new SessionScript(Saved());
+        Assert.Equal("a.png", script.PeekNextMediaPath());
+        Assert.Equal("a.png", script.NextMediaPath());
+        Assert.Equal("b.png", script.PeekNextMediaPath());
+        Assert.Equal("b.png", script.NextMediaPath());
+        Assert.Null(script.PeekNextMediaPath());
+    }
+
+    [Fact]
+    public void ignored_paths_are_not_looked_at_either()
+    {
+        Assert.Null(new SessionScript(Saved(), ignorePaths: true).PeekNextMediaPath());
+    }
+
     [Fact]
     public void a_script_without_paths_says_so()
     {

@@ -441,9 +441,81 @@ public sealed class PlaylistPlayerTests : IDisposable
         Assert.Equal(3000, player.AutoPlayTimer.IntervalMs);
     }
 
+    // --- the next medium, got ready while this one is up ---
+
+    [Fact]
+    public void the_next_medium_is_got_ready_while_this_one_is_up()
+    {
+        var files = Files("a.png", "b.gif", "c.mp4");
+        var player = Player();
+        player.SetPlaylist(files);
+
+        player.LoadCurrent();
+        Assert.Equal([files[1]], _stage.Prepared);
+
+        player.ShowNext();
+        Assert.Equal([files[1], files[2]], _stage.Prepared);
+    }
+
+    [Fact]
+    public void after_the_last_one_the_first_is_got_ready()
+    {
+        var files = Files("a.png", "b.png", "c.png");
+        var player = Player();
+        player.SetPlaylist(files);
+        player.CurrentIndex = 2;
+
+        player.LoadCurrent();
+
+        Assert.Equal([files[0]], _stage.Prepared);
+    }
+
+    [Fact]
+    public void a_replay_gets_the_recorded_next_one_ready_without_using_it_up()
+    {
+        var (one, two) = (Files("one.png")[0], Files("two.png")[0]);
+        var player = Player();
+        player.SetPlaylist(Files("mine.png"));
+        player.Script = ReplayScript([At(0.0, one), At(4.0, two)]);
+
+        player.LoadCurrent();
+        Assert.Equal([two], _stage.Prepared);
+
+        player.ShowNext();
+        Assert.Equal([one, two], _shown);
+    }
+
+    [Fact]
+    public void once_the_recording_runs_out_the_playlist_is_got_ready_again()
+    {
+        var mine = Files("mine.png", "yours.png");
+        var player = Player();
+        player.SetPlaylist(mine);
+        player.Script = ReplayScript([At(0.0, Files("one.png")[0])]);
+
+        player.LoadCurrent();
+
+        Assert.Equal([mine[1]], _stage.Prepared);
+    }
+
+    [Fact]
+    public void nothing_is_got_ready_from_an_empty_playlist()
+    {
+        var player = Player();
+
+        player.ShowNext();
+        player.LoadCurrent();
+
+        Assert.Empty(_stage.Prepared);
+    }
+
     private sealed class FakeStage : IMediaStage
     {
         public List<string> Calls { get; } = [];
+
+        public List<string> Prepared { get; } = [];
+
+        public void Prepare(string path) => Prepared.Add(path);
 
         public void ShowImage(string path) => Calls.Add("image " + path);
 

@@ -62,6 +62,16 @@ here unchanged. This file only adds what is specific to this side.
   every release has the FFmpeg source of exactly that revision and the extension's source attached
   (`engine/third_party/ffmpeg`, see its README). A new build of the extension replaces all of it
   together; `Gooner.Build.Tests` and `LicenseShelfTests` fail until the archives and notices follow.
+- **A picture or a GIF is never read on the main thread** (`Stage/MediaStage`): the player names the
+  medium that comes next (`IMediaStage.Prepare`, from `PlaylistPlayer`; a replay's next recorded
+  path through `SessionScript.PeekNextMediaPath`), and the stage reads and scales it on a worker
+  while the current one is up; one not got ready ahead goes up when its worker is done, the last one
+  staying up meanwhile. Read in the frame, a 24-megapixel photo stalled it 0.8 s (measured with the
+  wall clock - Godot's `delta` is capped near 140 ms and hides it), the beat track and her hand
+  jumping by as much. **A clip is not got ready**: EIRTeam.FFmpeg makes its texture as it opens the
+  file, which only the render thread may do (`texture_clear` errors, a failing smoke run), and an
+  open costs 10-40 ms. Scaling halves first (`ShrinkX2`) while the picture is twice too big, then
+  Lanczos: Lanczos alone took half a second on 24 MP.
 - **Every dialog of the Python app is a panel** (`godot/scripts/Panels/`), shown by the `PanelHost`
   over the whole window - start screen included, as a modal dialog blocked everything behind it -
   while the session plays on behind it. Panels are frosted glass (`Ui/Glass.cs`,

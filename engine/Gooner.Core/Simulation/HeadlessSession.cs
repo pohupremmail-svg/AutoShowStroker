@@ -194,5 +194,7 @@ public sealed class HeadlessSession
         public void StopAll() { }
 
         public void SetMuted(bool muted) { }
+
+        public void Prepare(string path) { }
     }
 }

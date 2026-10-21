@@ -96,14 +96,21 @@ public sealed class SessionScript
     // that carry no path at all, which is what a partially stripped file would look like.
     public string? NextMediaPath()
     {
-        if (_ignorePaths) return null;
-        while (_pathPos < _media.Count)
-        {
-            var entry = _media[_pathPos++];
-            if (entry.ContainsKey("path"))
-                return (string?)entry["path"];
-        }
-        return null;
+        var (path, after) = FindPath();
+        _pathPos = after;
+        return path;
+    }
+
+    // The path NextMediaPath would give, without giving it: what the player gets ready in advance.
+    public string? PeekNextMediaPath() => FindPath().Path;
+
+    private (string? Path, int After) FindPath()
+    {
+        if (_ignorePaths) return (null, _pathPos);
+        for (var pos = _pathPos; pos < _media.Count; pos++)
+            if (_media[pos].ContainsKey("path"))
+                return ((string?)_media[pos]["path"], pos + 1);
+        return (null, _media.Count);
     }
 
     private static List<JsonObject> Objects(JsonNode? node) =>
