@@ -4,58 +4,103 @@ using Gooner.Core.Settings;
 
 namespace Gooner.Core.Characters;
 
-// Which figure stands on the start screen: any .vrm in res/characters, or none. Users drop their own
-// into that folder of their installation and pick it in Settings > Look. Only the file's name is
-// kept - the folder is the app's own. Until one is picked, and when the picked one is gone, the
-// first by name.
+// Which figure the app shows: any .vrm in res/characters, any in a folder of the user's own, or none.
+// Picked in Settings > Look. Kept are the file's name - "own/<name>" for one from the user's folder -
+// and that folder's path, which is the user's to see and to delete (Privacy & Data) and is never
+// logged: like a media folder, it says where their collection lives. Until one is picked, and when
+// the picked one is gone, the first by name.
 public sealed class CharacterChoice : ISettingsOwner
 {
     public const string None = "none";
 
+    private const string OwnPrefix = "own/";
+
     public static string SettingsGroup => "Character";
 
-    // Empty: nothing picked yet, so the first one found.
+    // file: empty means nothing picked yet, so the first one found. folder: empty means none.
     public static IReadOnlyDictionary<string, object> Defaults { get; } = new Dictionary<string, object>
     {
         ["file"] = "",
+        ["folder"] = "",
     };
 
     private readonly ISettingsStore? _settings;
     private readonly string? _dir;
-    private readonly IReadOnlyList<string> _files;
+    private readonly IReadOnlyList<string> _bundled;
+    private IReadOnlyList<string> _own = [];
 
     public CharacterChoice(ISettingsStore? settings, string? dir)
     {
         _settings = settings;
         _dir = dir;
-        _files = dir is not null && Directory.Exists(dir)
+        _bundled = ModelsIn(dir);
+        var folder = settings?.GetString($"{SettingsGroup}/folder", (string)Defaults["folder"]) ?? "";
+        Folder = folder.Length > 0 ? folder : null;
+        _own = ModelsIn(Folder);
+        var stored = settings?.GetString($"{SettingsGroup}/file", (string)Defaults["file"]) ?? "";
+        File = stored == None || Values.Contains(stored) ? stored : First;
+    }
+
+    // The user's own folder of models, or null.
+    public string? Folder { get; private set; }
+
+    // A file name in res/characters, "own/<name>" for one in Folder, or None.
+    public string File { get; private set; }
+
+    // What a reset goes back to.
+    public string First => Values.FirstOrDefault() ?? None;
+
+    // The file to load, or null for no character.
+    public string? Path => PathOf(File);
+
+    // Each figure under its file's name - the bundled ones, then the user's own - and then none.
+    public IReadOnlyList<LookOption> Options => OptionsOf(_own);
+
+    // The list as it would be with that folder chosen, for Settings while it is still a draft.
+    public IReadOnlyList<LookOption> OptionsFor(string? folder) => OptionsOf(ModelsIn(folder));
+
+    public void Choose(string file)
+    {
+        if (file != None && !Values.Contains(file)) return;
+        File = file;
+        _settings?.SetValue($"{SettingsGroup}/file", file);
+    }
+
+    // A folder of the user's own models; null or empty forgets it. A model from the old folder that
+    // is no longer on offer gives way to the first one.
+    public void ChooseFolder(string? folder)
+    {
+        Folder = string.IsNullOrEmpty(folder) ? null : folder;
+        _settings?.SetValue($"{SettingsGroup}/folder", Folder ?? "");
+        _own = ModelsIn(Folder);
+        if (File != None && !Values.Contains(File)) Choose(First);
+    }
+
+    private IEnumerable<string> Values => _bundled.Concat(_own.Select(name => OwnPrefix + name));
+
+    private IReadOnlyList<LookOption> OptionsOf(IReadOnlyList<string> own) =>
+    [
+        .. _bundled.Select(name => new LookOption(name, Label(name))),
+        .. own.Select(name => new LookOption(OwnPrefix + name, Label(name))),
+        new LookOption(None, L10n.T("None")),
+    ];
+
+    private string? PathOf(string file)
+    {
+        if (file == None) return null;
+        if (file.StartsWith(OwnPrefix, StringComparison.Ordinal))
+            return Folder is null ? null : System.IO.Path.Combine(Folder, file[OwnPrefix.Length..]);
+        return _dir is null ? null : System.IO.Path.Combine(_dir, file);
+    }
+
+    private static string Label(string file) => System.IO.Path.GetFileNameWithoutExtension(file);
+
+    // Not a "*.vrm" pattern: on Windows that also matches *.vrma, the format's animations.
+    private static IReadOnlyList<string> ModelsIn(string? dir) =>
+        dir is not null && Directory.Exists(dir)
             ? [.. Directory.EnumerateFiles(dir)
-                // Not a "*.vrm" pattern: on Windows that also matches *.vrma, the format's animations.
                 .Where(file => string.Equals(System.IO.Path.GetExtension(file), ".vrm", StringComparison.OrdinalIgnoreCase))
                 .Select(file => System.IO.Path.GetFileName(file))
                 .Order(StringComparer.Ordinal)]
             : [];
-        var stored = settings?.GetString($"{SettingsGroup}/file", (string)Defaults["file"]) ?? "";
-        File = stored == None || _files.Contains(stored) ? stored : First;
-    }
-
-    // A file name in the folder, or None.
-    public string File { get; private set; }
-
-    // What a reset goes back to.
-    public string First => _files.Count > 0 ? _files[0] : None;
-
-    // The file to load, or null for no character.
-    public string? Path => File == None || _dir is null ? null : System.IO.Path.Combine(_dir, File);
-
-    // Each figure under its file's name, then none.
-    public IReadOnlyList<LookOption> Options =>
-        [.. _files.Select(file => new LookOption(file, System.IO.Path.GetFileNameWithoutExtension(file))), new LookOption(None, L10n.T("None"))];
-
-    public void Choose(string file)
-    {
-        if (file != None && !_files.Contains(file)) return;
-        File = file;
-        _settings?.SetValue($"{SettingsGroup}/file", file);
-    }
 }

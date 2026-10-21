@@ -162,6 +162,23 @@ public sealed class PrivacyDataTests : IDisposable
         Assert.Null(_data.Load("last_selected_folders"));
     }
 
+    // The folder of the user's own character models says where their collection lives, as a media
+    // folder does: disclosed here and deletable.
+    [Fact]
+    public void the_own_character_folder_is_disclosed_and_forgotten()
+    {
+        var own = Directory.CreateDirectory(Path.Combine(_tmp.FullName, "models")).FullName;
+        Assert.Equal(0, _privacy.CategoryCounts()["character_folder"]);
+        _app.Character.ChooseFolder(own);
+
+        Assert.Equal(1, _privacy.CategoryCounts()["character_folder"]);
+        _privacy.ClearCategories(["character_folder"]);
+
+        Assert.Null(_app.Character.Folder);
+        Assert.Equal(0, _privacy.CategoryCounts()["character_folder"]);
+        Assert.Equal("", _settings.GetString("Character/folder", "x"));
+    }
+
     [Fact]
     public void clearing_settings_wipes_them_but_keeps_the_data_files()
     {

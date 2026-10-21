@@ -126,6 +126,15 @@ public sealed class ChoiceSetting
     // Shown as a drop-down list rather than a row of buttons: for a choice that can grow long.
     public bool Dropdown { get; init; }
 
+    // Where it is stored, under Group, when that is not its Name.
+    public string Key
+    {
+        get => _key ?? Name;
+        init => _key = value;
+    }
+
+    private readonly string? _key;
+
     public string Value
     {
         get => _value;
@@ -150,6 +159,8 @@ public sealed record ManagePatternsRow : SettingsRow;
 public sealed record LanguageRow : SettingsRow;
 // The language of the app's own words. Not one of its tab's values: resetting the tab leaves it.
 public sealed record UiLanguageRow : SettingsRow;
+// The folder of the user's own .vrm models: chosen, shown, forgotten. Not reset with its tab.
+public sealed record CharacterFolderRow : SettingsRow;
 public sealed record TonesRow : SettingsRow;
 public sealed record ManagePhraseFilesRow : SettingsRow;
 public sealed record DeviceRow : SettingsRow;
@@ -226,8 +237,7 @@ public sealed class SettingsForm
 
         ChoiceRow CharacterRow(CharacterChoice character)
         {
-            _choices["character"] = new ChoiceSetting("character", L10n.T("On the start screen:"), CharacterChoice.SettingsGroup,
-                character.Options, character.First, character.File, character.Choose) { Dropdown = true };
+            _choices["character"] = CharacterSetting(character.Options, character.File);
             return new ChoiceRow("character");
         }
 
@@ -329,7 +339,8 @@ public sealed class SettingsForm
             LookChoice("effects", L10n.T("Effects:"), look.Effects, v => look.Effects = v),
             new HeaderRow(L10n.T("Character")),
             CharacterRow(app.Character),
-            new NoteRow(L10n.T("Put your own .vrm files into the res/characters folder of the app to pick them here.")),
+            new CharacterFolderRow(),
+            new NoteRow(L10n.T("Choose a folder of your own .vrm models, and every one in it is offered here.")),
             new ResetRow("Look"),
         ]));
         // The device's tab only when there is device output - the tab is its UI, not the form's.
@@ -341,6 +352,7 @@ public sealed class SettingsForm
         Tabs = tabs;
         UiLanguages = app.UiLanguage.Options;
         UiLanguage = app.UiLanguage.Language;
+        CharacterFolder = app.Character.Folder;
         RefreshRhythms();
     }
 
@@ -351,6 +363,23 @@ public sealed class SettingsForm
     public IReadOnlyDictionary<string, ToggleSetting> Toggles => _toggles;
 
     public IReadOnlyDictionary<string, ChoiceSetting> Choices => _choices;
+
+    // The folder of the user's own models as the draft has it; applied with the rest.
+    public string? CharacterFolder { get; private set; }
+
+    // Picks the folder (null forgets it) and offers its models at once; the character picked stays
+    // if it is still on offer.
+    public void SetCharacterFolder(string? folder)
+    {
+        CharacterFolder = string.IsNullOrEmpty(folder) ? null : folder;
+        var options = _app.Character.OptionsFor(CharacterFolder);
+        var current = _choices["character"].Value;
+        _choices["character"] = CharacterSetting(options, options.Any(o => o.Value == current) ? current : options[0].Value);
+    }
+
+    private ChoiceSetting CharacterSetting(IReadOnlyList<LookOption> options, string value) =>
+        new("character", L10n.T("On the start screen:"), CharacterChoice.SettingsGroup, options,
+            _app.Character.First, value, _app.Character.Choose) { Dropdown = true, Key = "file" };
 
     // The Device tab's draft; null without device output. Its connection settings are applied
     // separately, after Apply, since a changed address may first need the user's consent.
@@ -493,10 +522,12 @@ public sealed class SettingsForm
             toggle.Write();
             settings?.SetValue($"{toggle.Group}/{toggle.Name}", toggle.Value);
         }
+        // Before the choices: the character picked may be one from the new folder.
+        _app.Character.ChooseFolder(CharacterFolder);
         foreach (var choice in _choices.Values)
         {
             choice.Write();
-            settings?.SetValue($"{choice.Group}/{choice.Name}", choice.Value);
+            settings?.SetValue($"{choice.Group}/{choice.Key}", choice.Value);
         }
 
         var selected = _rhythms.Where(r => r.Value).Select(r => r.Key).ToList();

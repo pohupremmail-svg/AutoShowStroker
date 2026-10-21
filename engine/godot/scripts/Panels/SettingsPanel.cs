@@ -74,6 +74,7 @@ public partial class SettingsPanel : AppPanel
         ManagePatternsRow => Action(L10n.T("Manage Custom Patterns..."), () => _openPatternEditor(RefreshRhythms)),
         LanguageRow => Language(),
         UiLanguageRow => UiLanguage(),
+        CharacterFolderRow => CharacterFolder(),
         TonesRow => Tones(),
         ManagePhraseFilesRow => Action(L10n.T("Manage Custom Phrase Files..."), _openPhraseFiles),
         DeviceRow => new DeviceTab(_form.Device!, _host),
@@ -139,6 +140,59 @@ public partial class SettingsPanel : AppPanel
 
     // A button per option, the chosen one lit: the options are few, and seeing them all side by side
     // is half the point of a look setting.
+    // A drop-down list filled from the form's setting as it stands, the current value selected.
+    private void Fill(string name)
+    {
+        var list = _dropdowns[name];
+        var setting = _form.Choices[name];
+        list.Clear();
+        foreach (var option in setting.Options) list.AddItem(option.Label);
+        list.Select(setting.Options.ToList().FindIndex(o => o.Value == setting.Value));
+    }
+
+    // The folder of the user's own models: its name, a native folder dialog to pick it, and a way to
+    // forget it. The list of characters takes in its models at once.
+    private HBoxContainer CharacterFolder()
+    {
+        var row = new HBoxContainer();
+        row.AddChild(new Label { Text = L10n.T("Your own models:"), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1 });
+        var right = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
+        right.AddThemeConstantOverride("separation", 6);
+        var shown = new Label { SizeFlagsHorizontal = SizeFlags.ExpandFill, ClipText = true, Modulate = new Color(1, 1, 1, 0.75f) };
+        var forget = new Button { Text = L10n.T("Forget"), FocusMode = FocusModeEnum.None };
+        void Show()
+        {
+            // The folder's own name only: enough to recognise it, and no path on screen for a stray screenshot.
+            shown.Text = _form.CharacterFolder is { } folder ? System.IO.Path.GetFileName(System.IO.Path.TrimEndingDirectorySeparator(folder)) : L10n.T("no folder chosen");
+            shown.TooltipText = _form.CharacterFolder ?? "";
+            forget.Disabled = _form.CharacterFolder is null;
+        }
+        void Use(string? folder)
+        {
+            _form.SetCharacterFolder(folder);
+            if (_dropdowns.ContainsKey("character")) Fill("character");
+            Show();
+        }
+        var chooser = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.OpenDir,
+            Access = FileDialog.AccessEnum.Filesystem,
+            UseNativeDialog = true,
+            Title = L10n.T("Folder of your own .vrm models"),
+        };
+        chooser.DirSelected += folder => Use(folder);
+        row.AddChild(chooser);
+        var choose = new Button { Text = L10n.T("Choose Folder..."), FocusMode = FocusModeEnum.None };
+        choose.Pressed += () => chooser.PopupCentered(new Vector2I(900, 600));
+        forget.Pressed += () => Use(null);
+        right.AddChild(shown);
+        right.AddChild(choose);
+        right.AddChild(forget);
+        row.AddChild(right);
+        Show();
+        return row;
+    }
+
     private HBoxContainer Choice(ChoiceSetting setting)
     {
         var row = new HBoxContainer();
@@ -146,10 +200,11 @@ public partial class SettingsPanel : AppPanel
         if (setting.Dropdown)
         {
             var list = new OptionButton { FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
-            foreach (var option in setting.Options) list.AddItem(option.Label);
-            list.Select(setting.Options.ToList().FindIndex(o => o.Value == setting.Value));
-            list.ItemSelected += index => setting.Value = setting.Options[(int)index].Value;
             _dropdowns[setting.Name] = list;
+            Fill(setting.Name);
+            // Looked up when picked: the form may have replaced the setting with a longer list since.
+            var name = setting.Name;
+            list.ItemSelected += index => _form.Choices[name].Value = _form.Choices[name].Options[(int)index].Value;
             row.AddChild(list);
             return row;
         }
@@ -285,11 +340,7 @@ public partial class SettingsPanel : AppPanel
         foreach (var (name, spin) in _numbers) spin.SetValueNoSignal(_form.Numbers[name].Value);
         foreach (var (name, check) in _toggles) check.SetPressedNoSignal(_form.Toggles[name].Value);
         foreach (var (tone, check) in _tones) check.SetPressedNoSignal(_form.Tones[tone]);
-        foreach (var (name, list) in _dropdowns)
-        {
-            var setting = _form.Choices[name];
-            list.Select(setting.Options.ToList().FindIndex(o => o.Value == setting.Value));
-        }
+        foreach (var name in _dropdowns.Keys) Fill(name);
         foreach (var (name, buttons) in _choices)
         {
             var setting = _form.Choices[name];

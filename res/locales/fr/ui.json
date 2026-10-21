@@ -437,5 +437,12 @@
   "Lean back. I set the pace tonight.": "Détends-toi. Ce soir, c'est moi qui donne le rythme.",
   "Character": "Personnage",
   "On the start screen:": "Sur l'écran d'accueil :",
-  "Put your own .vrm files into the res/characters folder of the app to pick them here.": "Dépose tes propres fichiers .vrm dans le dossier res/characters de l'app pour les choisir ici."
+  "Choose a folder of your own .vrm models, and every one in it is offered here.": "Choisis un dossier avec tes propres modèles .vrm, et ils seront tous proposés ici.",
+  "Your own models:": "Tes propres modèles :",
+  "Forget": "Oublier",
+  "no folder chosen": "aucun dossier",
+  "Folder of your own .vrm models": "Dossier de tes propres modèles .vrm",
+  "Choose Folder...": "Choisir un dossier...",
+  "Folder of your own characters": "Dossier de tes propres personnages",
+  "where your own .vrm models are": "où se trouvent tes propres modèles .vrm"
 }

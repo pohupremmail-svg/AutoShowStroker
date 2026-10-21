@@ -36,6 +36,7 @@ public sealed class PrivacyData
         new("custom_patterns", L10n.N("Custom rhythm patterns"), L10n.N("the patterns you built in the pattern editor")),
         new("custom_phrase_files", L10n.N("Custom phrase files"), L10n.N("the callout files you added")),
         new("last_selected_folders", L10n.N("Last used media folders"), L10n.N("the folder paths the picker remembers")),
+        new("character_folder", L10n.N("Folder of your own characters"), L10n.N("where your own .vrm models are")),
         new("diagnostic_log", L10n.N("Diagnostic log"), L10n.N("the opt-in log file, if you turned it on")),
         new("settings", L10n.N("All settings"), L10n.N("every slider, toggle and the selected language")),
     ];
@@ -111,6 +112,7 @@ public sealed class PrivacyData
             ["custom_patterns"] = _app.Beat.CustomBeatPatterns.Count,
             ["custom_phrase_files"] = _app.Callouts?.CustomPhraseFiles.Count ?? 0,
             ["last_selected_folders"] = store?.Load("last_selected_folders") is JsonArray folders ? folders.Count : 0,
+            ["character_folder"] = _app.Character.Folder is null ? 0 : 1,
             // Files, not lines: rotated backups count too, and reading them to count lines just
             // to label a checkbox would be silly.
             ["diagnostic_log"] = store is null ? 0 : AppLog.LogFilePaths(store.BaseDir).Count,
@@ -181,6 +183,9 @@ public sealed class PrivacyData
                     break;
                 case "last_selected_folders":
                     _app.DataStore?.Delete("last_selected_folders");
+                    break;
+                case "character_folder":
+                    _app.Character.ChooseFolder(null);
                     break;
                 case "diagnostic_log":
                     if (_app.DataStore is { } store) AppLog.DeleteLogFiles(store.BaseDir);

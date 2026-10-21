@@ -180,7 +180,8 @@ public partial class CharacterView : SubViewportContainer
             }
             if (document.GenerateScene(state) is not Node3D root) return null;
             foreach (var skeleton in All<Skeleton3D>(root)) skeleton.ResetBonePoses();
-            AppLog.Info(Log, "Character loaded: {0}", System.IO.Path.GetFileName(path));
+            // No name: it may be one of the user's own, and a file name of theirs belongs only in a warning about it.
+            AppLog.Info(Log, "Character loaded");
             return root;
         }
         finally

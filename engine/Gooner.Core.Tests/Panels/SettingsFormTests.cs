@@ -727,6 +727,59 @@ public sealed class SettingsFormTests : IDisposable
         Assert.False(Form.Choices["note_track"].Dropdown);
     }
 
+    private string OwnModels()
+    {
+        var own = Directory.CreateDirectory(Path.Combine(_tmp.FullName, "own"));
+        File.WriteAllBytes(Path.Combine(own.FullName, "mine.vrm"), [0]);
+        return own.FullName;
+    }
+
+    [Fact]
+    public void the_look_has_a_folder_for_ones_own_models()
+    {
+        Assert.Contains(new CharacterFolderRow(), Form.Tabs.Single(t => t.Title == "Look").Rows);
+        Assert.Null(Form.CharacterFolder);
+    }
+
+    // The folder is part of the draft like everything else, but its models are offered at once.
+    [Fact]
+    public void a_chosen_folder_offers_its_models_and_is_applied_with_the_rest()
+    {
+        var own = OwnModels();
+
+        Form.SetCharacterFolder(own);
+        Form.Choices["character"].Value = "own/mine.vrm";
+
+        Assert.Null(_app.Character.Folder);
+        Assert.True(Form.Apply());
+        Assert.Equal(own, _app.Character.Folder);
+        Assert.Equal(Path.Combine(own, "mine.vrm"), _app.Character.Path);
+    }
+
+    [Fact]
+    public void forgetting_the_folder_takes_its_models_off_the_list()
+    {
+        var own = OwnModels();
+        _app.Character.ChooseFolder(own);
+
+        Form.SetCharacterFolder(null);
+
+        Assert.DoesNotContain(Form.Choices["character"].Options, o => o.Value == "own/mine.vrm");
+        Assert.True(Form.Apply());
+        Assert.Null(_app.Character.Folder);
+    }
+
+    [Fact]
+    public void reset_leaves_the_folder_alone()
+    {
+        var own = OwnModels();
+        Form.SetCharacterFolder(own);
+
+        Form.Reset("Look");
+
+        Assert.Equal(own, Form.CharacterFolder);
+    }
+
     [Fact]
     public void no_character_is_applied_and_stored()
     {
