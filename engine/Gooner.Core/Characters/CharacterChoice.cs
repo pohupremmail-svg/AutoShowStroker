@@ -22,6 +22,7 @@ public sealed class CharacterChoice : ISettingsOwner
     {
         ["file"] = "",
         ["folder"] = "",
+        ["in_session"] = true,
     };
 
     private readonly ISettingsStore? _settings;
@@ -37,9 +38,13 @@ public sealed class CharacterChoice : ISettingsOwner
         var folder = settings?.GetString($"{SettingsGroup}/folder", (string)Defaults["folder"]) ?? "";
         Folder = folder.Length > 0 ? folder : null;
         _own = ModelsIn(Folder);
+        InSession = settings?.GetBool($"{SettingsGroup}/in_session", (bool)Defaults["in_session"]) ?? (bool)Defaults["in_session"];
         var stored = settings?.GetString($"{SettingsGroup}/file", (string)Defaults["file"]) ?? "";
         File = stored == None || Values.Contains(stored) ? stored : First;
     }
+
+    // Whether the character comes through with each callout during a session (the telepathy frame).
+    public bool InSession { get; set; }
 
     // The user's own folder of models, or null.
     public string? Folder { get; private set; }

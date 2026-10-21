@@ -780,6 +780,19 @@ public sealed class SettingsFormTests : IDisposable
         Assert.Equal(own, Form.CharacterFolder);
     }
 
+    // The character comes through with every callout of a session unless switched off.
+    [Fact]
+    public void the_character_in_a_session_can_be_switched_off()
+    {
+        Assert.True(Form.Toggles["in_session"].Value);
+        Form.Toggles["in_session"].Value = false;
+
+        Assert.True(Form.Apply());
+
+        Assert.False(_app.Character.InSession);
+        Assert.False(_settings.GetBool("Character/in_session", true));
+    }
+
     [Fact]
     public void no_character_is_applied_and_stored()
     {

@@ -177,15 +177,39 @@ here unchanged. This file only adds what is specific to this side.
 
 ## Characters (phase 8, begun)
 
-- `res/characters/*.vrm`, picked in Settings > Look (`CharacterChoice`, the first by name until then), stands on the start screen's
-  pedestal (`Ui/CharacterView`); none, or one that will not load, leaves the logo there. The
-  models are **gitignored** until there are ones the app may pass on: rights in writing, nothing
-  explicit on GitHub, unmistakably adult. The local test model's own licence forbids passing it on.
+- **Where models come from**: `res/characters/*.vrm`, and a folder of the user's own picked under
+  Settings > Look (`CharacterChoice`; "own/<name>" for one from there). That folder's path is treated
+  like a media folder: disclosed and deletable under Privacy & Data, **never logged** - nor is a
+  model's name (`Character loaded` names none). The bundled ones are **gitignored** until there are
+  ones the app may pass on (rights in writing, nothing explicit on GitHub, unmistakably adult), and
+  the package leaves every `.vrm` out (`Package.BesideExecutable`). The chosen one stands on the
+  start screen's pedestal; none, or one that will not load, leaves the logo there.
+- **One figure, shared** (`Characters/Figure.cs`): `Figures` loads the chosen model once, and
+  whichever `CharacterView` is on screen takes it into its own 3D world - the pedestal between
+  sessions, the telepathy frame during one. A view leaving the tree takes the figure out of its
+  world first, so a view being freed (the start screen rebuilt for a language) never frees it.
+- **The face is driven, not played** (`FaceRig`): godot-vrm makes each expression an animation that
+  only writes the shapes it keys, so one played after another left the first one's shapes behind
+  (the eyes stayed shut). Every expression is read as blend shapes at their full weight, any number
+  are mixed at once - mood, blink, the vowel being said - and every touched shape is written each
+  frame; the AnimationPlayer is never played.
+- **The telepathy frame** (`Ui/TelepathyFrame`, `shaders/telepathy.gdshader`): her bust at the top
+  right from the session's start to its end, a neon oval or an old tube screen (`Look.TelepathyFrame`,
+  the user's two picks), off with `Character/in_session`. Each callout draws it closer and brighter;
+  she wears `Reactions.For(trigger, tone)` and her mouth follows `Visemes` of the line. A fake climax
+  speaks with `climax_real`'s lines until revealed, so it gets the same face - keep it that way.
+- **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock by
+  `Main`): one full stroke per note - the hand at the root of the toy on the note, up near its tip
+  halfway to the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with
+  it; in a pause she eases to a stop. The arm reaches by two-bone IK and the fingers close round the
+  toy (`Figure.Reach`, `Aim`, `Curl`), all in skeleton space. **The toy is a stand-in** built from
+  primitives (`CharacterView.PlaceToy`) until the user brings a proper asset - which needs its licence
+  checked like a character, and stays off GitHub if it is explicit.
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
   Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
   `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,
   bone poses reset. Do not "simplify" any of it; each one was a crash or a distorted mesh.
-- A model loads **off the main thread** (`CharacterView`, one at a time - godot-vrm's extensions are
+- A model loads **off the main thread** (`Figures`, one at a time - godot-vrm's extensions are
   registered globally for the length of a load); the logo holds the pedestal until the figure fades
   in. A large model takes minutes (an 878 MB one, 100 s). Quitting while one loads ends the process
   with `OS.Kill` at the end of `Main.Quit`, after everything of the app's own is written: Godot's
@@ -306,7 +330,7 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
-"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--size=WxH] [--screenshot=PNG]
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--size=WxH] [--screenshot=PNG [--shots=N]]
 "$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S] [--size=WxH]
 "$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
 dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)
@@ -319,7 +343,7 @@ app's key.
 
 `--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
 `settings`, `settings-look`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`,
-`crash`, `splash`, `menu`, `start` - the start screen alone - ...), waits for it to fade in and saves
+`crash`, `menu`, `start` - the start screen alone - ...), waits for it to fade in and saves
 the window - how every panel was checked by eye. `--size=1280x720` checks a small laptop screen
 (a panel of a set height scrolls its body rather than run off the window); `--panel=NAME` on a
 smoke session opens the panel over a running session, to see the glass over a picture.

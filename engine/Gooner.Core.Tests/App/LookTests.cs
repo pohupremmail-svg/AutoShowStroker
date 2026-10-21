@@ -25,6 +25,7 @@ public sealed class LookTests : IDisposable
         Assert.Equal("normal", look.Effects);
         Assert.True(look.FocusWanders);
         Assert.Equal("off", look.Censor);
+        Assert.Equal("oval", look.TelepathyFrame);
     }
 
     [Fact]
@@ -36,6 +37,7 @@ public sealed class LookTests : IDisposable
         store.SetValue("Look/effects", "subtle");
         store.SetValue("Look/focus_wanders", false);
         store.SetValue("Look/censor", "mosaic");
+        store.SetValue("Look/telepathy_frame", "crt");
 
         var look = new Look(store);
 
@@ -44,6 +46,7 @@ public sealed class LookTests : IDisposable
         Assert.Equal("subtle", look.Effects);
         Assert.False(look.FocusWanders);
         Assert.Equal("mosaic", look.Censor);
+        Assert.Equal("crt", look.TelepathyFrame);
     }
 
     // A later build may know more of them; this one reads what it cannot draw as its default.

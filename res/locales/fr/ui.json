@@ -444,5 +444,9 @@
   "Folder of your own .vrm models": "Dossier de tes propres modèles .vrm",
   "Choose Folder...": "Choisir un dossier...",
   "Folder of your own characters": "Dossier de tes propres personnages",
-  "where your own .vrm models are": "où se trouvent tes propres modèles .vrm"
+  "where your own .vrm models are": "où se trouvent tes propres modèles .vrm",
+  "Frame:": "Cadre :",
+  "Shown during a session, closer with each callout": "Visible pendant une session, plus près à chaque réplique",
+  "Neon Oval": "Ovale néon",
+  "Tube Screen": "Écran cathodique"
 }

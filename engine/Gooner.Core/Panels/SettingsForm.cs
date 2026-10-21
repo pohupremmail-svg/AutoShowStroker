@@ -340,6 +340,9 @@ public sealed class SettingsForm
             new HeaderRow(L10n.T("Character")),
             CharacterRow(app.Character),
             new CharacterFolderRow(),
+            Toggle("in_session", L10n.T("Shown during a session, closer with each callout"), CharacterChoice.SettingsGroup, CharacterChoice.Defaults,
+                app.Character.InSession, v => app.Character.InSession = v),
+            LookChoice("telepathy_frame", L10n.T("Frame:"), look.TelepathyFrame, v => look.TelepathyFrame = v),
             new NoteRow(L10n.T("Choose a folder of your own .vrm models, and every one in it is offered here.")),
             new ResetRow("Look"),
         ]));

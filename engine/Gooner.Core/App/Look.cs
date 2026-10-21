@@ -21,6 +21,7 @@ public sealed class Look : ISettingsOwner
         ["effects"] = "normal",
         ["focus_wanders"] = true,
         ["censor"] = "off",
+        ["telepathy_frame"] = "oval",
     };
 
     // Every choice, in the order the settings offer it; the settings show the label translated.
@@ -30,6 +31,7 @@ public sealed class Look : ISettingsOwner
         ["color_scheme"] = [new("neon", L10n.N("Neon Pink")), new("boudoir", L10n.N("Boudoir"))],
         ["effects"] = [new("subtle", L10n.N("Subtle")), new("normal", L10n.N("Normal")), new("wild", L10n.N("Wild"))],
         ["censor"] = [new("off", L10n.N("Clear")), new("blur", L10n.N("Blur")), new("mosaic", L10n.N("Mosaic")), new("dark", L10n.N("Dark"))],
+        ["telepathy_frame"] = [new("oval", L10n.N("Neon Oval")), new("crt", L10n.N("Tube Screen"))],
     };
 
     public Look(ISettingsStore? settings)
@@ -38,6 +40,7 @@ public sealed class Look : ISettingsOwner
         ColorScheme = Choice(settings, "color_scheme");
         Effects = Choice(settings, "effects");
         Censor = Choice(settings, "censor");
+        TelepathyFrame = Choice(settings, "telepathy_frame");
         var wanders = (bool)Defaults["focus_wanders"];
         FocusWanders = settings?.GetBool($"{SettingsGroup}/focus_wanders", wanders) ?? wanders;
     }
@@ -60,6 +63,9 @@ public sealed class Look : ISettingsOwner
 
     // What the Hypno Ring does to the picture around it: nothing, or blurs, pixelates or darkens it.
     public string Censor { get; set; }
+
+    // The window the character is seen in during a session: a neon oval, or an old tube screen.
+    public string TelepathyFrame { get; set; }
 
     // What the effects are scaled by: how many particles, how hard the shake and the flashes.
     public double EffectScale => Effects switch

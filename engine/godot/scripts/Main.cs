@@ -14,6 +14,7 @@ using Gooner.Core.Settings;
 using Gooner.Core.Timing;
 using Gooner.Core.Track;
 using Gooner.Engine.Audio;
+using Gooner.Engine.Characters;
 using Gooner.Engine.Fx;
 using Gooner.Engine.Panels;
 using Gooner.Engine.Stage;
@@ -41,6 +42,9 @@ namespace Gooner.Engine;
 //                         --climax-at=<s> brings the climax that many seconds in; --stop presses
 //                         Stop at the end, so the question is in the screenshot, and
 //                         --answer=came|ruined|stopped|none answers it, so the recap is.
+//                         --shots=N takes N more screenshots a tenth of a second apart.
+//                         --say=<trigger> has a callout of that trigger (session_started,
+//                         climax_real, ...) said 2.5 s before the end, so it is in the screenshot.
 //                         --device=<ws://...> switches device output on against a server of your
 //                         own (no consent question - a development run only).
 //   -- --smoke-panel=<n>  opens one panel by name (see SmokePanels) and quits; with --screenshot.
@@ -68,6 +72,7 @@ public partial class Main : Control
     private bool _wasMaximized;
     private int _hits;
     private double _smokeUntil;
+    private string? _say;
     private string? _smoke;
 
     // Widgets synced from the app's state every frame.
@@ -77,6 +82,9 @@ public partial class Main : Control
     private ClimaxOverlay _climax = null!;
     private GlassChip _chase = null!, _clockChip = null!;
     private CalloutView _callout = null!;
+    private TelepathyFrame? _telepathy;
+    private double? _lastNote, _nextNote;
+    private string? _frameStyle;
     private RhythmBadge _rhythm = null!;
     private PanelContainer _outcome = null!;
     private Dock _dock = null!;
@@ -149,6 +157,23 @@ public partial class Main : Control
         _particles = new Particles();
         _track = new NoteTrackView(_app.Look, _particles, new Gooner.Core.Randomness.SystemRandomSource());
         _app.SessionStarted += _track.Reset;
+        // The character is with the user through a session (TelepathyFrame) and comes closer for each
+        // callout - not between sessions, and not when switched off.
+        if (_app.Callouts is { } callouts)
+        {
+            callouts.CalloutSpoken += callout =>
+            {
+                if (_app.IsRunning && _app.Character.InSession) _telepathy?.Speak(callout);
+            };
+            callouts.TeaseHidden += () => _telepathy?.Close();
+        }
+        _app.SessionStarted += () =>
+        {
+            _lastNote = _nextNote = null;
+            if (_app.Character.InSession) _telepathy?.Open();
+        };
+        _app.SessionEnded += () => _telepathy?.Cut();
+        _app.Panicked += () => _telepathy?.Cut();
         Build();
         // Full screen the first time, and after that as the window was last left; a smoke run keeps
         // the fixed window it is checked at.
@@ -197,9 +222,15 @@ public partial class Main : Control
         if (_smokeUntil == double.MaxValue) BeginSmoke();
         _app.Frame();
         if (_scheme != _app.Look.ColorScheme) ApplyScheme();
+        if (_frameStyle != _app.Look.TelepathyFrame && _telepathy is not null) BuildTelepathy();
         if (_language != L10n.Language || _character != _app.Character.Path) ApplyLanguage();
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
+        // The notes either side of now, for the character to move to.
+        var now = _clock.Now;
+        if (_nextNote is { } passed && passed <= now) _lastNote = passed;
+        _nextNote = notes.Where(n => n.Audible && n.At > now).Select(n => (double?)n.At).FirstOrDefault();
+        _telepathy?.Rhythm(now, _lastNote, _nextNote);
         click.Schedule(notes.Where(n => n.Audible).Select(n => n.At));
         click.Volume = (float)_app.Beat.BeatLoudness;
         click.Muted = _app.Beat.IsMuted;
@@ -217,6 +248,11 @@ public partial class Main : Control
         Place();
         Sync();
 
+        if (_say is not null && _smokeUntil > 0 && _clock.Now >= _smokeUntil - 2.5)
+        {
+            _app.Callouts?.ForceOutputSentence(_say);
+            _say = null;
+        }
         if (_smokeUntil > 0 && _clock.Now >= _smokeUntil) EndSmoke(click);
     }
 
@@ -297,8 +333,30 @@ public partial class Main : Control
         _outcome = Replace(_outcome, BuildOutcome());
         _dock = Replace(_dock, BuildDock());
         _start = Replace(_start, BuildStart());
+        BuildTelepathy();
         _stage?.Reword();
         Sync();
+    }
+
+    // The frame the character comes through in during a session, for the character picked; none
+    // without one. Built again when the pick changes.
+    private void BuildTelepathy()
+    {
+        var index = _telepathy?.GetIndex() ?? _callout.GetIndex() + 1;
+        if (_telepathy is not null)
+        {
+            _world.RemoveChild(_telepathy);
+            _telepathy.QueueFree();
+            _telepathy = null;
+        }
+        if (_app?.Character.Path is not { } path) return;
+        _frameStyle = _app.Look.TelepathyFrame;
+        var style = _frameStyle == "crt" ? TelepathyFrame.Style.TubeScreen : TelepathyFrame.Style.Oval;
+        _telepathy = new TelepathyFrame(path, style);
+        _world.AddChild(_telepathy);
+        _world.MoveChild(_telepathy, index);
+        // Picked anew in the middle of a session: she is there at once.
+        if (_app.IsRunning && _app.Character.InSession) _telepathy.Open();
     }
 
     private T Replace<T>(T old, T fresh) where T : Node
@@ -442,11 +500,12 @@ public partial class Main : Control
         // A character still loading: Godot's import runs on in its own thread into the engine going
         // down, and that crashes. Everything of the app's own is written by now (the log line by line
         // as it goes), so the process ends here instead - at once, which a large model would not.
-        if (CharacterView.Loading)
+        if (Figures.Loading)
         {
             AppLog.Info("GoonerApp", "Quitting while a character is still loading: the process ends at once");
             OS.Kill(OS.GetProcessId());
         }
+        Figures.Release();
         GetTree().Quit(exitCode);
     }
 
@@ -466,6 +525,7 @@ public partial class Main : Control
         // A plain rhythm: its first note comes a fifth of a second in at the earliest, so even that
         // one has to make its click on time.
         app.Beat.SelectedBeatPatterns = ["Standard Beat"];
+        _say = AppPaths.UserArg("say");
         if (AppPaths.UserArg("climax-at") is { } climaxAt)
         {
             app.Climax.ClimaxActive = true;
@@ -506,6 +566,14 @@ public partial class Main : Control
         await ToSignal(GetTree().CreateTimer(wait), SceneTreeTimer.SignalName.Timeout);
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         GetViewport().GetTexture().GetImage().SavePng(shot);
+        // --shots=N: N more, a tenth of a second apart (<shot>_1.png, ...), to see a movement through.
+        var shots = AppPaths.UserArg("shots") is { } n ? int.Parse(n, System.Globalization.CultureInfo.InvariantCulture) : 0;
+        for (var i = 1; i <= shots; i++)
+        {
+            await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.ChangeExtension(shot, null) + $"_{i}.png");
+        }
     }
 
     private async void EndSmoke(Gooner.Core.Audio.ClickTrack click)
@@ -566,6 +634,7 @@ public partial class Main : Control
         _world.AddChild(_rhythm);
         _callout = new CalloutView();
         _world.AddChild(_callout);
+        BuildTelepathy();
         _climax = new ClimaxOverlay(_particles);
         _world.AddChild(_climax);
         _world.AddChild(_particles);
