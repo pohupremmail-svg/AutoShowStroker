@@ -38,6 +38,8 @@ public sealed class PrivacyData
         new("last_selected_folders", L10n.N("Last used media folders"), L10n.N("the folder paths the picker remembers")),
         new("character_folder", L10n.N("Folder of your own characters"), L10n.N("where your own .vrm models are")),
         new("diagnostic_log", L10n.N("Diagnostic log"), L10n.N("the opt-in log file, if you turned it on")),
+        new("graphics_cache", L10n.N("Graphics cache"),
+            L10n.N("compiled shaders, so that the app starts without stutters - made again at the next start")),
         new("settings", L10n.N("All settings"), L10n.N("every slider, toggle and the selected language")),
     ];
 
@@ -50,18 +52,23 @@ public sealed class PrivacyData
     };
 
     private readonly GoonerApp _app;
+    private readonly string? _graphicsCache;
     private readonly List<string> _selected = [];
 
-    public PrivacyData(GoonerApp app)
+    // `graphicsCache` is the folder the engine keeps its compiled shaders and pipelines in (Godot's
+    // user folder, which holds nothing else of ours); null where there is none.
+    public PrivacyData(GoonerApp app, string? graphicsCache = null)
     {
         ArgumentNullException.ThrowIfNull(app);
         _app = app;
+        _graphicsCache = graphicsCache;
     }
 
     // --- disclosure ---
 
-    public string LocationsText =>
-        L10n.F("Data files:\n{0}\n\nSettings:\n{1}", _app.DataStore?.BaseDir, _app.Settings?.Location);
+    public string LocationsText => _graphicsCache is null
+        ? L10n.F("Data files:\n{0}\n\nSettings:\n{1}", _app.DataStore?.BaseDir, _app.Settings?.Location)
+        : L10n.F("Data files:\n{0}\n\nSettings:\n{1}\n\nGraphics cache:\n{2}", _app.DataStore?.BaseDir, _app.Settings?.Location, _graphicsCache);
 
     // The data folder, created first if nothing has been saved yet - opening Explorer on a path that
     // does not exist just fails silently. Null when it cannot be.
@@ -116,6 +123,9 @@ public sealed class PrivacyData
             // Files, not lines: rotated backups count too, and reading them to count lines just
             // to label a checkbox would be silly.
             ["diagnostic_log"] = store is null ? 0 : AppLog.LogFilePaths(store.BaseDir).Count,
+            ["graphics_cache"] = _graphicsCache is { } cache && Directory.Exists(cache)
+                ? Directory.EnumerateFiles(cache, "*", SearchOption.AllDirectories).Count()
+                : 0,
             ["settings"] = _app.Settings?.Keys.Count ?? 0,
         };
     }
@@ -190,6 +200,9 @@ public sealed class PrivacyData
                 case "diagnostic_log":
                     if (_app.DataStore is { } store) AppLog.DeleteLogFiles(store.BaseDir);
                     break;
+                case "graphics_cache":
+                    DeleteGraphicsCache();
+                    break;
                 case "settings":
                     // Before the wipe, because disconnecting writes the cleared-out address back. A
                     // live connection outliving "delete all my settings" is not what deleting them
@@ -198,6 +211,21 @@ public sealed class PrivacyData
                     _app.Settings?.Clear();
                     break;
             }
+        }
+    }
+
+    // What is in the folder, not the folder: Godot makes it again at every start anyway.
+    private void DeleteGraphicsCache()
+    {
+        if (_graphicsCache is not { } cache || !Directory.Exists(cache)) return;
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories(cache)) Directory.Delete(dir, recursive: true);
+            foreach (var file in Directory.EnumerateFiles(cache)) File.Delete(file);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warning(Log, "Could not delete the graphics cache: {0}", e.Message);
         }
     }
 }

@@ -168,7 +168,7 @@ public partial class Main
         new AchievementsOverview(_app!.Achievements, _app.Score.GetHistory()),
         System.IO.Path.GetDirectoryName(AppPaths.Resources!)!));
 
-    private void ShowPrivacy() => _panels.Show(new PrivacyPanel(new PrivacyData(_app!), _panels));
+    private void ShowPrivacy() => _panels.Show(new PrivacyPanel(new PrivacyData(_app!, OS.GetUserDataDir()), _panels));
 
     private void ShowSettings() => ShowSettings(null);
 

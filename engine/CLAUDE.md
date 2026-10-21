@@ -314,12 +314,19 @@ here unchanged. This file only adds what is specific to this side.
   the builder's home folder** (a build path carries a name), and a headless smoke start of the
   result that finds `res/` and leaves no Godot folder behind. Do not publish a package it refuses.
   Like `scripts/build.py`, it only ever builds and never talks to a server.
-- **Godot writes nothing on the user's machine**: its file log and its shader and pipeline caches
-  are off in `project.godot` (measured: 5 MB in `%APPDATA%\Godot\app_userdata\GoonerApp` after one
-  start; the caches save about 0.8 s per start), and the empty folder Godot makes at every start
-  regardless is removed again at once (`Main.RemoveGodotUserDir`). `Gooner.Build.Tests` holds these
-  settings, the export preset (no console wrapper, no debug symbols) and `godot/icon.ico` - a copy
-  of `res/icons/favicon.ico` the export embeds as the executable's icon.
+- **Godot writes its shader and pipeline caches, and nothing else**: its file log is off in
+  `project.godot`; the caches are on (the user's call, 2026-10-21 - they had been off so that nothing
+  of Godot's was left behind). They live in `%APPDATA%\Godot\app_userdata\GoonerApp` (`shader_cache`,
+  `vulkan\pipelines.*.cache`; 7 MB after one session) and are shown and deletable under Privacy &
+  Data as the graphics cache (`PrivacyData`, given `OS.GetUserDataDir()`). Measured with them: the
+  start a second faster, her first appearance in the frame 176 -> 69 ms. Without them every start
+  compiled all shaders again and the first session stalled on it. What is left at the start of a
+  session (about 120 ms) is first-draw work, not compiling - check with Godot's
+  `Performance.Monitor.PipelineCompilations*` monitors and the wall clock, not `delta`. The empty
+  folder Godot makes at every start is still removed when nothing is in it
+  (`Main.RemoveGodotUserDir`). `Gooner.Build.Tests` holds these settings, the export preset (no
+  console wrapper, no debug symbols) and `godot/icon.ico` - a copy of `res/icons/favicon.ico` the
+  export embeds as the executable's icon.
 - **An exported build has no `res://` on disk**: `GlobalizePath("res://")` is empty there, so
   anything found relative to the Godot project needs a fallback beside the executable (`AppPaths`).
 - **The release check** (`.github/workflows/release-check.yml`, on a version tag) installs Godot and

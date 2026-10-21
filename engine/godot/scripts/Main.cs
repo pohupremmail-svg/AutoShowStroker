@@ -515,8 +515,9 @@ public partial class Main : Control
     }
 
     // Godot makes %APPDATA%\Godot\app_userdata\GoonerApp at every start, before any of this code
-    // runs; nothing is written there (no file log, no shader or pipeline cache - project.godot), so
-    // it goes again, with Godot\app_userdata and Godot themselves when they hold nothing else.
+    // runs. All it keeps there is its shader and pipeline cache (no file log - project.godot), shown
+    // and deletable under Privacy & Data; emptied there, the folder goes again, with
+    // Godot\app_userdata and Godot themselves when they hold nothing else.
     private static void RemoveGodotUserDir() => EmptyFolders.RemoveWithParents(OS.GetUserDataDir(), parents: 2);
 
     // --- smoke runs ---

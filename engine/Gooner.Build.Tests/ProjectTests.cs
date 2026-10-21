@@ -30,14 +30,16 @@ public class ProjectTests
         Has(debug, "file_logging/enable_file_logging.pc=false");
     }
 
-    // Both would go to %APPDATA%\Godot\app_userdata\GoonerApp - a folder whose name alone says this
-    // app ran here (measured: 5 MB after one start). Costs about 0.8 s per start.
+    // Both go to %APPDATA%\Godot\app_userdata\GoonerApp (measured: 5 MB after one start). They were
+    // off so that nothing of Godot's was left behind; without them every start compiled its shaders
+    // again, and the first session stalled on it - 130 ms as it began, 140 ms as she appeared in her
+    // frame. The user's call (2026-10-21): keep them. Disclosed and deletable under Privacy & Data.
     [Fact]
-    public void godot_keeps_no_shader_or_pipeline_cache()
+    public void godot_keeps_its_shader_and_pipeline_caches()
     {
         var rendering = Section(ProjectFile, "rendering");
-        Has(rendering, "shader_compiler/shader_cache/enabled=false");
-        Has(rendering, "rendering_device/pipeline_cache/enable=false");
+        Has(rendering, "shader_compiler/shader_cache/enabled=true");
+        Has(rendering, "rendering_device/pipeline_cache/enable=true");
     }
 
     // main.py: window.showMaximized().

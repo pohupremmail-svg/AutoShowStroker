@@ -179,6 +179,36 @@ public sealed class PrivacyDataTests : IDisposable
         Assert.Equal("", _settings.GetString("Character/folder", "x"));
     }
 
+    // Godot's compiled shaders and pipelines, kept so that a start does not stall compiling them
+    // again (the user's call): named, counted and deletable like everything else the app leaves.
+    [Fact]
+    public void the_graphics_cache_is_disclosed_and_deleted()
+    {
+        var cache = Directory.CreateDirectory(Path.Combine(_tmp.FullName, "godot")).FullName;
+        Directory.CreateDirectory(Path.Combine(cache, "shader_cache", "CanvasShaderRD"));
+        File.WriteAllText(Path.Combine(cache, "shader_cache", "CanvasShaderRD", "a.cache"), "a");
+        Directory.CreateDirectory(Path.Combine(cache, "vulkan"));
+        File.WriteAllText(Path.Combine(cache, "vulkan", "pipelines.cache"), "b");
+        var privacy = new PrivacyData(_app, cache);
+
+        Assert.Contains(cache, privacy.LocationsText);
+        Assert.Equal(2, privacy.CategoryCounts()["graphics_cache"]);
+        privacy.ClearCategories(["graphics_cache"]);
+
+        Assert.Equal(0, privacy.CategoryCounts()["graphics_cache"]);
+        Assert.False(File.Exists(Path.Combine(cache, "vulkan", "pipelines.cache")));
+    }
+
+    [Fact]
+    public void without_a_graphics_cache_there_is_none_to_count_or_delete()
+    {
+        Assert.Equal(0, _privacy.CategoryCounts()["graphics_cache"]);
+        _privacy.ClearCategories(["graphics_cache"]);
+        var missing = new PrivacyData(_app, Path.Combine(_tmp.FullName, "never-made"));
+        Assert.Equal(0, missing.CategoryCounts()["graphics_cache"]);
+        missing.ClearCategories(["graphics_cache"]);
+    }
+
     [Fact]
     public void clearing_settings_wipes_them_but_keeps_the_data_files()
     {
