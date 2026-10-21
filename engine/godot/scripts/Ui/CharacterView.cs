@@ -538,9 +538,16 @@ public partial class CharacterView : SubViewportContainer
             _camera.Position = at + new Vector3(0, 0, near).Rotated(Vector3.Left, tilt).Rotated(Vector3.Up, turn);
             if (turn != 0 || tilt != 0) _camera.LookAt(at);
         }
-        // --face-closeup: the camera on her face, to judge its expressions.
+        // --face-closeup: the camera on her face, to judge its expressions - between her eyes and her mouth
+        // (as Mouth() finds it), not off the head bone, which sits at the mouth on one model and at the
+        // neck on the next and framed a forehead.
         if (_framing == Framing.Bust && AppPaths.UserFlag("face-closeup"))
-            _camera.Position = new Vector3(head.X, head.Y + height * 0.05f, head.Z + height * 0.075f / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2)));
+        {
+            var face = head + Vector3.Up * height * 0.05f;
+            if (_figure.Skeleton is { } sk && _figure.Bone("LeftEye") is { } l && _figure.Bone("RightEye") is { } r)
+                face = sk.GlobalTransform * ((_figure.Pose(l) + _figure.Pose(r)) / 2) - Vector3.Up * height * 0.025f;
+            _camera.Position = new Vector3(face.X, face.Y, head.Z + height * 0.075f / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2)));
+        }
         _camera.Near = Math.Max(0.01f, distance * 0.01f);
         _camera.Far = Math.Max(100, distance * 10);
     }
