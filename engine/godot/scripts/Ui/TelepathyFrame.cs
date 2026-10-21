@@ -76,8 +76,10 @@ public partial class TelepathyFrame : Control
         _fade.TweenMethod(Callable.From<float>(SetFade), 0f, 1f, 0.5f);
     }
 
-    // The beat, for her to move to: the session clock now, the note before and the note after.
-    public void Rhythm(double now, double? lastNote, double? nextNote) => _view.Rhythm(now, lastNote, nextNote);
+    // The beat, for her to move to: the session clock now, the notes before and after it, and the one
+    // beyond each of those.
+    public void Rhythm(double now, double? noteBefore, double? lastNote, double? nextNote, double? noteAfter) =>
+        _view.Rhythm(now, noteBefore, lastNote, nextNote, noteAfter);
 
     // A callout: closer, a face for what happened, the line on her lips.
     public void Speak(Callout callout)

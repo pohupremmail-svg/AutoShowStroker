@@ -198,10 +198,15 @@ here unchanged. This file only adds what is specific to this side.
   the user's two picks), off with `Character/in_session`. Each callout draws it closer and brighter;
   she wears `Reactions.For(trigger, tone)` and her mouth follows `Visemes` of the line. A fake climax
   speaks with `climax_real`'s lines until revealed, so it gets the same face - keep it that way.
-- **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock by
-  `Main`): one full stroke per note - the hand at the root of the toy on the note, up near its tip
-  halfway to the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with
-  it; in a pause she eases to a stop. The arm reaches by two-bone IK, the **forearm takes the roll**
+- **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock and one
+  beyond each by `Main`): one stroke per note - the hand down on the note, up near the tip halfway to
+  the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with it; in a
+  pause she eases to a stop. **A fast beat gets a shorter stroke, kept at the top**
+  (`Gooner.Core.Characters.StrokeMotion`, the user's call): a whole one at five notes a second moved a
+  quarter of the toy per frame and read as the hand teleporting. A note's depth is set by the shorter
+  of the gaps either side of it, known ahead because the beat is planned, so the hand is already up
+  when a fast run begins and never jumps at a note. What still jumps is a long frame - a media change
+  that stalls the main thread is a stroke skipped. The arm reaches by two-bone IK, the **forearm takes the roll**
   (a wrist turned alone twists a long glove's cuff into a loop), the hand is turned so the palm faces
   the shaft and the fingers run round its front, and each finger is laid **joint by joint as chords of
   the circle round the shaft through its own knuckle** (`Figure.Reach`, `Orient`, `Wrap`) - aimed, not

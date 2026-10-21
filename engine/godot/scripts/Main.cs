@@ -83,7 +83,7 @@ public partial class Main : Control
     private GlassChip _chase = null!, _clockChip = null!;
     private CalloutView _callout = null!;
     private TelepathyFrame? _telepathy;
-    private double? _lastNote, _nextNote;
+    private double? _noteBefore, _lastNote, _nextNote;
     private string? _frameStyle;
     private RhythmBadge _rhythm = null!;
     private PanelContainer _outcome = null!;
@@ -169,7 +169,7 @@ public partial class Main : Control
         }
         _app.SessionStarted += () =>
         {
-            _lastNote = _nextNote = null;
+            _noteBefore = _lastNote = _nextNote = null;
             if (_app.Character.InSession) _telepathy?.Open();
         };
         _app.SessionEnded += () => _telepathy?.Cut();
@@ -226,11 +226,12 @@ public partial class Main : Control
         if (_language != L10n.Language || _character != _app.Character.Path) ApplyLanguage();
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
-        // The notes either side of now, for the character to move to.
+        // The notes either side of now and one beyond each, for the character to move to.
         var now = _clock.Now;
-        if (_nextNote is { } passed && passed <= now) _lastNote = passed;
-        _nextNote = notes.Where(n => n.Audible && n.At > now).Select(n => (double?)n.At).FirstOrDefault();
-        _telepathy?.Rhythm(now, _lastNote, _nextNote);
+        if (_nextNote is { } passed && passed <= now) (_noteBefore, _lastNote) = (_lastNote, passed);
+        var ahead = notes.Where(n => n.Audible && n.At > now).Select(n => (double?)n.At).Take(2).ToList();
+        _nextNote = ahead.ElementAtOrDefault(0);
+        _telepathy?.Rhythm(now, _noteBefore, _lastNote, _nextNote, ahead.ElementAtOrDefault(1));
         click.Schedule(notes.Where(n => n.Audible).Select(n => n.At));
         click.Volume = (float)_app.Beat.BeatLoudness;
         click.Muted = _app.Beat.IsMuted;

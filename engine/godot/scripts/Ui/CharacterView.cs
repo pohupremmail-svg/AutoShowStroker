@@ -35,10 +35,11 @@ public partial class CharacterView : SubViewportContainer
     private float _moodWeight;
     private IReadOnlyList<MouthShape> _line = [];
     private double _lineAt = -1;
-    // The beat, in the frame: the session clock and the notes either side of it.
+    // The beat, in the frame: the session clock, the two notes either side of it and one more beyond
+    // each (StrokeMotion settles a note's depth by the gaps either side).
     private double _beatNow;
-    private double? _lastNote, _nextNote;
-    private float _moving;
+    private double? _noteBefore, _lastNote, _nextNote, _noteAfter;
+    private float _moving, _stroke = 0.5f;
     private Node3D? _toy;
     private const float ToyRadius = 0.021f;
     private Vector3? _gripAt;
@@ -74,12 +75,15 @@ public partial class CharacterView : SubViewportContainer
 
     public void Calm() => _mood = null;
 
-    // The beat for her to move to: the session clock now, the note before and the note after.
-    public void Rhythm(double now, double? lastNote, double? nextNote)
+    // The beat for her to move to: the session clock now, the notes before and after it, and the one
+    // beyond each of those.
+    public void Rhythm(double now, double? noteBefore, double? lastNote, double? nextNote, double? noteAfter)
     {
         _beatNow = now;
+        _noteBefore = noteBefore;
         _lastNote = lastNote;
         _nextNote = nextNote;
+        _noteAfter = noteAfter;
     }
 
     // The mouth moves to the line, letter by letter (Visemes), from now.
@@ -155,17 +159,15 @@ public partial class CharacterView : SubViewportContainer
         return true;
     }
 
-    // How far down the stroke is: 1 on a note, 0 halfway between two - one full stroke per note, the
-    // beat its frequency. Without a note close by (a pause, the start) she eases to a stop halfway.
+    // How far down the stroke is: 1 at the bottom of a whole stroke, 0 at the top - one stroke per note,
+    // shorter on a fast beat (StrokeMotion). Without a note close by (a pause, the start) she eases to a
+    // stop halfway, from wherever the last stroke left her hand.
     private float Stroke(double delta)
     {
-        var active = _framing == Framing.Bust && _lastNote is { } last && _nextNote is { } next
-            && next > last && next - last < 2.5 && next - _beatNow < 2.5;
-        _moving = Mathf.MoveToward(_moving, active ? 1 : 0, (float)delta * 3);
-        if (!active) return 0.5f * _moving + 0.5f * (1 - _moving);
-        var phase = (float)((_beatNow - _lastNote!.Value) / (_nextNote!.Value - _lastNote.Value));
-        var down = 0.5f * (1 + MathF.Cos(2 * MathF.PI * Math.Clamp(phase, 0, 1)));
-        return Mathf.Lerp(0.5f, down, _moving);
+        var down = _framing == Framing.Bust ? StrokeMotion.Down(_beatNow, _noteBefore, _lastNote, _nextNote, _noteAfter) : null;
+        _moving = Mathf.MoveToward(_moving, down is null ? 0 : 1, (float)delta * 3);
+        if (down is { } d) _stroke = (float)d;
+        return Mathf.Lerp(0.5f, _stroke, _moving);
     }
 
     // What the grip measures on a figure, once: where the toy stands and how big it is, which way the
