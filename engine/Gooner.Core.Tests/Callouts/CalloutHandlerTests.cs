@@ -157,6 +157,33 @@ public sealed class CalloutHandlerTests : IDisposable
         Assert.True(_handler.IsTeasing);
     }
 
+    // What the character on screen needs besides the words: what the line answers, and in which voice.
+    [Fact]
+    public void a_callout_says_what_it_answers_and_in_which_tone()
+    {
+        var spoken = new List<Callout>();
+        _handler.CalloutSpoken += spoken.Add;
+
+        _handler.ForceOutputSentence("session_started");
+
+        Assert.Equal([new Callout("en session_started phrase", "session_started", "flirty")], spoken);
+    }
+
+    [Fact]
+    public void the_tone_named_is_the_one_the_line_was_drawn_from()
+    {
+        _handler.CalloutData["en"]["shy"] = new Dictionary<string, List<string>> { ["session_started"] = ["shy line"] };
+        _handler.SetTones(["flirty", "shy"]);
+        var spoken = new List<Callout>();
+        _handler.CalloutSpoken += spoken.Add;
+
+        for (var i = 0; i < 40; i++) _handler.ForceOutputSentence("session_started");
+
+        Assert.All(spoken, c => Assert.Equal(c.Text == "shy line" ? "shy" : "flirty", c.Tone));
+        Assert.Contains(spoken, c => c.Tone == "shy");
+        Assert.Contains(spoken, c => c.Tone == "flirty");
+    }
+
     [Fact]
     public void force_output_sentence_missing_category_does_not_raise() =>
         Assert.Empty(Said(_handler, () => _handler.ForceOutputSentence("does_not_exist")));

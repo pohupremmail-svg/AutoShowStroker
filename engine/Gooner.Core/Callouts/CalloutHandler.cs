@@ -37,6 +37,10 @@ public sealed record CustomPhraseFile(string Path, string Lang, string? Tone);
 // No timer in here: a shown tease ends TeaseTime later on the TimeProvider, and the host calls
 // Tick() every frame to let that happen. Python's QTimer repeats and resends the hide every
 // 7 seconds; only the first of those ever did anything.
+// A line on screen with what it answers and the tone it was drawn from: what a character needs to
+// react to it.
+public sealed record Callout(string Text, string Category, string? Tone);
+
 public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
 {
     public static string SettingsGroup => "CalloutHandler";
@@ -148,6 +152,12 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
 
     public event Action<string>? TeaseShown;
     public event Action? TeaseHidden;
+
+    // Each line as it goes on screen, with its trigger and tone - beside TeaseShown, which the HUD
+    // and the Python side's tests only need the words of.
+    public event Action<Callout>? CalloutSpoken;
+    private string _lastCategory = "";
+    private string? _lastTone;
 
     public string CalloutDir { get; }
     public TimeSpan TeaseTime { get; set; } = TimeSpan.FromSeconds(7);
@@ -476,10 +486,14 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
     {
         var tones = CalloutData.TryGetValue(Lang, out var t) ? t : [];
         var pools = new List<List<string>>();
+        var poolTones = new List<string>();
         foreach (var tone in UsableTones())
         {
             if (tones.TryGetValue(tone, out var categories) && categories.TryGetValue(category, out var phrases) && phrases.Count > 0)
+            {
                 pools.Add(phrases);
+                poolTones.Add(tone);
+            }
         }
 
         if (pools.Count == 0)
@@ -487,12 +501,18 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
             AppLog.Warning(Log, "No {0} phrases available for language {1}", PyJson.Quote(category), PyJson.Quote(Lang));
             return null;
         }
-        return _random.Choice(_random.Choice(pools));
+        // The same two draws as ever (the parity run replays them); the tone is only read off the pool.
+        var pool = _random.Choice(pools);
+        _lastCategory = category;
+        _lastTone = poolTones[pools.IndexOf(pool)];
+        return _random.Choice(pool);
     }
 
+    // Always right after the PickPhrase that drew it, so the category and tone are this line's.
     private void ShowTease(string tease)
     {
         TeaseShown?.Invoke(tease);
+        CalloutSpoken?.Invoke(new Callout(tease, _lastCategory, _lastTone));
         IsTeasing = true;
         _teaseEndsAt = Now + TeaseTime.TotalSeconds;
     }
