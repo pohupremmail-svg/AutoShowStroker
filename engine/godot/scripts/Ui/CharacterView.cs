@@ -43,6 +43,7 @@ public partial class CharacterView : SubViewportContainer
     // How she stands while nothing else is asked of her; a view of its own, so the pedestal and the
     // frame never move as one.
     private readonly IdleMotion _idle = new(Random.Shared.Next());
+    private readonly FaceMotion _faceMotion = new(Random.Shared.Next());
     private float _glance;
     private (Figure Of, float Height, Vector3 LeftAnkle, Vector3 RightAnkle)? _stance;
     private Node3D? _toy;
@@ -360,10 +361,23 @@ public partial class CharacterView : SubViewportContainer
     private void Face(double delta)
     {
         _weights.Clear();
+        // Beneath everything a face that is never blank (FaceMotion) - heated while she strokes.
+        var aroused = _framing == Framing.Bust ? _moving : 0;
+        foreach (var (name, weight) in _faceMotion.At(_time, _idle.Breath(_time), aroused)) _weights[name] = (float)weight;
+        if (_framing == Framing.Pedestal) _weights["relaxed"] = _weights.GetValueOrDefault("relaxed") + 0.4f;
+        // A little smile once a line is said.
+        if (_lineAt >= 0 && _line.Count > 0 && _time - _lineAt - _line[^1].At is > 0 and < 1.5 and var after)
+            _weights["happy"] = _weights.GetValueOrDefault("happy") + 0.3f * MathF.Sin(MathF.PI * (float)after / 1.5f);
+        // The callout's face over it; a cross or a sad one takes the smile away as it comes.
         var target = _mood is { } mood ? (float)mood.Strength : 0;
         _moodWeight = Mathf.MoveToward(_moodWeight, target, (float)delta * 4);
-        if (_mood is { } m && _moodWeight > 0) _weights[m.Expression] = _moodWeight;
-        else if (_moodWeight <= 0 && _figure!.Face.Has("relaxed")) _weights["relaxed"] = _framing == Framing.Pedestal ? 1 : 0.3f;
+        if (_mood is { } m && _moodWeight > 0)
+        {
+            if (m.Expression is "angry" or "sad") _weights["happy"] = _weights.GetValueOrDefault("happy") * (1 - _moodWeight);
+            _weights[m.Expression] = Math.Min(1, _weights.GetValueOrDefault(m.Expression) + _moodWeight);
+        }
+        // Heavy lids and a smile that narrows the eyes never add up to closed ones.
+        _weights["blink"] = _weights.GetValueOrDefault("blink") * (1 - Math.Min(1, _weights.GetValueOrDefault("happy")));
 
         // Shut in 80 ms, held for 60, open again in 120.
         if (_time >= _nextBlink)
@@ -374,7 +388,7 @@ public partial class CharacterView : SubViewportContainer
         if (_blinkedAt >= 0)
         {
             var since = (float)(_time - _blinkedAt);
-            _weights["blink"] = since < 0.08f ? since / 0.08f : since < 0.14f ? 1 : Math.Max(0, 1 - (since - 0.14f) / 0.12f);
+            _weights["blink"] = Math.Max(_weights.GetValueOrDefault("blink"), since < 0.08f ? since / 0.08f : since < 0.14f ? 1 : Math.Max(0, 1 - (since - 0.14f) / 0.12f));
             if (since >= 0.26f) _blinkedAt = -1;
         }
 
@@ -389,7 +403,8 @@ public partial class CharacterView : SubViewportContainer
             }
             // Open quickly into the letter's shape and back towards closed through it.
             var into = (float)((at - shape.At) * Visemes.LettersPerSecond);
-            if (shape.Viseme is { } viseme) _weights[viseme] = 0.75f * MathF.Sin(Math.Clamp(into, 0, 1) * MathF.PI * 0.8f + 0.25f);
+            if (shape.Viseme is { } viseme)
+                _weights[viseme] = Math.Max(_weights.GetValueOrDefault(viseme), 0.75f * MathF.Sin(Math.Clamp(into, 0, 1) * MathF.PI * 0.8f + 0.25f));
         }
         _figure!.Face.Apply(_weights);
     }
@@ -435,6 +450,9 @@ public partial class CharacterView : SubViewportContainer
             _camera.Position = at + new Vector3(0, 0, near).Rotated(Vector3.Left, tilt).Rotated(Vector3.Up, turn);
             if (turn != 0 || tilt != 0) _camera.LookAt(at);
         }
+        // --face-closeup: the camera on her face, to judge its expressions.
+        if (_framing == Framing.Bust && AppPaths.UserFlag("face-closeup"))
+            _camera.Position = new Vector3(head.X, head.Y + height * 0.05f, head.Z + height * 0.075f / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2)));
         _camera.Near = Math.Max(0.01f, distance * 0.01f);
         _camera.Far = Math.Max(100, distance * 10);
     }

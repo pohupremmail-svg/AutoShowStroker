@@ -227,6 +227,13 @@ here unchanged. This file only adds what is specific to this side.
   `--smoke-panel=start --wait=20 --screenshot=...` or a smoke session), ffmpeg from the spikes
   crops it. D.Va's and Shadowheart's exports carry no spring bones, so their hair does not move -
   an export-side job; the VRoid sample's does.
+- **Her face is never blank** (`Gooner.Core.Characters.FaceMotion`, laid under the callout's face in
+  `CharacterView.Face` - the user found it "tot", "lustlos"): a smile that never quite goes and
+  drifts; every 2.5-7 s a micro-expression (a smile breaking through, raised brows, a contented look);
+  while she strokes in the frame heavier lids, lips parted and breathing, a wink every 15-40 s; a
+  small smile after each line. A cross or sad callout face takes the smile away as it comes, and
+  heavy lids plus a smile that narrows the eyes never add up to closed ones. `--face-closeup` puts
+  the camera on her face in the frame, for a Movie Maker recording.
 - **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock and one
   beyond each by `Main`): one stroke per note - the hand down on the note, up near the tip halfway to
   the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with it; in a
@@ -388,7 +395,7 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
-"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--grip-closeup [--grip-turn=DEG] [--grip-tilt=DEG]] [--grip-down=0..1] [--size=WxH] [--screenshot=PNG [--shots=N]]
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--face-closeup] [--grip-closeup [--grip-turn=DEG] [--grip-tilt=DEG]] [--grip-down=0..1] [--size=WxH] [--screenshot=PNG [--shots=N]]
 "$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S] [--size=WxH]
 "$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
 dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)
