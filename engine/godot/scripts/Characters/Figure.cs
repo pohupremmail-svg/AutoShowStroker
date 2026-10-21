@@ -205,11 +205,12 @@ public sealed class Figure
     }
 
     // Where the front of the body is at a height, in skeleton space: the furthest point towards the
-    // viewer among the rest pose's vertices within `halfWidth` of the middle and `band` of that height
-    // - clothes included, so a toy placed in front of it stands clear of a wide skirt.
-    public float FrontAt(float height, float halfWidth, float band)
+    // viewer among the rest pose's vertices within `halfWidth` of `middle` (across) and `band` of that
+    // height - belly and clothes included, so a toy placed in front of it stands clear of both. Null
+    // where there is no vertex there.
+    public float? FrontAt(float middle, float height, float halfWidth, float band)
     {
-        if (Skeleton is not { } sk) return 0;
+        if (Skeleton is not { } sk) return null;
         var front = float.NegativeInfinity;
         var toSkeleton = sk.GlobalTransform.AffineInverse();
         foreach (var mesh in All<MeshInstance3D>(Root))
@@ -221,11 +222,11 @@ public sealed class Figure
                 foreach (var v in am.SurfaceGetArrays(s)[(int)Mesh.ArrayType.Vertex].AsVector3Array())
                 {
                     var p = toHere * v;
-                    if (Math.Abs(p.Y - height) < band && Math.Abs(p.X) < halfWidth && p.Z > front) front = p.Z;
+                    if (Math.Abs(p.Y - height) < band && Math.Abs(p.X - middle) < halfWidth && p.Z > front) front = p.Z;
                 }
             }
         }
-        return float.IsNegativeInfinity(front) ? 0 : front;
+        return float.IsNegativeInfinity(front) ? null : front;
     }
 
     // A bone turned so that two directions it carries - `fromA`, and `fromB` as far as it is across

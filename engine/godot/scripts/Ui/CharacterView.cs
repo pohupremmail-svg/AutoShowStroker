@@ -254,23 +254,34 @@ public partial class CharacterView : SubViewportContainer
 
     private static GripSetup? MeasureGrip(Figure figure)
     {
-        if (figure.Bone("Hips") is not { } hipsBone || figure.Bone("Head") is not { } headBone
-            || figure.Bone("RightHand") is not { } hand || figure.Bone("RightMiddleProximal") is not { } knuckle) return null;
+        if (figure.Bone("Hips") is not { } hipsBone || figure.Bone("Head") is not { } headBone || figure.Bone("RightHand") is not { } hand
+            || figure.Bone("RightMiddleProximal") is not { } knuckle || figure.Bone("RightUpperArm") is not { } upper
+            || figure.Bone("RightLowerArm") is not { } lower) return null;
         var hips = figure.Rest(hipsBone);
         var scale = Math.Max(0.3f, (figure.Rest(headBone).Y - (figure.Bone("LeftFoot") is { } f ? figure.Rest(f).Y : 0)) / 1.45f);
         var along = new Vector3(0, 1, 0.18f).Normalized();
         var length = 0.16f * scale;
         var radius = ToyRadius * scale;
-        // In front of her belly, and clear of whatever she wears there.
+        // A set gap in front of her body - the front of her belly and whatever she wears there, over the
+        // toy's whole height - from the toy's widest part, its foot. A deep belly puts it further out.
         var y = hips.Y - 0.02f * scale;
-        var front = figure.FrontAt(y + length / 2, 0.1f * scale, length / 2);
-        var root = new Vector3(hips.X, y, Math.Max(hips.Z + 0.13f * scale, front + radius + 0.035f * scale));
+        var front = figure.FrontAt(hips.X, y + length / 2, 0.12f * scale, length / 2 + radius) ?? hips.Z + 0.1f * scale;
+        var root = new Vector3(hips.X, y, front + 1.5f * radius + 0.03f * scale);
         // From her right towards the shaft, and round its front, where the fingers are seen.
         var toShaft = (Vector3.Right - along * Vector3.Right.Dot(along)).Normalized();
         var round = along.Cross(toShaft);
         if (round.Z < 0) round = -round;
         var palmLength = (figure.Rest(knuckle) - figure.Rest(hand)).Length();
-        return new GripSetup(root, along, length, radius, toShaft, round, palmLength, palmLength * 0.22f, scale);
+        var finger = palmLength * 0.22f;
+        // Her arm is never stretched: an arm too short to reach both ends of the stroke out there brings
+        // the toy back towards her instead, into her belly if it must (the user's rule).
+        var shoulder = figure.Rest(upper);
+        var arm = 0.95f * ((figure.Rest(lower) - shoulder).Length() + (figure.Rest(hand) - figure.Rest(lower)).Length());
+        Vector3 Wrist(Vector3 at, float share) =>
+            at + along * length * share - toShaft * (radius + finger * 0.9f) - round * palmLength;
+        while (root.Z > hips.Z && ((Wrist(root, 0.8f) - shoulder).Length() > arm || (Wrist(root, 0.32f) - shoulder).Length() > arm))
+            root.Z -= 0.002f * scale;
+        return new GripSetup(root, along, length, radius, toShaft, round, palmLength, finger, scale);
     }
 
     // The right hand round the toy, sliding along it: at its root on a note, up near the tip between
