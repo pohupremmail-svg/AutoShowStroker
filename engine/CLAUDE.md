@@ -252,12 +252,17 @@ here unchanged. This file only adds what is specific to this side.
   side comes from the hand's chirality (little finger to index across the knuckles, wrist to middle
   knuckle along), never from the fingers' bend at rest, which some models have slightly backwards.
   What does not change - where the toy stands (a set gap in front of her belly and clothes over its whole
-  height, from its foot, `Figure.FrontAt`; brought back towards her when her arm cannot reach both
-  ends of the stroke - **an arm is never stretched, the toy goes into her belly instead**, the user's
-  rule; it follows her hips as they sway), which way her elbow bends (out to her side and back, unless
-  that takes her arm through her waist on its way to the toy - a wide one did, the user saw it - then
-  the first direction further forward where neither part of the arm passes through her rest-pose
-  points at either end of the stroke, `Gooner.Core.Characters.ElbowChoice`),
+  height, from what sticks out of it towards her, `Figure.FrontAt`; and far enough out that her
+  **wrist** is clear too - the hand closes on the shaft from in front, so the wrist is a hand's length
+  behind the knuckles, and on wide figures it sat in her belly; when her arm cannot reach both ends of
+  the stroke it is first held up to 6 cm higher, then brought back towards her - **an arm is never
+  stretched, the toy goes into her belly instead**, the user's rule; it follows her hips as they sway),
+  which way her elbow bends (out to her side and back, unless that takes her arm through her - a wide
+  waist did, the user saw it - then the nearest direction, forward, back or raised out to her side,
+  where neither part of the arm passes through her rest-pose points at either end of the stroke,
+  `Gooner.Core.Characters.ElbowChoice`), how far down her free arms hang (by her side, unless her hips
+  are in the way - then up to 25 degrees further out, `ArmHang`; her hair is not counted as her body,
+  `Figure.RestPoints`),
   the hand's size, the fingers' wrap - is measured once per figure; per frame only the arm and the
   hand move. Check by eye with `--grip-closeup --grip-down=<0..1>` on a smoke session (the camera on
   the hand, the stroke held; `--grip-turn=90` from her left, `--grip-tilt=40` from above, to see the

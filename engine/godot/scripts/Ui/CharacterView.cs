@@ -161,14 +161,15 @@ public partial class CharacterView : SubViewportContainer
         figure.Turn("Chest", Vector3.Right, -1.6f * breath, keep: true);
         figure.Turn("LeftShoulder", Vector3.Back, 1.4f * breath);
         figure.Turn("RightShoulder", Vector3.Back, -1.4f * breath);
-        figure.Turn("LeftUpperArm", Vector3.Back, -77 + 1.5f * Wander(3) - breath);
+        var hang = Hang(figure);
+        figure.Turn("LeftUpperArm", Vector3.Back, hang.Left + 1.5f * Wander(3) - breath);
         figure.Turn("LeftUpperArm", Vector3.Right, -5 + 2 * Wander(4), keep: true);
         figure.Turn("LeftLowerArm", Vector3.Right, -18 + 3 * Wander(5));
         figure.Ease("Left");
         if (_framing == Framing.Bust) Grip(figure, down);
         else
         {
-            figure.Turn("RightUpperArm", Vector3.Back, 76 + 1.5f * Wander(10) + breath);
+            figure.Turn("RightUpperArm", Vector3.Back, hang.Right + 1.5f * Wander(10) + breath);
             figure.Turn("RightUpperArm", Vector3.Right, -3 + 2 * Wander(11), keep: true);
             figure.Turn("RightLowerArm", Vector3.Right, -24 + 3 * Wander(12));
             figure.Ease("Right");
@@ -257,7 +258,50 @@ public partial class CharacterView : SubViewportContainer
     // not change from one frame to the next.
     private readonly List<(int Bone, Quaternion Turn)> _closed = [];
 
-    private static GripSetup? MeasureGrip(Figure figure, ToyShape? toy)
+    // How thick an arm is taken to be, at a person's size, wherever it is kept clear of her body.
+    private const float Thickness = 0.035f;
+
+    private static System.Numerics.Vector3 N(Vector3 v) => new(v.X, v.Y, v.Z);
+
+    // Her body as it rests, every third point of it - what her arms are kept clear of. Read once per figure.
+    private List<System.Numerics.Vector3> Body(Figure figure)
+    {
+        if (_bodyFor != figure)
+        {
+            _bodyFor = figure;
+            _body = [.. figure.RestPoints().Where((_, i) => i % 3 == 0).Select(N)];
+        }
+        return _body;
+    }
+
+    private Figure? _bodyFor;
+    private List<System.Numerics.Vector3> _body = [];
+
+    // How far down each free arm hangs (ArmHang): by her side, unless her hips are in the way.
+    private (float Left, float Right) Hang(Figure figure)
+    {
+        if (_hangFor == figure) return _hang;
+        _hangFor = figure;
+        _hang = (-77, 76);
+        if (figure.Bone("Head") is not { } head) return _hang;
+        var scale = Math.Max(0.3f, (figure.Rest(head).Y - (figure.Bone("LeftFoot") is { } f ? figure.Rest(f).Y : 0)) / 1.45f);
+        float For(string side, float preferred)
+        {
+            if (figure.Bone($"{side}UpperArm") is not { } upper || figure.Bone($"{side}LowerArm") is not { } lower
+                || figure.Bone($"{side}Hand") is not { } hand) return preferred;
+            var shoulder = figure.Rest(upper);
+            var tip = figure.Bone($"{side}MiddleProximal") is { } knuckle ? figure.Rest(knuckle) : figure.Rest(hand);
+            var length = (figure.Rest(lower) - shoulder).Length() + (figure.Rest(hand) - figure.Rest(lower)).Length() + (tip - figure.Rest(hand)).Length();
+            return ArmHang.Pick(N(shoulder), N((figure.Rest(lower) - shoulder).Normalized()), length, preferred, Body(figure), Thickness * scale);
+        }
+        _hang = (For("Left", -77), For("Right", 76));
+        return _hang;
+    }
+
+    private Figure? _hangFor;
+    private (float Left, float Right) _hang;
+
+    private static GripSetup? MeasureGrip(Figure figure, ToyShape? toy, List<System.Numerics.Vector3> body)
     {
         if (figure.Bone("Hips") is not { } hipsBone || figure.Bone("Head") is not { } headBone || figure.Bone("RightHand") is not { } hand
             || figure.Bone("RightMiddleProximal") is not { } knuckle || figure.Bone("RightUpperArm") is not { } upper
@@ -282,20 +326,32 @@ public partial class CharacterView : SubViewportContainer
         if (round.Z < 0) round = -round;
         var palmLength = (figure.Rest(knuckle) - figure.Rest(hand)).Length();
         var finger = palmLength * 0.22f;
-        // Her arm is never stretched: an arm too short to reach both ends of the stroke out there brings
-        // the toy back towards her instead, into her belly if it must (the user's rule).
+        // Her hand closes round the shaft from in front, so her wrist is a hand's length behind her
+        // knuckles: the toy stands far enough out for the wrist to be clear of her too, or her forearm
+        // ran into her belly (the user saw it on a wide figure and in a hoodie).
+        var wristX = hips.X - (radius + finger * 0.9f);
+        if (figure.FrontAt(wristX, y + length * 0.56f, 0.03f * scale, length * 0.3f) is { } wristFront)
+            root.Z = Math.Max(root.Z, wristFront + palmLength * round.Z + Thickness * scale);
+        // Her arm is never stretched: an arm too short to reach both ends of the stroke out there first
+        // holds the toy a little higher, and then brings it back towards her, into her belly if it must
+        // (the user's rule) - short arms put her wrist into her belly where it could have been held higher.
         var shoulder = figure.Rest(upper);
         var arm = 0.95f * ((figure.Rest(lower) - shoulder).Length() + (figure.Rest(hand) - figure.Rest(lower)).Length());
         Vector3 Wrist(Vector3 at, float share) =>
             at + along * length * share - toShaft * (radius + finger * 0.9f) - round * palmLength;
-        while (root.Z > hips.Z && ((Wrist(root, 0.8f) - shoulder).Length() > arm || (Wrist(root, 0.32f) - shoulder).Length() > arm))
+        bool OutOfReach() => (Wrist(root, 0.8f) - shoulder).Length() > arm || (Wrist(root, 0.32f) - shoulder).Length() > arm;
+        var raised = 0f;
+        while (raised < 0.06f * scale && OutOfReach())
+        {
+            root.Y += 0.002f * scale;
+            raised += 0.002f * scale;
+        }
+        while (root.Z > hips.Z && OutOfReach())
             root.Z -= 0.002f * scale;
         // Her elbow out to her side and back, unless that takes her arm through her waist on its way to
         // the toy: then where it does not.
-        static System.Numerics.Vector3 N(Vector3 v) => new(v.X, v.Y, v.Z);
-        var body = figure.RestPoints().Where((_, i) => i % 3 == 0).Select(N).ToList();
         var pole = ElbowChoice.Pick(N(shoulder), (figure.Rest(lower) - shoulder).Length(), (figure.Rest(hand) - figure.Rest(lower)).Length(),
-            [N(Wrist(root, 0.8f)), N(Wrist(root, 0.32f))], body, 0.035f * scale, N(new Vector3(-1, -0.4f, -0.7f)));
+            [N(Wrist(root, 0.8f)), N(Wrist(root, 0.32f))], body, Thickness * scale, N(new Vector3(-1, -0.4f, -0.7f)));
         return new GripSetup(root, along, length, radius, toShaft, round, palmLength, finger, scale, new Vector3(pole.X, pole.Y, pole.Z));
     }
 
@@ -311,7 +367,7 @@ public partial class CharacterView : SubViewportContainer
             // a shaft of the wrong size.
             if (!Toy.Settled) return;
             _gripFor = figure;
-            _grip = MeasureGrip(figure, Toy.Loaded?.Shape);
+            _grip = MeasureGrip(figure, Toy.Loaded?.Shape, Body(figure));
             _closed.Clear();
             _toy?.QueueFree();
             _toy = null;

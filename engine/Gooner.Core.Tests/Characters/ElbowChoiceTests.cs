@@ -32,6 +32,25 @@ public sealed class ElbowChoiceTests
         Assert.Equal(0, ElbowChoice.Hits(Shoulder, Upper, Fore, Wrists, pole, body, Thickness));
     }
 
+    // Hips far wider than her shoulders (a figure the user brought): an elbow bent back or forward still
+    // ends up in her flank - it has to go out, and up, as anyone's would.
+    [Fact]
+    public void on_hips_wider_than_her_shoulders_the_elbow_goes_out_and_up()
+    {
+        var body = new List<Vector3>();
+        for (var y = 0.8f; y <= 1.45f; y += 0.02f)
+            for (var a = 0; a < 360; a += 6)
+            {
+                var r = y > 1.3f ? 0.12f : 0.24f;
+                body.Add(new Vector3(r * MathF.Cos(a * MathF.PI / 180), y, r * MathF.Sin(a * MathF.PI / 180)));
+            }
+        Vector3[] wrists = [new(-0.06f, 1.08f, 0.33f), new(-0.06f, 1.14f, 0.34f)];
+        var shoulder = Shoulder with { X = -0.22f };
+        var pole = ElbowChoice.Pick(shoulder, Upper, Fore, wrists, body, Thickness, Back);
+        Assert.Equal(0, ElbowChoice.Hits(shoulder, Upper, Fore, wrists, pole, body, Thickness));
+        Assert.True(pole.Y > Vector3.Normalize(Back).Y);
+    }
+
     [Fact]
     public void a_slim_waist_keeps_the_elbow_out_to_the_side_and_back()
     {

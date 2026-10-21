@@ -10,18 +10,22 @@ namespace Gooner.Core.Characters;
 // Skeleton space, +Y up, +Z towards the viewer, her right towards -X.
 public static class ElbowChoice
 {
-    // The directions tried after `preferred`, from out-and-back round to out-and-forward.
-    private static readonly float[] Forward = [-0.5f, -0.3f, -0.1f, 0.1f, 0.3f, 0.5f, 0.7f];
+    // The directions tried after `preferred`: forward and back of it, and with the elbow raised out to
+    // her side - on hips wider than her shoulders a hanging upper arm is in her flank whichever way the
+    // elbow bends. Nearest to `preferred` first, so she keeps the most natural one that is clear.
+    private static readonly float[] Forward = [-0.7f, -0.5f, -0.3f, -0.1f, 0.1f, 0.3f, 0.5f, 0.7f];
+    private static readonly float[] Raised = [0, 0.3f, 0.6f, 0.9f];
 
     public static Vector3 Pick(Vector3 shoulder, float upper, float fore, IReadOnlyList<Vector3> wrists,
         IReadOnlyList<Vector3> body, float thickness, Vector3 preferred)
     {
-        var best = Vector3.Normalize(preferred);
-        var fewest = Hits(shoulder, upper, fore, wrists, best, body, thickness);
-        foreach (var z in Forward)
+        var first = Vector3.Normalize(preferred);
+        var candidates = Raised.SelectMany(up => Forward.Select(z => Vector3.Normalize(preferred with { Y = preferred.Y + up, Z = z })))
+            .OrderBy(pole => -Vector3.Dot(pole, first));
+        var (best, fewest) = (first, Hits(shoulder, upper, fore, wrists, first, body, thickness));
+        foreach (var pole in candidates)
         {
             if (fewest == 0) break;
-            var pole = Vector3.Normalize(preferred with { Z = z });
             var hits = Hits(shoulder, upper, fore, wrists, pole, body, thickness);
             if (hits < fewest) (best, fewest) = (pole, hits);
         }

@@ -18,11 +18,13 @@ public sealed class Toy
     private const string Log = "Toy";
     private static Task<Toy?>? _loading;
 
-    private readonly Node3D _model;
+    // The model as a scene to copy from: a node of its own kept for that never belongs to a tree, and
+    // was left behind when the app quit (Godot reported its mesh and material leaked).
+    private readonly PackedScene _model;
 
     public ToyShape Shape { get; }
 
-    private Toy(Node3D model, ToyShape shape)
+    private Toy(PackedScene model, ToyShape shape)
     {
         _model = model;
         Shape = shape;
@@ -40,7 +42,7 @@ public sealed class Toy
     public Node3D Make(float scale)
     {
         var holder = new Node3D();
-        var model = (Node3D)_model.Duplicate();
+        var model = _model.Instantiate<Node3D>();
         var turn = Shape.BallsTowardsViewer ? Basis.Identity : new Basis(Vector3.Up, Mathf.Pi);
         var foot = new Vector3(Shape.Foot.X, Shape.Foot.Y, Shape.Foot.Z);
         model.Transform = new Transform3D(turn.Scaled(Vector3.One * scale), -(turn * foot) * scale);
@@ -92,8 +94,12 @@ public sealed class Toy
                     model.Free();
                     return null;
                 }
+                var packed = new PackedScene();
+                var packing = packed.Pack(model);
+                model.Free();
+                if (packing != Error.Ok) return null;
                 AppLog.Info(Log, "Toy loaded");
-                return new Toy(model, shape);
+                return new Toy(packed, shape);
             }
             catch (Exception e)
             {

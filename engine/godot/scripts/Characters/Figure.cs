@@ -216,7 +216,8 @@ public sealed class Figure
         return float.IsNegativeInfinity(front) ? null : front;
     }
 
-    // Every vertex of her meshes as they rest, body and clothes, in skeleton space.
+    // Every vertex of her meshes as they rest, body and clothes, in skeleton space. Not her hair: it is
+    // not solid, and long hair hanging by her sides held her arms out from them.
     public IEnumerable<Vector3> RestPoints()
     {
         if (Skeleton is not { } sk) yield break;
@@ -224,6 +225,8 @@ public sealed class Figure
         foreach (var mesh in All<MeshInstance3D>(Root))
         {
             if (mesh.Mesh is not ArrayMesh am) continue;
+            if (mesh.Name.ToString().Contains("hair", StringComparison.OrdinalIgnoreCase)
+                || mesh.GetParent()?.Name.ToString().Contains("hair", StringComparison.OrdinalIgnoreCase) == true) continue;
             var toHere = toSkeleton * mesh.GlobalTransform;
             for (var s = 0; s < am.GetSurfaceCount(); s++)
                 foreach (var v in am.SurfaceGetArrays(s)[(int)Mesh.ArrayType.Vertex].AsVector3Array())
