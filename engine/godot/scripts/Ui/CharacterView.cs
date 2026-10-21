@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Gooner.Core.App;
 using Gooner.Core.Characters;
 using Gooner.Engine.Characters;
@@ -245,7 +246,7 @@ public partial class CharacterView : SubViewportContainer
     // palm faces it and the fingers run round it, and how big the hand is. Skeleton space (+Y up, +Z
     // towards the viewer).
     private sealed record GripSetup(Vector3 Root, Vector3 Along, float Length, float Radius,
-        Vector3 ToShaft, Vector3 Round, float PalmLength, float Finger, float Scale);
+        Vector3 ToShaft, Vector3 Round, float PalmLength, float Finger, float Scale, Vector3 Pole);
 
     private GripSetup? _grip;
     private Figure? _gripFor;
@@ -282,7 +283,13 @@ public partial class CharacterView : SubViewportContainer
             at + along * length * share - toShaft * (radius + finger * 0.9f) - round * palmLength;
         while (root.Z > hips.Z && ((Wrist(root, 0.8f) - shoulder).Length() > arm || (Wrist(root, 0.32f) - shoulder).Length() > arm))
             root.Z -= 0.002f * scale;
-        return new GripSetup(root, along, length, radius, toShaft, round, palmLength, finger, scale);
+        // Her elbow out to her side and back, unless that takes her arm through her waist on its way to
+        // the toy: then where it does not.
+        static System.Numerics.Vector3 N(Vector3 v) => new(v.X, v.Y, v.Z);
+        var body = figure.RestPoints().Where((_, i) => i % 3 == 0).Select(N).ToList();
+        var pole = ElbowChoice.Pick(N(shoulder), (figure.Rest(lower) - shoulder).Length(), (figure.Rest(hand) - figure.Rest(lower)).Length(),
+            [N(Wrist(root, 0.8f)), N(Wrist(root, 0.32f))], body, 0.035f * scale, N(new Vector3(-1, -0.4f, -0.7f)));
+        return new GripSetup(root, along, length, radius, toShaft, round, palmLength, finger, scale, new Vector3(pole.X, pole.Y, pole.Z));
     }
 
     // The right hand round the toy, sliding along it: at its root on a note, up near the tip between
@@ -308,7 +315,7 @@ public partial class CharacterView : SubViewportContainer
         var wrist = knuckles - g.Round * g.PalmLength;
 
         foreach (var bone in new[] { "RightUpperArm", "RightLowerArm", "RightHand" }) figure.Turn(bone, Vector3.Up, 0);
-        figure.Reach("Right", wrist, new Vector3(-1, -0.4f, -0.7f));
+        figure.Reach("Right", wrist, g.Pole);
         // The forearm takes the roll, as a real one does; the wrist only what is left - turned in the
         // wrist alone, a long glove's cuff twisted into a loop.
         if (figure.Bone("RightLowerArm") is { } lower && figure.Palm("Right") is { } before)

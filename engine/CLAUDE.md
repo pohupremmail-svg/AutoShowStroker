@@ -254,7 +254,10 @@ here unchanged. This file only adds what is specific to this side.
   What does not change - where the toy stands (a set gap in front of her belly and clothes over its whole
   height, from its foot, `Figure.FrontAt`; brought back towards her when her arm cannot reach both
   ends of the stroke - **an arm is never stretched, the toy goes into her belly instead**, the user's
-  rule; it follows her hips as they sway),
+  rule; it follows her hips as they sway), which way her elbow bends (out to her side and back, unless
+  that takes her arm through her waist on its way to the toy - a wide one did, the user saw it - then
+  the first direction further forward where neither part of the arm passes through her rest-pose
+  points at either end of the stroke, `Gooner.Core.Characters.ElbowChoice`),
   the hand's size, the fingers' wrap - is measured once per figure; per frame only the arm and the
   hand move. Check by eye with `--grip-closeup --grip-down=<0..1>` on a smoke session (the camera on
   the hand, the stroke held; `--grip-turn=90` from her left, `--grip-tilt=40` from above, to see the

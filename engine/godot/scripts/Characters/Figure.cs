@@ -210,23 +210,25 @@ public sealed class Figure
     // where there is no vertex there.
     public float? FrontAt(float middle, float height, float halfWidth, float band)
     {
-        if (Skeleton is not { } sk) return null;
         var front = float.NegativeInfinity;
+        foreach (var p in RestPoints())
+            if (Math.Abs(p.Y - height) < band && Math.Abs(p.X - middle) < halfWidth && p.Z > front) front = p.Z;
+        return float.IsNegativeInfinity(front) ? null : front;
+    }
+
+    // Every vertex of her meshes as they rest, body and clothes, in skeleton space.
+    public IEnumerable<Vector3> RestPoints()
+    {
+        if (Skeleton is not { } sk) yield break;
         var toSkeleton = sk.GlobalTransform.AffineInverse();
         foreach (var mesh in All<MeshInstance3D>(Root))
         {
             if (mesh.Mesh is not ArrayMesh am) continue;
             var toHere = toSkeleton * mesh.GlobalTransform;
             for (var s = 0; s < am.GetSurfaceCount(); s++)
-            {
                 foreach (var v in am.SurfaceGetArrays(s)[(int)Mesh.ArrayType.Vertex].AsVector3Array())
-                {
-                    var p = toHere * v;
-                    if (Math.Abs(p.Y - height) < band && Math.Abs(p.X - middle) < halfWidth && p.Z > front) front = p.Z;
-                }
-            }
+                    yield return toHere * v;
         }
-        return float.IsNegativeInfinity(front) ? null : front;
     }
 
     // A bone turned so that two directions it carries - `fromA`, and `fromB` as far as it is across
