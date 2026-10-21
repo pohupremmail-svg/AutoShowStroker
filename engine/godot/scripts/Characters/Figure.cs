@@ -92,24 +92,78 @@ public sealed class Figure
         Rotate(bone, from.Cross(to), from.AngleTo(to));
     }
 
-    // An arm reaching for a point with its wrist: the elbow found by the two bones' lengths and bent
-    // out towards `pole`, then the upper arm aimed at it and the forearm at the point. Out of reach,
-    // the arm stretches towards it.
-    public void Reach(string side, Vector3 wrist, Vector3 pole)
+    // An arm reaching for a point with its wrist, the elbow bent out towards `pole`.
+    public void Reach(string side, Vector3 wrist, Vector3 pole) => Limb($"{side}UpperArm", $"{side}LowerArm", $"{side}Hand", wrist, pole);
+
+    // A leg set down with its ankle at a point, the knee bent towards `pole`, the foot kept flat as it
+    // rests: what keeps her feet on the floor while her hips move over the leg that carries her.
+    public void Plant(string side, Vector3 ankle, Vector3 pole)
     {
-        if (Bone($"{side}UpperArm") is not { } upper || Bone($"{side}LowerArm") is not { } lower || Bone($"{side}Hand") is not { } hand) return;
+        Limb($"{side}UpperLeg", $"{side}LowerLeg", $"{side}Foot", ankle, pole);
+        Hold($"{side}Foot");
+    }
+
+    // Two bones reaching for a point with the end of the second: the middle joint found by the bones'
+    // lengths and bent out towards `pole`, then the first aimed at it and the second at the point. Out
+    // of reach, the limb stretches towards it.
+    private void Limb(string first, string second, string end, Vector3 target, Vector3 pole)
+    {
+        if (Bone(first) is not { } upper || Bone(second) is not { } lower || Bone(end) is not { } tip) return;
         var a = (Rest(lower) - Rest(upper)).Length();
-        var b = (Rest(hand) - Rest(lower)).Length();
-        var shoulder = Pose(upper);
-        var reach = wrist - shoulder;
+        var b = (Rest(tip) - Rest(lower)).Length();
+        var root = Pose(upper);
+        var reach = target - root;
         var d = Math.Clamp(reach.Length(), Math.Abs(a - b) + 1e-4f, a + b - 1e-4f);
         var dir = reach.Normalized();
         var along = (a * a - b * b + d * d) / (2 * d);
         var off = MathF.Sqrt(Math.Max(0, a * a - along * along));
         var bend = (pole - dir * pole.Dot(dir)).Normalized();
-        var elbow = shoulder + dir * along + bend * off;
-        Aim($"{side}UpperArm", $"{side}LowerArm", elbow);
-        Aim($"{side}LowerArm", $"{side}Hand", shoulder + dir * d);
+        var joint = root + dir * along + bend * off;
+        Aim(first, second, joint);
+        Aim(second, end, root + dir * d);
+    }
+
+    // A bone moved by `offset` (skeleton space) from where it rests under its parent: her hips over the
+    // leg that carries her.
+    public void Shift(string human, Vector3 offset)
+    {
+        if (Skeleton is not { } sk || Bone(human) is not { } index) return;
+        var parent = sk.GetBoneParent(index);
+        var toParent = parent >= 0 ? sk.GetBoneGlobalPose(parent).Basis.Inverse() : Basis.Identity;
+        sk.SetBonePosePosition(index, sk.GetBoneRest(index).Origin + toParent * offset);
+    }
+
+    // A bone turned back to the way it faces at rest in the skeleton, whatever its parents did: a foot
+    // flat on the floor under a bent knee.
+    public void Hold(string human)
+    {
+        if (Skeleton is not { } sk || Bone(human) is not { } index) return;
+        var parent = sk.GetBoneParent(index);
+        var parentPose = parent >= 0 ? sk.GetBoneGlobalPose(parent).Basis.Orthonormalized() : Basis.Identity;
+        sk.SetBonePoseRotation(index, (parentPose.Inverse() * sk.GetBoneGlobalRest(index).Basis.Orthonormalized()).GetRotationQuaternion());
+    }
+
+    // A hand at ease, as it hangs when it holds nothing: from its rest, every finger bent a little at
+    // each joint towards the palm, most at the middle one; the thumb a little in. Bent towards the palm
+    // the hand itself says is its palm (Palm), so a model whose fingers rest slightly backwards still
+    // curls the right way.
+    public void Ease(string side)
+    {
+        RelaxHand(side);
+        if (Palm(side) is not { } palm) return;
+        foreach (var finger in Fingers)
+        {
+            var joints = Joints(side, finger).Select(Bone).ToList();
+            float[] degrees = finger == "Thumb" ? [4, 8, 10] : [10, 22, 14];
+            for (var i = 0; i < joints.Count; i++)
+            {
+                if (joints[i] is not { } bone) continue;
+                var along = i + 1 < joints.Count && joints[i + 1] is { } next ? Pose(next) - Pose(bone)
+                    : i > 0 && joints[i - 1] is { } previous ? Pose(bone) - Pose(previous) : Vector3.Zero;
+                if (along.LengthSquared() < 1e-12f) continue;
+                Rotate(bone, along.Cross(palm), Mathf.DegToRad(degrees[i]));
+            }
+        }
     }
 
     private static readonly string[] FingerJoints = ["Proximal", "Intermediate", "Distal"];

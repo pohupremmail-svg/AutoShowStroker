@@ -40,6 +40,11 @@ public partial class CharacterView : SubViewportContainer
     private double _beatNow;
     private double? _noteBefore, _lastNote, _nextNote, _noteAfter;
     private float _moving, _stroke = 0.5f;
+    // How she stands while nothing else is asked of her; a view of its own, so the pedestal and the
+    // frame never move as one.
+    private readonly IdleMotion _idle = new(Random.Shared.Next());
+    private float _glance;
+    private (Figure Of, float Height, Vector3 LeftAnkle, Vector3 RightAnkle)? _stance;
     private Node3D? _toy;
     private const float ToyRadius = 0.021f;
     private Vector3? _gripAt;
@@ -121,30 +126,76 @@ public partial class CharacterView : SubViewportContainer
         _gaze = _gaze.Lerp(new Vector2(Math.Clamp(pointer.X, -1, 1), Math.Clamp(pointer.Y, -1, 1)), (float)Math.Min(1, delta * 3));
         var speaking = Speaking();
 
-        // Arms down from the T-pose they come in; a breath; a slow sway; the head after the pointer, and
-        // a small nod while she speaks. Model space throughout (+Y up, +Z towards the viewer), parents first.
-        figure.Turn("Hips", Vector3.Up, 3 * MathF.Sin(t * 0.5f));
-        figure.Turn("Spine", Vector3.Back, 1.5f * MathF.Sin(t * 0.5f + 1));
-        figure.Turn("Chest", Vector3.Right, -1.2f * MathF.Sin(t * 1.6f));
+        // Standing as a person stands (IdleMotion): her weight on one leg and then the other, her hips
+        // over it and her shoulders leaning against it; a breath, in quicker than out; a slow wander
+        // that never repeats; arms hanging loose, not alike; hands at ease; eyes that rest and dart.
+        // Then what the view asks of her: the pointer followed on the pedestal, the beat and the toy in
+        // the frame, a nod while she speaks. Model space throughout (+Y up, +Z towards the viewer),
+        // parents first.
+        var weight = (float)_idle.Weight(_time);
+        var breath = (float)_idle.Breath(_time);
+        float Wander(int part) => (float)_idle.Drift(_time, part);
+        var stance = Stance(figure);
+        figure.Shift("Hips", new Vector3(0.028f * weight, -0.008f * Math.Abs(weight), 0) * stance.Height);
+        figure.Turn("Hips", Vector3.Up, 3 * weight + 2.5f * Wander(0));
+        figure.Turn("Hips", Vector3.Back, 6 * weight, keep: true);
+        figure.Turn("Spine", Vector3.Back, -3.5f * weight + 1.2f * Wander(1));
         // On the beat (in the frame): leaning into each note, the head nodding with it.
         var down = Stroke(delta);
         // A development look at the grip: --grip-down=<0..1> holds the stroke there.
         if (_framing == Framing.Bust && AppPaths.UserArg("grip-down") is { } held)
             down = float.Parse(held, System.Globalization.CultureInfo.InvariantCulture);
-        figure.Turn("Spine", Vector3.Right, 3 * down * _moving, keep: true);
-        figure.Turn("LeftUpperArm", Vector3.Back, -72 + 2 * MathF.Sin(t * 1.6f));
-        figure.Turn("LeftLowerArm", Vector3.Right, -14);
+        figure.Turn("Spine", Vector3.Right, 3 * down * _moving + 0.8f * Wander(2), keep: true);
+        figure.Turn("Chest", Vector3.Back, -2 * weight);
+        figure.Turn("Chest", Vector3.Right, -1.6f * breath, keep: true);
+        figure.Turn("LeftShoulder", Vector3.Back, 1.4f * breath);
+        figure.Turn("RightShoulder", Vector3.Back, -1.4f * breath);
+        figure.Turn("LeftUpperArm", Vector3.Back, -77 + 1.5f * Wander(3) - breath);
+        figure.Turn("LeftUpperArm", Vector3.Right, -5 + 2 * Wander(4), keep: true);
+        figure.Turn("LeftLowerArm", Vector3.Right, -18 + 3 * Wander(5));
+        figure.Ease("Left");
         if (_framing == Framing.Bust) Grip(figure, down);
         else
         {
-            figure.Turn("RightUpperArm", Vector3.Back, 72 - 2 * MathF.Sin(t * 1.6f));
-            figure.Turn("RightLowerArm", Vector3.Right, -14);
+            figure.Turn("RightUpperArm", Vector3.Back, 76 + 1.5f * Wander(10) + breath);
+            figure.Turn("RightUpperArm", Vector3.Right, -3 + 2 * Wander(11), keep: true);
+            figure.Turn("RightLowerArm", Vector3.Right, -24 + 3 * Wander(12));
+            figure.Ease("Right");
+            // The leg that carries her stays where it stands while her hips move over it; the free one
+            // eases off - its knee forward, its heel up, set down a little ahead and out.
+            foreach (var (side, ankle, outward, free) in new[]
+                     { ("Left", stance.LeftAnkle, 1f, Math.Max(0, -weight)), ("Right", stance.RightAnkle, -1f, Math.Max(0, weight)) })
+            {
+                figure.Turn($"{side}UpperLeg", Vector3.Up, 0);
+                figure.Turn($"{side}LowerLeg", Vector3.Up, 0);
+                figure.Plant(side, ankle + new Vector3(0.012f * outward, 0.03f, 0.045f) * free * stance.Height, new Vector3(0.2f * outward, 0, 1));
+                figure.Turn($"{side}Foot", Vector3.Right, 14 * free, keep: true);
+            }
         }
-        figure.Turn("Neck", Vector3.Up, 10 * _gaze.X);
-        figure.Turn("Head", Vector3.Up, 14 * _gaze.X + (speaking ? 3 * MathF.Sin(t * 2.3f) : 0));
-        figure.Turn("Head", Vector3.Right, 10 * _gaze.Y + 4 * down * _moving + (speaking ? 2.5f * MathF.Sin(t * 7.1f) : 0), keep: true);
+        // Her eyes rest and dart (IdleMotion.Gaze); a glance aside takes her head along, slower.
+        var (lookX, lookY) = _idle.Gaze(_time);
+        _glance = Mathf.Lerp(_glance, Math.Abs(lookX) > 0.55 ? (float)lookX : 0, (float)Math.Min(1, delta * 3));
+        figure.Turn("Neck", Vector3.Up, 10 * _gaze.X + 4 * _glance + 2 * Wander(6));
+        figure.Turn("Head", Vector3.Up, 14 * _gaze.X + 6 * _glance + 2.5f * Wander(7) + (speaking ? 3 * MathF.Sin(t * 2.3f) : 0));
+        figure.Turn("Head", Vector3.Right, 10 * _gaze.Y + 2 * Wander(8) + 4 * down * _moving + (speaking ? 2.5f * MathF.Sin(t * 7.1f) : 0), keep: true);
+        figure.Turn("Head", Vector3.Back, 2.5f * Wander(9) - 1.5f * weight, keep: true);
+        foreach (var eye in new[] { "LeftEye", "RightEye" })
+        {
+            figure.Turn(eye, Vector3.Up, 8 * (float)lookX);
+            figure.Turn(eye, Vector3.Right, 5 * (float)lookY, keep: true);
+        }
 
         Face(delta);
+    }
+
+    // Her height and where her feet stand, at rest in the skeleton - measured once per figure.
+    private (Figure Of, float Height, Vector3 LeftAnkle, Vector3 RightAnkle) Stance(Figure figure)
+    {
+        if (_stance is { } known && known.Of == figure) return known;
+        Vector3 Rest(string human) => figure.Bone(human) is { } bone ? figure.Rest(bone) : Vector3.Zero;
+        var (left, right) = (Rest("LeftFoot"), Rest("RightFoot"));
+        _stance = (figure, Math.Max(0.3f, Rest("Head").Y - Math.Min(left.Y, right.Y)), left, right);
+        return _stance.Value;
     }
 
     // Leaving the screen, the figure is taken out of this view's world, so it outlives it: a view freed

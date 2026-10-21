@@ -214,6 +214,19 @@ here unchanged. This file only adds what is specific to this side.
   (`TelepathyFrame.Present`): without a figure, with the frame switched off or while she still loads,
   the line is the big one over the picture as before. A fake climax
   speaks with `climax_real`'s lines until revealed, so it gets the same face - keep it that way.
+- **She stands as a person stands** (`Gooner.Core.Characters.IdleMotion`, applied in `CharacterView`),
+  on the pedestal and in the frame alike - the user found her stiff, "nicht wirklich menschlich":
+  her weight on one leg and then the other (held 6-14 s, moved over in 1.4 s), hips over it and
+  tilted, spine and chest leaning against it, the free knee forward and its heel up while the feet
+  stay put (`Figure.Plant`, two-bone IK, `Hold` keeps the foot flat); a breath in quicker than out
+  with a rest; a wander on three slow incommensurate waves rather than a sine; arms loose and not
+  alike; hands at ease (`Figure.Ease`, curled towards the palm the hand itself reports); eyes that
+  rest and dart, now and then glancing aside with the head following slower. Pure sines read as a
+  machine - that was the old pose. Judge motion from a video, not stills: Godot's Movie Maker mode
+  writes every frame at a fixed rate (`--write-movie out.avi --fixed-fps 30` before the `--`, then
+  `--smoke-panel=start --wait=20 --screenshot=...` or a smoke session), ffmpeg from the spikes
+  crops it. D.Va's and Shadowheart's exports carry no spring bones, so their hair does not move -
+  an export-side job; the VRoid sample's does.
 - **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock and one
   beyond each by `Main`): one stroke per note - the hand down on the note, up near the tip halfway to
   the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with it; in a
