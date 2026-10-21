@@ -48,6 +48,7 @@ public partial class CharacterView : SubViewportContainer
     private float _glance;
     private (Figure Of, float Height, Vector3 LeftAnkle, Vector3 RightAnkle)? _stance;
     private Node3D? _toy;
+    private bool _toyIsModel;
     private const float ToyRadius = 0.021f;
     private Vector3? _gripAt;
 
@@ -58,6 +59,8 @@ public partial class CharacterView : SubViewportContainer
     {
         _path = path;
         _framing = framing;
+        // Read ahead, while she is still on the pedestal, for the moment she holds it.
+        Toy.Load(AppPaths.Resources is { } res ? System.IO.Path.Combine(res, "props") : null);
         Stretch = true;
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsPreset(LayoutPreset.FullRect);
@@ -254,7 +257,7 @@ public partial class CharacterView : SubViewportContainer
     // not change from one frame to the next.
     private readonly List<(int Bone, Quaternion Turn)> _closed = [];
 
-    private static GripSetup? MeasureGrip(Figure figure)
+    private static GripSetup? MeasureGrip(Figure figure, ToyShape? toy)
     {
         if (figure.Bone("Hips") is not { } hipsBone || figure.Bone("Head") is not { } headBone || figure.Bone("RightHand") is not { } hand
             || figure.Bone("RightMiddleProximal") is not { } knuckle || figure.Bone("RightUpperArm") is not { } upper
@@ -262,13 +265,17 @@ public partial class CharacterView : SubViewportContainer
         var hips = figure.Rest(hipsBone);
         var scale = Math.Max(0.3f, (figure.Rest(headBone).Y - (figure.Bone("LeftFoot") is { } f ? figure.Rest(f).Y : 0)) / 1.45f);
         var along = new Vector3(0, 1, 0.18f).Normalized();
-        var length = 0.16f * scale;
-        var radius = ToyRadius * scale;
+        // The toy's own measure (res/props), at her size; the stand-in's without one.
+        var length = (toy?.Length ?? 0.16f) * scale;
+        var radius = (toy?.Radius ?? ToyRadius) * scale;
+        var behind = toy is { } t ? t.Behind * scale : 1.5f * radius;
+        var halfWidth = Math.Max(0.12f, toy?.HalfWidth ?? 0) * scale;
         // A set gap in front of her body - the front of her belly and whatever she wears there, over the
-        // toy's whole height - from the toy's widest part, its foot. A deep belly puts it further out.
+        // toy's whole height - from what sticks out of the toy furthest towards her (its balls, its foot).
+        // A deep belly puts it further out.
         var y = hips.Y - 0.02f * scale;
-        var front = figure.FrontAt(hips.X, y + length / 2, 0.12f * scale, length / 2 + radius) ?? hips.Z + 0.1f * scale;
-        var root = new Vector3(hips.X, y, front + 1.5f * radius + 0.03f * scale);
+        var front = figure.FrontAt(hips.X, y + length / 2, halfWidth, length / 2 + behind) ?? hips.Z + 0.1f * scale;
+        var root = new Vector3(hips.X, y, front + behind + 0.03f * scale);
         // From her right towards the shaft, and round its front, where the fingers are seen.
         var toShaft = (Vector3.Right - along * Vector3.Right.Dot(along)).Normalized();
         var round = along.Cross(toShaft);
@@ -300,15 +307,27 @@ public partial class CharacterView : SubViewportContainer
     {
         if (_gripFor != figure)
         {
+            // Her hand waits the moment the toy takes to read: measured on the stand-in, it would close on
+            // a shaft of the wrong size.
+            if (!Toy.Settled) return;
             _gripFor = figure;
-            _grip = MeasureGrip(figure);
+            _grip = MeasureGrip(figure, Toy.Loaded?.Shape);
             _closed.Clear();
+            _toy?.QueueFree();
+            _toy = null;
+            _toyIsModel = false;
         }
         if (_grip is not { } g || figure.Skeleton is not { } sk || figure.Bone("RightHand") is not { } hand
             || figure.Bone("RightMiddleProximal") is not { } knuckle) return;
         // The toy goes where her hips go, or her swaying belly would take her hand into it.
         var root = g.Root + (figure.Bone("Hips") is { } hips ? figure.Pose(hips) - figure.Rest(hips) : Vector3.Zero);
-        var grip = root + g.Along * g.Length * Mathf.Lerp(0.8f, 0.32f, down);
+        var share = Mathf.Lerp(0.8f, 0.32f, down);
+        PlaceToy(sk, root, g.Along, g.Length, g.Scale);
+        // On the middle of the shaft at that height: a real one curves, and a straight line through its
+        // foot left her fingers standing off it.
+        var grip = _toy is { } placed && Toy.Loaded is { } toy && _toyIsModel
+            ? sk.GlobalTransform.AffineInverse() * (placed.GlobalTransform * toy.Centre(share, g.Scale))
+            : root + g.Along * g.Length * share;
         _gripAt = sk.GlobalTransform * grip;
         if (AppPaths.UserFlag("grip-closeup")) Frame();
         var knuckles = grip - g.ToShaft * (g.Radius + g.Finger * 0.9f);
@@ -341,12 +360,18 @@ public partial class CharacterView : SubViewportContainer
         }
         else
             foreach (var (bone, turn) in _closed) sk.SetBonePoseRotation(bone, turn);
-        PlaceToy(sk, root, g.Along, g.Length, g.Scale);
     }
 
-    // A stand-in until a proper model comes: a pink shaft with a rounded tip on a flat foot.
+    // The toy (res/props) at her size - or, without one, a stand-in: a pink shaft with a rounded tip on a
+    // flat foot. Its balls go towards her (+Z of its own, turned away from the viewer below).
     private void PlaceToy(Skeleton3D sk, Vector3 root, Vector3 along, float length, float scale)
     {
+        if (_toy is null && Toy.Loaded is { } toy)
+        {
+            _toyIsModel = true;
+            _toy = toy.Make(scale);
+            _viewport.AddChild(_toy);
+        }
         if (_toy is null)
         {
             var radius = ToyRadius * scale;

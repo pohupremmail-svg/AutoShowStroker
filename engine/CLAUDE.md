@@ -263,9 +263,16 @@ here unchanged. This file only adds what is specific to this side.
   the hand, the stroke held; `--grip-turn=90` from her left, `--grip-tilt=40` from above, to see the
   thumb behind the shaft), on several models. A hand that folds its palm in half to close a finger
   is a model mapped wrong, not a grip to tune: its "proximal" finger bones are the ones in the palm,
-  starting at the wrist (D.Va's export did that - `Index1` is her metacarpal). **The toy is a stand-in** built from
-  primitives (`CharacterView.PlaceToy`) until the user brings a proper asset - which needs its licence
-  checked like a character, and stays off GitHub if it is explicit.
+  starting at the wrist (D.Va's export did that - `Index1` is her metacarpal). **The toy is the first
+  `.glb` in `res/props`** (`Characters/Toy.cs`), read once off the main thread under the same lock as a
+  character (godot-vrm's extensions are global while one loads) and **measured where it is read**
+  (`Gooner.Core.Characters.ToyShape`): length, shaft thickness slice by slice, the middle of the shaft
+  at each height - a real one curves, and a straight line through its foot left her fingers standing off
+  it - and how far balls and foot stand out behind it, which side goes towards her and sets the gap
+  from her belly. Real size, times her size. Her hand waits the moment it takes to read; without one
+  she holds a stand-in built from primitives. `res/props` is gitignored (the user's model, licence
+  unchecked, explicit), and the package leaves a prop's `.blend` source out - the `.glb` is made from
+  it by `GoonerSpikes/blender/scripts/prop_export.py` (decimated, colour baked, 2K textures).
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
   Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
   `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,

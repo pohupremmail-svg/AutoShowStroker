@@ -32,6 +32,19 @@ public sealed class PackageTests : IDisposable
         Assert.DoesNotContain(Listed(), f => f.EndsWith(".vrm", StringComparison.Ordinal));
     }
 
+    // A prop's Blender source is tens of megabytes the app never reads; the .glb made from it is what
+    // it loads, and that goes along.
+    [Fact]
+    public void a_props_blender_source_stays_out_and_its_export_goes_along()
+    {
+        _fake.Write("res/props/TOY.blend", "source");
+        _fake.Write("res/props/toy.glb", "export");
+
+        var listed = Listed();
+        Assert.DoesNotContain(listed, f => f.EndsWith(".blend", StringComparison.Ordinal));
+        Assert.Contains("res/props/toy.glb", listed);
+    }
+
     [Fact]
     public void the_engines_licenses_and_the_version_go_with_it()
     {

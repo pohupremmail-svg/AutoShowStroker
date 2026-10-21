@@ -382,7 +382,9 @@ public static class Figures
         "res://addons/vrm/1.0/VRMC_materials_mtoon.gd",
     ];
 
-    private static readonly object OneAtATime = new();
+    // godot-vrm's extensions are registered for everything Godot reads while a model loads, so nothing
+    // else is read as glTF meanwhile (the toy, Toy.cs).
+    internal static readonly object OneAtATime = new();
     private static int _pending;
     private static (string Path, Task<Node3D?> Loading, Figure? Figure)? _current;
 

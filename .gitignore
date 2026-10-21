@@ -16,3 +16,4 @@ files_for_testing_DO_NOT_PUSH/
 # Characters stay on this machine until there are ones the app may pass on (rights in writing,
 # nothing explicit on GitHub). The test model's own licence forbids passing it on.
 res/characters/*.vrm
+res/props/

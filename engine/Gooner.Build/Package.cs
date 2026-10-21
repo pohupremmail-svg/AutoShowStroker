@@ -26,6 +26,8 @@ public static class Package
             if (inRes.Split(Path.DirectorySeparatorChar)[0] == PythonLicenses) continue;
             // The developer's own test figures: gigabytes, and none the app may pass on yet.
             if (string.Equals(Path.GetExtension(file), ".vrm", StringComparison.OrdinalIgnoreCase)) continue;
+            // A prop's Blender source: the app loads the .glb made from it.
+            if (string.Equals(Path.GetExtension(file), ".blend", StringComparison.OrdinalIgnoreCase)) continue;
             files.Add((Path.Combine("res", inRes), file));
         }
         files.AddRange(Files(repo.Licenses).Select(file => (Path.Combine("licenses", Path.GetRelativePath(repo.Licenses, file)), file)));
