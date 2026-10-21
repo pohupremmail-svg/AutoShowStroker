@@ -206,7 +206,13 @@ here unchanged. This file only adds what is specific to this side.
 - **The telepathy frame** (`Ui/TelepathyFrame`, `shaders/telepathy.gdshader`): her bust at the top
   right from the session's start to its end, a neon oval or an old tube screen (`Look.TelepathyFrame`,
   the user's two picks), off with `Character/in_session`. Each callout draws it closer and brighter;
-  she wears `Reactions.For(trigger, tone)` and her mouth follows `Visemes` of the line. A fake climax
+  she wears `Reactions.For(trigger, tone)` and her mouth follows `Visemes` of the line. **The line
+  goes in a speech bubble beside her** (`Ui/SpeechBubble`, the user's pick of three mocks: dark glass
+  with the frame's neon rim), typed in on the mouth's own timeline (`Visemes.Shown`), its tail at the
+  height of her mouth - found a twentieth of her height below her eyes, since the head bone sits at
+  the mouth on one model and at the neck on another. Only while she is in the frame
+  (`TelepathyFrame.Present`): without a figure, with the frame switched off or while she still loads,
+  the line is the big one over the picture as before. A fake climax
   speaks with `climax_real`'s lines until revealed, so it gets the same face - keep it that way.
 - **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock and one
   beyond each by `Main`): one stroke per note - the hand down on the note, up near the tip halfway to

@@ -32,6 +32,23 @@ public static class Visemes
         return text.Sum(Length);
     }
 
+    // How many letters of the line have been said `seconds` into it: what her speech bubble shows,
+    // typed in with her mouth.
+    public static int Shown(string text, double seconds)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var shown = 0;
+        var at = 0.0;
+        foreach (var letter in text)
+        {
+            // A hair's leeway: a letter is due at a sum of steps, the moment asked about may be a product.
+            if (at > seconds + 1e-9) break;
+            shown++;
+            at += Length(letter);
+        }
+        return shown;
+    }
+
     private static double Length(char letter) =>
         (".!?…".Contains(letter, StringComparison.Ordinal) ? 1 + BreathLetters : 1) / LettersPerSecond;
 

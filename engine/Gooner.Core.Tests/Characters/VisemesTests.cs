@@ -43,4 +43,35 @@ public sealed class VisemesTests
 
     [Fact]
     public void nothing_to_say_is_no_time() => Assert.Equal(0, Visemes.Duration(""));
+
+    // The words in her speech bubble type themselves in with her mouth: each letter shows as it is said.
+
+    [Fact]
+    public void before_the_line_starts_no_letter_shows() => Assert.Equal(0, Visemes.Shown("hi", -0.01));
+
+    [Fact]
+    public void the_first_letter_shows_at_once() => Assert.Equal(1, Visemes.Shown("hi", 0));
+
+    [Fact]
+    public void a_letter_shows_as_it_is_said()
+    {
+        Assert.Equal(2, Visemes.Shown("abc", Step * 1.5));
+        Assert.Equal(3, Visemes.Shown("abc", Step * 2));
+    }
+
+    [Fact]
+    public void the_breath_after_a_sentence_holds_the_next_letter_back()
+    {
+        // a, the full stop, then its breath before the space.
+        Assert.Equal(2, Visemes.Shown("a. b", Step * (1 + Visemes.BreathLetters + 0.5)));
+        Assert.Equal(3, Visemes.Shown("a. b", Step * (2 + Visemes.BreathLetters)));
+    }
+
+    [Fact]
+    public void once_the_line_is_said_all_of_it_shows()
+    {
+        const string line = "Pause over - go on and stroke.";
+        Assert.Equal(line.Length, Visemes.Shown(line, Visemes.Duration(line)));
+        Assert.Equal(line.Length, Visemes.Shown(line, 99));
+    }
 }

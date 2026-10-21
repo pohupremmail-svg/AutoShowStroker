@@ -281,7 +281,11 @@ public partial class Main : Control
             _dock.Device.ThemeTypeVariation = device.Primary ? "EdgeButton" : "DockButton";
         }
         _outcome.Visible = app.OutcomeQuestion is not null;
-        _callout.Show(app.Hud.CalloutText);
+        // With her in the frame she says it in a bubble beside her; without, it is the line over the
+        // picture, as it always was.
+        var bubbled = _telepathy?.Present == true;
+        _callout.Show(bubbled ? null : app.Hud.CalloutText);
+        _telepathy?.Say(bubbled ? app.Hud.CalloutText : null);
         _chase.Show(app.Hud.RecordChaseText);
         _clockChip.Show(app.Hud.SessionTimerText);
         SyncQuestion();

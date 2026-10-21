@@ -9,7 +9,8 @@ namespace Gooner.Engine.Ui;
 // The character with the user through a session, as if over a telepathic channel: her bust in a
 // glowing window at the top right, open from the session's start to its end. She moves to the beat
 // (CharacterView.Rhythm); with each callout the window draws closer and brighter, she wears a face for
-// what happened (Reactions) and her mouth moves to the line (Visemes), and afterwards it settles back.
+// what happened (Reactions), her mouth moves to the line (Visemes) and the line types itself into a
+// speech bubble beside her (SpeechBubble), and afterwards it settles back.
 // The window's look is one shader, telepathy.gdshader: a neon oval or an old tube screen.
 public partial class TelepathyFrame : Control
 {
@@ -21,8 +22,13 @@ public partial class TelepathyFrame : Control
 
     private static readonly Shader FrameShader = GD.Load<Shader>("res://shaders/telepathy.gdshader");
 
+    // How much of the frame's rect is left round the window for its glow: the shader's `pad`, set
+    // from here so that the bubble's tail can find the window's edge.
+    private const float Pad = 0.08f;
+
     private readonly CharacterView _view;
     private readonly ShaderMaterial _material = new() { Shader = FrameShader };
+    private readonly SpeechBubble _bubble = new();
     private readonly Style _style;
     private Tween? _fade, _closer;
     private float _near;
@@ -36,7 +42,9 @@ public partial class TelepathyFrame : Control
         _view = new CharacterView(path, Framing.Bust) { Material = _material };
         _material.SetShaderParameter("style", (int)style);
         _material.SetShaderParameter("fade", 0f);
+        _material.SetShaderParameter("pad", Pad);
         AddChild(_view);
+        AddChild(_bubble);
         SetAnchorsPreset(LayoutPreset.TopRight);
     }
 
@@ -44,6 +52,7 @@ public partial class TelepathyFrame : Control
     {
         if (!Visible) return;
         Fit();
+        if (_view.Mouth() is { } mouth && _view.Size.X > 0) _bubble.Place(Beside(mouth), GetParentAreaSize());
         _material.SetShaderParameter("flare", _near);
         _material.SetShaderParameter("glow", UiTheme.Of(Palette.Accent));
     }
@@ -62,6 +71,29 @@ public partial class TelepathyFrame : Control
         OffsetRight = -10;
         OffsetTop = 4;
         OffsetBottom = 4 + height;
+    }
+
+    // Her figure is in the frame, open: what she says goes in the bubble beside her rather than over
+    // the picture.
+    public bool Present => _open && Visible && _view.Loaded;
+
+    // The line in her bubble, or null once it is over.
+    public void Say(string? text) => _bubble.Say(text);
+
+    // Where the bubble's tail points: at the height of her mouth, just off the window's edge there -
+    // the oval narrows towards the top, the screen does not. `mouth` is in the view's own pixels, which
+    // the shader draws into the window inside the pad.
+    private Vector2 Beside(Vector2 mouth)
+    {
+        var y = Size.Y * Pad + mouth.Y / _view.Size.Y * Size.Y * (1 - 2 * Pad);
+        var radii = Size * (0.5f - Pad);
+        var edge = Size.X * Pad;
+        if (_style == Style.Oval)
+        {
+            var across = (y - Size.Y / 2) / radii.Y;
+            edge = Size.X / 2 - radii.X * MathF.Sqrt(Math.Max(0, 1 - across * across));
+        }
+        return new Vector2(edge - 4, y);
     }
 
     // The session has begun: the channel opens.

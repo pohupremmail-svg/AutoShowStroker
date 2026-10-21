@@ -86,6 +86,18 @@ public partial class CharacterView : SubViewportContainer
         _noteAfter = noteAfter;
     }
 
+    // Where her mouth is in this view, for a speech bubble to point at: a twentieth of her height below
+    // the middle of her eyes. Not the head bone - that sits at the mouth on one model and at the neck
+    // on the next; the eyes are where they look (checked on four models). Null until she is here.
+    public Vector2? Mouth()
+    {
+        if (!Loaded || _figure!.Skeleton is not { } sk || _figure.Measure() is not { } measured) return null;
+        Vector3? At(string human) => _figure.Bone(human) is { } bone ? sk.GlobalTransform * _figure.Pose(bone) : null;
+        if ((At("LeftEye") is { } left && At("RightEye") is { } right ? (left + right) / 2 : At("Head")) is not { } eyes) return null;
+        var mouth = eyes - Vector3.Up * 0.05f * (measured.Head.Y - measured.Feet);
+        return _camera.IsPositionBehind(mouth) ? null : _camera.UnprojectPosition(mouth);
+    }
+
     // The mouth moves to the line, letter by letter (Visemes), from now.
     public void Speak(string text)
     {
