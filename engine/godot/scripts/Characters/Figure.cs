@@ -192,11 +192,12 @@ public sealed class Figure
 
     // A finger closed round a rod: its joints laid one after another on the circle round the rod's axis
     // that passes through its knuckle - each segment a chord of that circle, aimed at the point one
-    // segment's length further round it, in the way the finger already points. Aiming rather than
-    // bending by set angles is what makes it fit any model: long fingers or short, straight at rest
-    // or curled. The circle never comes closer to the axis than `radius`, so no finger goes into the
-    // rod; the thumb lies right on it. The thumb's root (its metacarpal) stays in the palm.
-    public void Wrap(string side, string finger, Vector3 axis, Vector3 onAxis, float radius)
+    // segment's length further round it. `way` is the sense it goes round in, right-handed about
+    // `axis`: the fingers one way, the thumb the other, as a hand closes on anything. Aiming rather
+    // than bending by set angles is what makes it fit any model: long fingers or short, straight at
+    // rest or curled. The circle never comes closer to the axis than `radius`, so no finger goes into
+    // the rod; the thumb lies right on it. The thumb's root (its metacarpal) stays in the palm.
+    public void Wrap(string side, string finger, Vector3 axis, Vector3 onAxis, float radius, int way)
     {
         var joints = Joints(side, finger).Select(Bone).ToList();
         if (finger == "Thumb") joints.RemoveAt(0);
@@ -226,8 +227,7 @@ public sealed class Figure
             var rho = finger == "Thumb" ? radius : Math.Max(out_.Length(), radius);
             if (out_.LengthSquared() < 1e-10f || length <= 0) continue;
             out_ = out_.Normalized() * rho;
-            // Round the way the finger points; a chord of `length` turns that far round the circle.
-            var way = axis.Dot(out_.Cross(tip - head)) >= 0 ? 1 : -1;
+            // A chord of `length` turns that far round the circle.
             var turn = 2 * MathF.Asin(Math.Min(1, length / (2 * rho)));
             var target = centre + out_.Rotated(axis, way * turn);
             var from = tip - head;

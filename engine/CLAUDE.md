@@ -205,14 +205,18 @@ here unchanged. This file only adds what is specific to this side.
   (a wrist turned alone twists a long glove's cuff into a loop), the hand is turned so the palm faces
   the shaft and the fingers run round its front, and each finger is laid **joint by joint as chords of
   the circle round the shaft through its own knuckle** (`Figure.Reach`, `Orient`, `Wrap`) - aimed, not
-  bent by set angles, which is what fits any model's hands; the thumb lies on the shaft. The palm's
+  bent by set angles, which is what fits any model's hands. The fingers go round the front from the
+  palm, the **thumb the other way round**, behind the shaft, lying on it - as a hand closes on
+  anything (the user's correction: a thumb running the fingers' way is not how anyone holds it). The palm's
   side comes from the hand's chirality (little finger to index across the knuckles, wrist to middle
   knuckle along), never from the fingers' bend at rest, which some models have slightly backwards.
   What does not change - where the toy stands (clear of the clothes at her belly, `Figure.FrontAt`),
   the hand's size, the fingers' wrap - is measured once per figure; per frame only the arm and the
   hand move. Check by eye with `--grip-closeup --grip-down=<0..1>` on a smoke session (the camera on
-  the hand, the stroke held), on several models: D.Va Classic's long glove still kinks a little at
-  the wrist, a limit of that glove's skinning. **The toy is a stand-in** built from
+  the hand, the stroke held; `--grip-turn=90` from her left, `--grip-tilt=40` from above, to see the
+  thumb behind the shaft), on several models. A hand that folds its palm in half to close a finger
+  is a model mapped wrong, not a grip to tune: its "proximal" finger bones are the ones in the palm,
+  starting at the wrist (D.Va's export did that - `Index1` is her metacarpal). **The toy is a stand-in** built from
   primitives (`CharacterView.PlaceToy`) until the user brings a proper asset - which needs its licence
   checked like a character, and stays off GitHub if it is explicit.
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
@@ -340,7 +344,7 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
-"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--grip-closeup] [--grip-down=0..1] [--size=WxH] [--screenshot=PNG [--shots=N]]
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--grip-closeup [--grip-turn=DEG] [--grip-tilt=DEG]] [--grip-down=0..1] [--size=WxH] [--screenshot=PNG [--shots=N]]
 "$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S] [--size=WxH]
 "$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
 dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)

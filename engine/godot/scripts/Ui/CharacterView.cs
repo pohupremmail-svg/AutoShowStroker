@@ -237,10 +237,13 @@ public partial class CharacterView : SubViewportContainer
             figure.Orient(hand, figure.Pose(knuckle) - figure.Pose(hand), palm, g.Round, g.ToShaft);
         if (_closed.Count == 0)
         {
+            // The fingers from the palm round the front, the thumb the other way round the back, to meet
+            // them on the far side - as in a fist.
+            var way = g.Along.Dot(g.Round.Cross(g.ToShaft)) >= 0 ? 1 : -1;
             figure.RelaxHand("Right");
             foreach (var finger in new[] { "Index", "Middle", "Ring", "Little" })
-                figure.Wrap("Right", finger, g.Along, grip, g.Radius + g.Finger * 0.5f);
-            figure.Wrap("Right", "Thumb", g.Along, grip, g.Radius + g.Finger * 0.5f);
+                figure.Wrap("Right", finger, g.Along, grip, g.Radius + g.Finger * 0.5f, way);
+            figure.Wrap("Right", "Thumb", g.Along, grip, g.Radius + g.Finger * 0.5f, -way);
             foreach (var bone in figure.HandBones("Right")) _closed.Add((bone, sk.GetBonePoseRotation(bone)));
         }
         else
@@ -334,11 +337,18 @@ public partial class CharacterView : SubViewportContainer
         }
         var distance = half / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2));
         _camera.Position = new Vector3(head.X, centre, head.Z + distance);
-        // A development look at the grip: --grip-closeup puts the camera right in front of the hand.
+        // A development look at the grip: --grip-closeup puts the camera right in front of the hand;
+        // --grip-turn=<degrees> carries it round to her left (90: from the side, where thumb and fingers
+        // meet) and --grip-tilt=<degrees> up over the hand (40: from above, the thumb behind the shaft seen;
+        // much higher and the toy's tip hides the hand).
         if (_framing == Framing.Bust && AppPaths.UserFlag("grip-closeup") && _gripAt is { } at)
         {
             var near = height * 0.07f / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2));
-            _camera.Position = new Vector3(at.X, at.Y, at.Z + near);
+            static float Degrees(string name) => Mathf.DegToRad(AppPaths.UserArg(name) is { } d ? float.Parse(d, System.Globalization.CultureInfo.InvariantCulture) : 0);
+            var turn = Degrees("grip-turn");
+            var tilt = Degrees("grip-tilt");
+            _camera.Position = at + new Vector3(0, 0, near).Rotated(Vector3.Left, tilt).Rotated(Vector3.Up, turn);
+            if (turn != 0 || tilt != 0) _camera.LookAt(at);
         }
         _camera.Near = Math.Max(0.01f, distance * 0.01f);
         _camera.Far = Math.Max(100, distance * 10);
