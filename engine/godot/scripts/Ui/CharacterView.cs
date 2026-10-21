@@ -132,11 +132,17 @@ public partial class CharacterView : SubViewportContainer
         // Then what the view asks of her: the pointer followed on the pedestal, the beat and the toy in
         // the frame, a nod while she speaks. Model space throughout (+Y up, +Z towards the viewer),
         // parents first.
-        var weight = (float)_idle.Weight(_time);
+        // In the frame she holds the toy against her: her weight moves less there.
+        var weight = (float)_idle.Weight(_time) * (_framing == Framing.Bust ? 0.4f : 1);
         var breath = (float)_idle.Breath(_time);
         float Wander(int part) => (float)_idle.Drift(_time, part);
         var stance = Stance(figure);
-        figure.Shift("Hips", new Vector3(0.028f * weight, -0.008f * Math.Abs(weight), 0) * stance.Height);
+        // Never still: her hips drift a little every way and settle with each breath, and sit low enough
+        // that neither knee locks - so the legs under them keep giving a little too.
+        figure.Shift("Hips", new Vector3(
+            0.028f * weight + 0.005f * Wander(13),
+            -0.008f * Math.Abs(weight) - 0.006f - 0.002f * breath + 0.003f * Wander(14),
+            0.005f * Wander(15)) * stance.Height);
         figure.Turn("Hips", Vector3.Up, 3 * weight + 2.5f * Wander(0));
         figure.Turn("Hips", Vector3.Back, 6 * weight, keep: true);
         figure.Turn("Spine", Vector3.Back, -3.5f * weight + 1.2f * Wander(1));
@@ -168,7 +174,8 @@ public partial class CharacterView : SubViewportContainer
             {
                 figure.Turn($"{side}UpperLeg", Vector3.Up, 0);
                 figure.Turn($"{side}LowerLeg", Vector3.Up, 0);
-                figure.Plant(side, ankle + new Vector3(0.012f * outward, 0.03f, 0.045f) * free * stance.Height, new Vector3(0.2f * outward, 0, 1));
+                var restless = new Vector3(0.012f * outward + 0.005f * Wander(outward > 0 ? 16 : 17), 0.03f, 0.045f + 0.008f * Wander(outward > 0 ? 18 : 19));
+                figure.Plant(side, ankle + restless * free * stance.Height, new Vector3(0.2f * outward, 0, 1));
                 figure.Turn($"{side}Foot", Vector3.Right, 14 * free, keep: true);
             }
         }
@@ -280,7 +287,9 @@ public partial class CharacterView : SubViewportContainer
         }
         if (_grip is not { } g || figure.Skeleton is not { } sk || figure.Bone("RightHand") is not { } hand
             || figure.Bone("RightMiddleProximal") is not { } knuckle) return;
-        var grip = g.Root + g.Along * g.Length * Mathf.Lerp(0.8f, 0.32f, down);
+        // The toy goes where her hips go, or her swaying belly would take her hand into it.
+        var root = g.Root + (figure.Bone("Hips") is { } hips ? figure.Pose(hips) - figure.Rest(hips) : Vector3.Zero);
+        var grip = root + g.Along * g.Length * Mathf.Lerp(0.8f, 0.32f, down);
         _gripAt = sk.GlobalTransform * grip;
         if (AppPaths.UserFlag("grip-closeup")) Frame();
         var knuckles = grip - g.ToShaft * (g.Radius + g.Finger * 0.9f);
@@ -313,7 +322,7 @@ public partial class CharacterView : SubViewportContainer
         }
         else
             foreach (var (bone, turn) in _closed) sk.SetBonePoseRotation(bone, turn);
-        PlaceToy(sk, g.Root, g.Along, g.Length, g.Scale);
+        PlaceToy(sk, root, g.Along, g.Length, g.Scale);
     }
 
     // A stand-in until a proper model comes: a pink shaft with a rounded tip on a flat foot.
