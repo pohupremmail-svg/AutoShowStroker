@@ -244,7 +244,10 @@ here unchanged. This file only adds what is specific to this side.
   anything (the user's correction: a thumb running the fingers' way is not how anyone holds it). The palm's
   side comes from the hand's chirality (little finger to index across the knuckles, wrist to middle
   knuckle along), never from the fingers' bend at rest, which some models have slightly backwards.
-  What does not change - where the toy stands (clear of the clothes at her belly, `Figure.FrontAt`),
+  What does not change - where the toy stands (a set gap in front of her belly and clothes over its whole
+  height, from its foot, `Figure.FrontAt`; brought back towards her when her arm cannot reach both
+  ends of the stroke - **an arm is never stretched, the toy goes into her belly instead**, the user's
+  rule; it follows her hips as they sway),
   the hand's size, the fingers' wrap - is measured once per figure; per frame only the arm and the
   hand move. Check by eye with `--grip-closeup --grip-down=<0..1>` on a smoke session (the camera on
   the hand, the stroke held; `--grip-turn=90` from her left, `--grip-tilt=40` from above, to see the
