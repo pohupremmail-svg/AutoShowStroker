@@ -112,20 +112,128 @@ public sealed class Figure
         Aim($"{side}LowerArm", $"{side}Hand", shoulder + dir * d);
     }
 
-    // A finger closed round a point: each joint bent towards it in turn, the root first.
-    public void Curl(string side, string finger, Vector3 around, float degrees)
+    private static readonly string[] FingerJoints = ["Proximal", "Intermediate", "Distal"];
+    private static readonly string[] ThumbJoints = ["Metacarpal", "Proximal", "Distal"];
+    private static readonly string[] Fingers = ["Thumb", "Index", "Middle", "Ring", "Little"];
+
+    private static string[] Joints(string side, string finger) =>
+        [.. (finger == "Thumb" ? ThumbJoints : FingerJoints).Select(joint => $"{side}{finger}{joint}")];
+
+    // Back to its rest under its parent: what a hand's bones need each frame before they are bent again,
+    // or every frame's bend would add to the last one's.
+    public void Relax(string human)
     {
-        var joints = finger == "Thumb" ? new[] { "Metacarpal", "Proximal", "Distal" } : ["Proximal", "Intermediate", "Distal"];
-        var bones = new int?[3];
-        for (var i = 0; i < 3; i++) bones[i] = Bone($"{side}{finger}{joints[i]}");
-        for (var i = 0; i < 3; i++)
+        if (Skeleton is { } sk && Bone(human) is { } bone) sk.SetBonePoseRotation(bone, sk.GetBoneRest(bone).Basis.GetRotationQuaternion());
+    }
+
+    // Every finger bone of a hand the model has.
+    public IEnumerable<int> HandBones(string side) =>
+        Fingers.SelectMany(finger => Joints(side, finger)).Select(Bone).OfType<int>();
+
+    public void RelaxHand(string side)
+    {
+        foreach (var finger in Fingers)
+            foreach (var joint in Joints(side, finger)) Relax(joint);
+    }
+
+    // The way the palm faces now, from the hand's own bones: across the knuckles (little finger to index)
+    // and along the hand (wrist to middle knuckle), a right hand's palm is the one, a left hand's the
+    // other. That is anatomy, so it holds for any model - unlike the fingers' bend at rest, which some
+    // models have slightly backwards.
+    public Vector3? Palm(string side)
+    {
+        if (Bone($"{side}Hand") is not { } hand || Bone($"{side}MiddleProximal") is not { } middle
+            || Bone($"{side}IndexProximal") is not { } index || (Bone($"{side}LittleProximal") ?? Bone($"{side}RingProximal")) is not { } outer) return null;
+        var along = Pose(middle) - Pose(hand);
+        var across = Pose(index) - Pose(outer);
+        var palm = side == "Right" ? across.Cross(along) : along.Cross(across);
+        return palm.LengthSquared() > 1e-12f ? palm.Normalized() : null;
+    }
+
+    // Where the front of the body is at a height, in skeleton space: the furthest point towards the
+    // viewer among the rest pose's vertices within `halfWidth` of the middle and `band` of that height
+    // - clothes included, so a toy placed in front of it stands clear of a wide skirt.
+    public float FrontAt(float height, float halfWidth, float band)
+    {
+        if (Skeleton is not { } sk) return 0;
+        var front = float.NegativeInfinity;
+        var toSkeleton = sk.GlobalTransform.AffineInverse();
+        foreach (var mesh in All<MeshInstance3D>(Root))
         {
-            if (bones[i] is not { } bone) continue;
+            if (mesh.Mesh is not ArrayMesh am) continue;
+            var toHere = toSkeleton * mesh.GlobalTransform;
+            for (var s = 0; s < am.GetSurfaceCount(); s++)
+            {
+                foreach (var v in am.SurfaceGetArrays(s)[(int)Mesh.ArrayType.Vertex].AsVector3Array())
+                {
+                    var p = toHere * v;
+                    if (Math.Abs(p.Y - height) < band && Math.Abs(p.X) < halfWidth && p.Z > front) front = p.Z;
+                }
+            }
+        }
+        return float.IsNegativeInfinity(front) ? 0 : front;
+    }
+
+    // A bone turned so that two directions it carries - `fromA`, and `fromB` as far as it is across
+    // `fromA` - become `toA` and `toB`: aiming a hand and rolling it in one.
+    public void Orient(int bone, Vector3 fromA, Vector3 fromB, Vector3 toA, Vector3 toB)
+    {
+        static Basis Frame(Vector3 a, Vector3 b)
+        {
+            var x = a.Normalized();
+            var y = (b - x * b.Dot(x)).Normalized();
+            return new Basis(x, y, x.Cross(y));
+        }
+        var turn = Frame(toA, toB) * Frame(fromA, fromB).Inverse();
+        var angle = turn.GetRotationQuaternion().GetAngle();
+        if (angle < 1e-5f) return;
+        Rotate(bone, turn.GetRotationQuaternion().GetAxis(), angle);
+    }
+
+    // A finger closed round a rod: its joints laid one after another on the circle round the rod's axis
+    // that passes through its knuckle - each segment a chord of that circle, aimed at the point one
+    // segment's length further round it, in the way the finger already points. Aiming rather than
+    // bending by set angles is what makes it fit any model: long fingers or short, straight at rest
+    // or curled. The circle never comes closer to the axis than `radius`, so no finger goes into the
+    // rod; the thumb lies right on it. The thumb's root (its metacarpal) stays in the palm.
+    public void Wrap(string side, string finger, Vector3 axis, Vector3 onAxis, float radius)
+    {
+        var joints = Joints(side, finger).Select(Bone).ToList();
+        if (finger == "Thumb") joints.RemoveAt(0);
+        for (var i = 0; i < joints.Count; i++)
+        {
+            if (joints[i] is not { } bone) continue;
             var head = Pose(bone);
-            var along = i < 2 && bones[i + 1] is { } next ? Pose(next) - head
-                : i > 0 && bones[i - 1] is { } prev ? head - Pose(prev) : Vector3.Zero;
-            if (along.LengthSquared() < 1e-10f) continue;
-            Rotate(bone, along.Cross(around - head), Mathf.DegToRad(degrees * (i == 0 ? 0.8f : 1f)));
+            var next = i + 1 < joints.Count ? joints[i + 1] : null;
+            // The last segment has no bone at its end: it runs on as the one before it, a little shorter.
+            Vector3 tip;
+            float length;
+            if (next is { } n)
+            {
+                tip = Pose(n);
+                length = (Rest(n) - Rest(bone)).Length();
+            }
+            else if (i > 0 && joints[i - 1] is { } prev)
+            {
+                length = (Rest(bone) - Rest(prev)).Length() * 0.8f;
+                tip = head + (head - Pose(prev)).Normalized() * length;
+            }
+            else continue;
+            var centre = onAxis + axis * (head - onAxis).Dot(axis);
+            var out_ = head - centre;
+            // The thumb's root sits further out than the knuckles; round a circle through it, it would
+            // swing in a wide loop over the hand. It lies on the rod instead.
+            var rho = finger == "Thumb" ? radius : Math.Max(out_.Length(), radius);
+            if (out_.LengthSquared() < 1e-10f || length <= 0) continue;
+            out_ = out_.Normalized() * rho;
+            // Round the way the finger points; a chord of `length` turns that far round the circle.
+            var way = axis.Dot(out_.Cross(tip - head)) >= 0 ? 1 : -1;
+            var turn = 2 * MathF.Asin(Math.Min(1, length / (2 * rho)));
+            var target = centre + out_.Rotated(axis, way * turn);
+            var from = tip - head;
+            var to = target - head;
+            if (from.LengthSquared() < 1e-10f || to.LengthSquared() < 1e-10f) continue;
+            Rotate(bone, from.Cross(to), Math.Min(from.AngleTo(to), Mathf.DegToRad(110)));
         }
     }
 

@@ -40,6 +40,8 @@ public partial class CharacterView : SubViewportContainer
     private double? _lastNote, _nextNote;
     private float _moving;
     private Node3D? _toy;
+    private const float ToyRadius = 0.021f;
+    private Vector3? _gripAt;
 
     // On screen: taken into this view's world.
     public bool Loaded => _figure is not null && IsInstanceValid(_figure.Root) && _figure.Root.GetParent() == _viewport;
@@ -110,6 +112,9 @@ public partial class CharacterView : SubViewportContainer
         figure.Turn("Chest", Vector3.Right, -1.2f * MathF.Sin(t * 1.6f));
         // On the beat (in the frame): leaning into each note, the head nodding with it.
         var down = Stroke(delta);
+        // A development look at the grip: --grip-down=<0..1> holds the stroke there.
+        if (_framing == Framing.Bust && AppPaths.UserArg("grip-down") is { } held)
+            down = float.Parse(held, System.Globalization.CultureInfo.InvariantCulture);
         figure.Turn("Spine", Vector3.Right, 3 * down * _moving, keep: true);
         figure.Turn("LeftUpperArm", Vector3.Back, -72 + 2 * MathF.Sin(t * 1.6f));
         figure.Turn("LeftLowerArm", Vector3.Right, -14);
@@ -163,26 +168,84 @@ public partial class CharacterView : SubViewportContainer
         return Mathf.Lerp(0.5f, down, _moving);
     }
 
-    // The right hand round the toy in front of her, sliding along it: at its root on a note, up near
-    // the tip between two. Measured on the figure, so it fits any height. Skeleton space throughout.
-    private void Grip(Figure figure, float down)
+    // What the grip measures on a figure, once: where the toy stands and how big it is, which way the
+    // palm faces it and the fingers run round it, and how big the hand is. Skeleton space (+Y up, +Z
+    // towards the viewer).
+    private sealed record GripSetup(Vector3 Root, Vector3 Along, float Length, float Radius,
+        Vector3 ToShaft, Vector3 Round, float PalmLength, float Finger, float Scale);
+
+    private GripSetup? _grip;
+    private Figure? _gripFor;
+    // The fingers' turns under the hand, wrapped once: the hand only slides along the toy, so they do
+    // not change from one frame to the next.
+    private readonly List<(int Bone, Quaternion Turn)> _closed = [];
+
+    private static GripSetup? MeasureGrip(Figure figure)
     {
-        if (figure.Bone("Hips") is not { } hipsBone || figure.Bone("Head") is not { } headBone || figure.Skeleton is not { } sk) return;
+        if (figure.Bone("Hips") is not { } hipsBone || figure.Bone("Head") is not { } headBone
+            || figure.Bone("RightHand") is not { } hand || figure.Bone("RightMiddleProximal") is not { } knuckle) return null;
         var hips = figure.Rest(hipsBone);
         var scale = Math.Max(0.3f, (figure.Rest(headBone).Y - (figure.Bone("LeftFoot") is { } f ? figure.Rest(f).Y : 0)) / 1.45f);
-        var root = hips + new Vector3(0, -0.02f, 0.13f) * scale;
-        var along = new Vector3(0, 1, -0.22f).Normalized();
+        var along = new Vector3(0, 1, 0.18f).Normalized();
         var length = 0.16f * scale;
-        var grip = root + along * length * Mathf.Lerp(0.85f, 0.3f, down);
-        var wrist = grip - along * 0.05f * scale + new Vector3(-0.035f, 0, -0.015f) * scale;
-        figure.Turn("RightUpperArm", Vector3.Up, 0);
-        figure.Turn("RightLowerArm", Vector3.Up, 0);
-        figure.Turn("RightHand", Vector3.Up, 0);
+        var radius = ToyRadius * scale;
+        // In front of her belly, and clear of whatever she wears there.
+        var y = hips.Y - 0.02f * scale;
+        var front = figure.FrontAt(y + length / 2, 0.1f * scale, length / 2);
+        var root = new Vector3(hips.X, y, Math.Max(hips.Z + 0.13f * scale, front + radius + 0.035f * scale));
+        // From her right towards the shaft, and round its front, where the fingers are seen.
+        var toShaft = (Vector3.Right - along * Vector3.Right.Dot(along)).Normalized();
+        var round = along.Cross(toShaft);
+        if (round.Z < 0) round = -round;
+        var palmLength = (figure.Rest(knuckle) - figure.Rest(hand)).Length();
+        return new GripSetup(root, along, length, radius, toShaft, round, palmLength, palmLength * 0.22f, scale);
+    }
+
+    // The right hand round the toy, sliding along it: at its root on a note, up near the tip between
+    // two. Per frame only the arm reaches the wrist (two-bone IK) and the hand is turned into the grip -
+    // the palm towards the shaft, the knuckles beside it, the fingers round its front; the fingers keep
+    // the wrap they were given once, each joint bent by the arc its segment covers round the shaft.
+    private void Grip(Figure figure, float down)
+    {
+        if (_gripFor != figure)
+        {
+            _gripFor = figure;
+            _grip = MeasureGrip(figure);
+            _closed.Clear();
+        }
+        if (_grip is not { } g || figure.Skeleton is not { } sk || figure.Bone("RightHand") is not { } hand
+            || figure.Bone("RightMiddleProximal") is not { } knuckle) return;
+        var grip = g.Root + g.Along * g.Length * Mathf.Lerp(0.8f, 0.32f, down);
+        _gripAt = sk.GlobalTransform * grip;
+        if (AppPaths.UserFlag("grip-closeup")) Frame();
+        var knuckles = grip - g.ToShaft * (g.Radius + g.Finger * 0.9f);
+        var wrist = knuckles - g.Round * g.PalmLength;
+
+        foreach (var bone in new[] { "RightUpperArm", "RightLowerArm", "RightHand" }) figure.Turn(bone, Vector3.Up, 0);
         figure.Reach("Right", wrist, new Vector3(-1, -0.4f, -0.7f));
-        figure.Aim("RightHand", "RightMiddleProximal", grip + new Vector3(0.06f, 0, 0.01f) * scale);
-        foreach (var finger in new[] { "Index", "Middle", "Ring", "Little" }) figure.Curl("Right", finger, grip, 58);
-        figure.Curl("Right", "Thumb", grip, 32);
-        PlaceToy(sk, root, along, length, scale);
+        // The forearm takes the roll, as a real one does; the wrist only what is left - turned in the
+        // wrist alone, a long glove's cuff twisted into a loop.
+        if (figure.Bone("RightLowerArm") is { } lower && figure.Palm("Right") is { } before)
+        {
+            var axis = (figure.Pose(hand) - figure.Pose(lower)).Normalized();
+            var now = before - axis * before.Dot(axis);
+            var want = g.ToShaft - axis * g.ToShaft.Dot(axis);
+            if (now.LengthSquared() > 1e-8f && want.LengthSquared() > 1e-8f)
+                figure.Rotate(lower, axis, now.SignedAngleTo(want, axis));
+        }
+        if (figure.Palm("Right") is { } palm)
+            figure.Orient(hand, figure.Pose(knuckle) - figure.Pose(hand), palm, g.Round, g.ToShaft);
+        if (_closed.Count == 0)
+        {
+            figure.RelaxHand("Right");
+            foreach (var finger in new[] { "Index", "Middle", "Ring", "Little" })
+                figure.Wrap("Right", finger, g.Along, grip, g.Radius + g.Finger * 0.5f);
+            figure.Wrap("Right", "Thumb", g.Along, grip, g.Radius + g.Finger * 0.5f);
+            foreach (var bone in figure.HandBones("Right")) _closed.Add((bone, sk.GetBonePoseRotation(bone)));
+        }
+        else
+            foreach (var (bone, turn) in _closed) sk.SetBonePoseRotation(bone, turn);
+        PlaceToy(sk, g.Root, g.Along, g.Length, g.Scale);
     }
 
     // A stand-in until a proper model comes: a pink shaft with a rounded tip on a flat foot.
@@ -190,7 +253,7 @@ public partial class CharacterView : SubViewportContainer
     {
         if (_toy is null)
         {
-            var radius = 0.021f * scale;
+            var radius = ToyRadius * scale;
             var material = new StandardMaterial3D { AlbedoColor = new Color(1f, 0.42f, 0.66f), Roughness = 0.3f, RimEnabled = true, Rim = 0.4f };
             _toy = new Node3D();
             _toy.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = radius, BottomRadius = radius * 1.05f, Height = length, Material = material }, Position = new Vector3(0, length / 2, 0) });
@@ -271,6 +334,12 @@ public partial class CharacterView : SubViewportContainer
         }
         var distance = half / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2));
         _camera.Position = new Vector3(head.X, centre, head.Z + distance);
+        // A development look at the grip: --grip-closeup puts the camera right in front of the hand.
+        if (_framing == Framing.Bust && AppPaths.UserFlag("grip-closeup") && _gripAt is { } at)
+        {
+            var near = height * 0.07f / MathF.Tan(Mathf.DegToRad(_camera.Fov / 2));
+            _camera.Position = new Vector3(at.X, at.Y, at.Z + near);
+        }
         _camera.Near = Math.Max(0.01f, distance * 0.01f);
         _camera.Far = Math.Max(100, distance * 10);
     }

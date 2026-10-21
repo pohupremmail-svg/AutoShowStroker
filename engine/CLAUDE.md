@@ -201,8 +201,18 @@ here unchanged. This file only adds what is specific to this side.
 - **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock by
   `Main`): one full stroke per note - the hand at the root of the toy on the note, up near its tip
   halfway to the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with
-  it; in a pause she eases to a stop. The arm reaches by two-bone IK and the fingers close round the
-  toy (`Figure.Reach`, `Aim`, `Curl`), all in skeleton space. **The toy is a stand-in** built from
+  it; in a pause she eases to a stop. The arm reaches by two-bone IK, the **forearm takes the roll**
+  (a wrist turned alone twists a long glove's cuff into a loop), the hand is turned so the palm faces
+  the shaft and the fingers run round its front, and each finger is laid **joint by joint as chords of
+  the circle round the shaft through its own knuckle** (`Figure.Reach`, `Orient`, `Wrap`) - aimed, not
+  bent by set angles, which is what fits any model's hands; the thumb lies on the shaft. The palm's
+  side comes from the hand's chirality (little finger to index across the knuckles, wrist to middle
+  knuckle along), never from the fingers' bend at rest, which some models have slightly backwards.
+  What does not change - where the toy stands (clear of the clothes at her belly, `Figure.FrontAt`),
+  the hand's size, the fingers' wrap - is measured once per figure; per frame only the arm and the
+  hand move. Check by eye with `--grip-closeup --grip-down=<0..1>` on a smoke session (the camera on
+  the hand, the stroke held), on several models: D.Va Classic's long glove still kinks a little at
+  the wrist, a limit of that glove's skinning. **The toy is a stand-in** built from
   primitives (`CharacterView.PlaceToy`) until the user brings a proper asset - which needs its licence
   checked like a character, and stays off GitHub if it is explicit.
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
@@ -330,7 +340,7 @@ dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
 "$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
 "$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
-"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--size=WxH] [--screenshot=PNG [--shots=N]]
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--grip-closeup] [--grip-down=0..1] [--size=WxH] [--screenshot=PNG [--shots=N]]
 "$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S] [--size=WxH]
 "$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
 dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)
