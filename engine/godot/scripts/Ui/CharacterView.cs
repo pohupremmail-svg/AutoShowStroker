@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Gooner.Core.App;
 using Gooner.Core.Logging;
 using Godot;
@@ -30,6 +32,13 @@ public partial class CharacterView : SubViewportContainer
     private static readonly string[] Feet = ["LeftFoot", "RightFoot"];
 
     private static (string Path, Node3D Root)? _kept;
+    private static readonly object OneAtATime = new();
+    private static int _pending;
+
+    // A load still running: quitting then has to end the process rather than take the engine down
+    // under the import (Main.Quit).
+    public static bool Loading => Volatile.Read(ref _pending) > 0;
+    private Task<Node3D?>? _loading;
 
     private readonly SubViewport _viewport = new() { TransparentBg = true, OwnWorld3D = true, Msaa3D = Viewport.Msaa.Msaa4X };
     private readonly Camera3D _camera = new() { Fov = 30, Current = true };
@@ -76,20 +85,49 @@ public partial class CharacterView : SubViewportContainer
             Take(kept.Root);
             return;
         }
-        try
+        // Off the main thread: a large model takes minutes, and the screen stays alive meanwhile, the
+        // logo on the pedestal until the figure fades in. One load at a time - godot-vrm's extensions
+        // are registered globally for the length of one.
+        var path = _path;
+        Interlocked.Increment(ref _pending);
+        _loading = Task.Run(() =>
         {
-            if (Load(_path) is { } root) Take(root);
-        }
-        catch (Exception e)
-        {
-            AppLog.Warning(Log, "Could not load the character {0}: {1}", System.IO.Path.GetFileName(_path), e.Message);
-        }
+            lock (OneAtATime)
+            {
+                try
+                {
+                    return Load(path);
+                }
+                catch (Exception e)
+                {
+                    AppLog.Warning(Log, "Could not load the character {0}: {1}", System.IO.Path.GetFileName(path), e.Message);
+                    return null;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _pending);
+                }
+            }
+        });
+    }
+
+    // Done loading: on the pedestal, faded in.
+    private void Arrive(Node3D? root)
+    {
+        _loading = null;
+        if (root is null) return;
+        Take(root);
+        Modulate = new Color(1, 1, 1, 0);
+        CreateTween().TweenProperty(this, "modulate:a", 1f, 0.6f);
     }
 
     // Left where it is: a new screen takes it over, and otherwise it goes with this one.
     public override void _ExitTree()
     {
         if (_root is not null) _kept = (_path, _root);
+        // Gone before its figure arrived: the figure goes too, once it does.
+        _loading?.ContinueWith(done => done.Result?.CallDeferred(Node.MethodName.Free));
+        _loading = null;
     }
 
     private void Take(Node3D root)
@@ -182,6 +220,7 @@ public partial class CharacterView : SubViewportContainer
 
     public override void _Process(double delta)
     {
+        if (_loading is { IsCompleted: true } loaded) Arrive(loaded.Result);
         if (_skeleton is null || !IsVisibleInTree()) return;
         _time += delta;
         var t = (float)_time;

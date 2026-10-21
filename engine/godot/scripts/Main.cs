@@ -439,6 +439,14 @@ public partial class Main : Control
         }
         await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
         RemoveGodotUserDir();
+        // A character still loading: Godot's import runs on in its own thread into the engine going
+        // down, and that crashes. Everything of the app's own is written by now (the log line by line
+        // as it goes), so the process ends here instead - at once, which a large model would not.
+        if (CharacterView.Loading)
+        {
+            AppLog.Info("GoonerApp", "Quitting while a character is still loading: the process ends at once");
+            OS.Kill(OS.GetProcessId());
+        }
         GetTree().Quit(exitCode);
     }
 

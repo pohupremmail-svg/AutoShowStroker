@@ -185,6 +185,12 @@ here unchanged. This file only adds what is specific to this side.
   Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
   `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,
   bone poses reset. Do not "simplify" any of it; each one was a crash or a distorted mesh.
+- A model loads **off the main thread** (`CharacterView`, one at a time - godot-vrm's extensions are
+  registered globally for the length of a load); the logo holds the pedestal until the figure fades
+  in. A large model takes minutes (an 878 MB one, 100 s). Quitting while one loads ends the process
+  with `OS.Kill` at the end of `Main.Quit`, after everything of the app's own is written: Godot's
+  import running on into the engine going down segfaults (reproduced, exit 139). Panic only
+  minimizes, so it is not affected.
 - Motion is written against humanoid bone names, in model space (`CharacterView.Turn`), never in a
   bone's local axes - that is what makes one motion fit every model.
 
