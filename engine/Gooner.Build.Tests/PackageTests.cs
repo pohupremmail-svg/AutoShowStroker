@@ -22,6 +22,16 @@ public sealed class PackageTests : IDisposable
         Assert.DoesNotContain(listed, f => f.StartsWith("res/licenses/", StringComparison.Ordinal));
     }
 
+    // Character models in res/characters are the developer's own test figures, gigabytes of them, and
+    // none the app may pass on yet; a user brings their own through Settings > Look.
+    [Fact]
+    public void character_models_stay_out()
+    {
+        _fake.Write("res/characters/Someone - Nude.vrm", "model");
+
+        Assert.DoesNotContain(Listed(), f => f.EndsWith(".vrm", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void the_engines_licenses_and_the_version_go_with_it()
     {

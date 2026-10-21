@@ -24,6 +24,8 @@ public static class Package
         {
             var inRes = Path.GetRelativePath(repo.Res, file);
             if (inRes.Split(Path.DirectorySeparatorChar)[0] == PythonLicenses) continue;
+            // The developer's own test figures: gigabytes, and none the app may pass on yet.
+            if (string.Equals(Path.GetExtension(file), ".vrm", StringComparison.OrdinalIgnoreCase)) continue;
             files.Add((Path.Combine("res", inRes), file));
         }
         files.AddRange(Files(repo.Licenses).Select(file => (Path.Combine("licenses", Path.GetRelativePath(repo.Licenses, file)), file)));
