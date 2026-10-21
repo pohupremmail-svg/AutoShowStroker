@@ -27,6 +27,25 @@ public sealed class Figure
         _bones = (root.Get("vrm_meta").AsGodotObject() as Resource)?.Get("humanoid_bone_mapping").AsGodotObject() as BoneMap;
         Face = new FaceRig(All<AnimationPlayer>(root).FirstOrDefault());
         FaceTheCamera();
+        SmoothCutouts(root);
+    }
+
+    // Hair cards, lashes and lace are cut out - each pixel all there or not, which sorts cleanly but
+    // leaves hair with hard, stepped edges (the user saw it on Shadowheart). With the views' MSAA, alpha
+    // to coverage turns the cut into a soft edge without giving up that sorting.
+    private static void SmoothCutouts(Node root)
+    {
+        foreach (var mesh in All<MeshInstance3D>(root))
+        {
+            if (mesh.Mesh is null) continue;
+            for (var s = 0; s < mesh.Mesh.GetSurfaceCount(); s++)
+                if ((mesh.GetSurfaceOverrideMaterial(s) ?? mesh.Mesh.SurfaceGetMaterial(s)) is BaseMaterial3D m
+                    && m.Transparency == BaseMaterial3D.TransparencyEnum.AlphaScissor)
+                {
+                    m.AlphaAntialiasingMode = BaseMaterial3D.AlphaAntiAliasing.AlphaToCoverageAndToOne;
+                    m.AlphaAntialiasingEdge = 0.3f;
+                }
+        }
     }
 
     public int? Bone(string human)

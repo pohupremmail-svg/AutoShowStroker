@@ -290,6 +290,11 @@ here unchanged. This file only adds what is specific to this side.
   minimizes, so it is not affected.
 - Motion is written against humanoid bone names, in model space (`CharacterView.Turn`), never in a
   bone's local axes - that is what makes one motion fit every model.
+- **Cut-out materials get soft edges** (`Figure.SmoothCutouts`): hair cards, lashes and lace come in
+  as alpha scissor, all or nothing per pixel, which sorts cleanly but steps their edges; with the
+  views' MSAA, alpha to coverage softens them. Sheer stockings are blended in the export itself
+  (`GoonerSpikes/blender/scripts/vrm_materials.py`), and hair, tail and breasts swing on VRM spring
+  bones the exports add (`vrm_springs.py`) - godot-vrm runs them.
 
 ## How the core keeps time
 
