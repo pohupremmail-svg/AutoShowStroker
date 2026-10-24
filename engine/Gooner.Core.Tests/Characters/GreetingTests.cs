@@ -61,7 +61,17 @@ public sealed class GreetingTests
         Assert.Null(greeting.Line);
     }
 
-    // Minutes of quiet between two lines - drawn anew each time, so it never ticks like a clock.
+    // About three quarters of a minute of quiet between two lines (the user's call - a few minutes was
+    // too long), and long enough up to be read at ease even when short.
+    [Fact]
+    public void she_speaks_again_after_about_45_seconds_and_lets_a_line_hang()
+    {
+        Assert.InRange((Greeting.MinPause + Greeting.MaxPause) / 2, 40, 50);
+        Assert.True(Greeting.MinPause >= 30 && Greeting.MaxPause <= 60);
+        Assert.True(Greeting.Shown("Hi.") - Visemes.Duration("Hi.") >= 7);
+    }
+
+    // Quiet between two lines - drawn anew each time, so it never ticks like a clock.
     [Fact]
     public void the_next_line_comes_after_a_pause_of_minutes()
     {

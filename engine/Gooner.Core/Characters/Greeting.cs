@@ -13,15 +13,17 @@ public enum FigureState
 }
 
 // What she says on the start screen, the way a game character idles (the user's call): a main_menu
-// line in a bubble beside her once she is there - typed in, left to be read, faded out - then a few
-// minutes of quiet and the next one. Without her the line stands under the name instead.
+// line in a bubble beside her once she is there - typed in, left to hang, faded out - then about
+// three quarters of a minute of quiet and the next one. Without her the line stands under the name
+// instead.
 public sealed class Greeting(Func<string?> nextLine, IRandomSource random)
 {
     // A moment after she has faded in, so the bubble does not arrive with her.
     public const double FirstAfter = 1.5;
 
-    // The quiet between two lines, drawn anew each time.
-    public const double MinPause = 120, MaxPause = 240;
+    // The quiet between two lines, drawn anew each time - about 45 s (the user's call; minutes were
+    // too long).
+    public const double MinPause = 35, MaxPause = 55;
 
     private double? _next, _until;
 
@@ -32,11 +34,12 @@ public sealed class Greeting(Func<string?> nextLine, IRandomSource random)
     // rather than show and then jump into her bubble.
     public static bool UnderTitle(FigureState state) => state is FigureState.None or FigureState.Failed;
 
-    // How long a line stays up: typed in on her mouth's timeline, then a reading's worth.
+    // How long a line stays up: typed in on her mouth's timeline, then left to hang a while longer
+    // than a reading's worth (the user asked for more).
     public static double Shown(string line)
     {
         ArgumentNullException.ThrowIfNull(line);
-        return Visemes.Duration(line) + Math.Clamp(2.5 + 0.05 * line.Length, 4, 9);
+        return Visemes.Duration(line) + Math.Clamp(5 + 0.07 * line.Length, 7, 14);
     }
 
     // `now` in seconds on any clock that only goes forward.
