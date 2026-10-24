@@ -402,6 +402,9 @@ public static class Changelog
             "<li><b>No more menu bar.</b> A start screen greets you in her voice, and during a " +
             "session your controls float on glass you can drag anywhere, or throw out of your " +
             "way</li>" +
+            "<li><b>Every window got dressed up.</b> Settings with a sidebar, sliders you can drag or simply " +
+            "type into, and a live preview of your look; your stats as tiles, your data laid out on glass - " +
+            "and whatever you want gone, you tick</li>" +
             "<li><b>The app speaks German and French now too</b> - its own words, not just her " +
             "callouts. Settings &gt; Playback &gt; App Language</li>" +
             "<li><b>It comes as a folder now.</b> Unpack it anywhere: your settings, history, " +
