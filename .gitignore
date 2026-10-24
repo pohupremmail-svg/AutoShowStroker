@@ -1,10 +1,6 @@
-__pycache__/
-.pytest_cache/
 .idea/
 .aider*
-*.spec
 entwicklertagebuch.md
-.venv/
 build/
 dist/
 CLAUDE.local.md

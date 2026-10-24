@@ -1,18 +1,18 @@
-# Keeps the workflow actions current. Python pins are deliberately left alone.
+# Keeps the workflow actions current. The engine's NuGet packages are deliberately left alone.
 #
 # The actions are worth automating: they are third-party code that runs with access to
 # this repository, nobody is watching them otherwise, and a bump is a one-line diff that
 # CI can prove. Two or three pull requests a year.
 #
-# Python dependencies are not here on purpose. requirements.txt is pinned exactly because
-# the shipped .exe bundles these versions, so a bump is not "merge the green PR" - it
-# means rebuilding with PyInstaller and opening the result to check that Qt, QtSvg,
-# QtWebSockets and the bundled resources all still survive the freeze. A weekly robot
-# cannot do that, and a queue of PRs that all need a manual build is noise that trains you
-# to ignore the one that matters. What watches those versions instead:
+# The NuGet packages are not here on purpose. The Godot SDK is pinned to the engine the
+# package is exported with, and the shipped package bundles the .NET runtime, so a bump is
+# not "merge the green PR" - it means exporting the package again and opening it to check
+# that it still starts, plays and finds its files. A weekly robot cannot do that, and a
+# queue of PRs that all need a manual build is noise that trains you to ignore the one that
+# matters. What watches those versions instead:
 #   - Dependabot *alerts* (repository setting, Security > Code security), which report a
 #     CVE without opening a pull request
-#   - .github/workflows/audit.yml, a weekly pip-audit over the resolved dependency tree
+#   - .github/workflows/audit.yml, a weekly audit over the resolved package tree
 version: 2
 updates:
   - package-ecosystem: "github-actions"

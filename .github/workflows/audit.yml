@@ -1,4 +1,5 @@
-# Watches the pinned dependencies for newly-disclosed vulnerabilities.
+# Watches the engine's NuGet packages, transitive ones included, for newly-disclosed
+# vulnerabilities.
 #
 # Deliberately a separate workflow rather than a step in CI: the pins do not change on
 # their own, but the advisory database does, so a finding here is almost never caused by
@@ -6,19 +7,17 @@
 # published overnight turns unrelated work red. This runs on its own schedule instead,
 # and GitHub mails the owner when it fails.
 #
-# The exception is a pull request that actually touches the requirements - that is the one
-# moment the answer is about the change in front of you, so it runs there too.
+# The exception is a pull request that actually touches the package references - that is the
+# one moment the answer is about the change in front of you, so it runs there too.
 name: Audit
 
 on:
   schedule:
-    # Mondays, 06:00 UTC. Weekly is the right cadence for a desktop app that ships a
-    # bundled interpreter: a finding means cutting a release, not just merging a bump.
+    # Mondays, 06:00 UTC. Weekly is the right cadence for a desktop app that ships its
+    # runtime: a finding means cutting a release, not just merging a bump.
     - cron: "0 6 * * 1"
   pull_request:
     paths:
-      - "requirements.txt"
-      - "requirements-dev.txt"
       - "engine/**/*.csproj"
       - "engine/Directory.Build.props"
       - "engine/global.json"
@@ -29,26 +28,8 @@ permissions:
   contents: read
 
 jobs:
-  pip-audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.13"
-
-      - run: pip install pip-audit
-
-      # requirements-dev.txt pulls in requirements.txt, so this covers both, and without
-      # --no-deps it resolves the transitive packages too - which is where a vulnerability
-      # is most likely to sit, since those are the ones nobody pinned on purpose.
-      - name: Audit pinned dependencies
-        run: pip-audit --strict --requirement requirements-dev.txt
-
-  # The engine's NuGet packages, transitive ones included - pip-audit's counterpart. The listing
-  # itself exits 0 whatever it finds, so the JSON is read: a project with anything vulnerable is
-  # the only kind that lists packages at all.
+  # The listing itself exits 0 whatever it finds, so the JSON is read: a project with anything
+  # vulnerable is the only kind that lists packages at all.
   nuget-audit:
     runs-on: ubuntu-latest
     env:
@@ -66,7 +47,7 @@ jobs:
       - name: Audit NuGet packages
         run: |
           dotnet list engine/GoonerEngine.sln package --vulnerable --include-transitive --format json > vulnerable.json
-          python3 - <<'EOF'
+          python3 - <<'PY'
           import json, sys
           listing = json.load(open("vulnerable.json", encoding="utf-8-sig"))
           found = [project["path"] for project in listing["projects"] if project.get("frameworks")]
@@ -74,4 +55,4 @@ jobs:
               print(f"Vulnerable packages in {path}")
           print("No vulnerable packages." if not found else "")
           sys.exit(1 if found else 0)
-          EOF
+          PY

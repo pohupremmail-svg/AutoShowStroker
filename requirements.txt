@@ -1,7 +1,0 @@
-# QtWebSockets (bundled with PyQt6) carries the optional device output in src/plugins/intiface.
-PyQt6==6.10.0
-PyQt6-Qt6==6.10.0
-PyQt6_sip==13.10.2
-pyinstaller==6.21.0
-pyqtgraph==0.14.0
-numpy==2.5.1
