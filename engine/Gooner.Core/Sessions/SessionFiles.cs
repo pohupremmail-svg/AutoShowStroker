@@ -46,6 +46,11 @@ public static class SessionFiles
     public const int MaxSavedSessions = 50;
 
     public static readonly IReadOnlyList<string> SegmentKinds = ["beat", "pause", "finale"];
+
+    // The fastest a segment may play: the ceiling the settings put on the beat frequency. Above it no
+    // one can follow, and far above it a note gap rounds to 0 ms - a file at 5000 froze the app. Python
+    // has no such ceiling; recorded in parity/allowlist.json.
+    public const double MaxFreq = 20.0;
     public static readonly IReadOnlyList<string> ClimaxOutcomes = ["real", "ruined", "denied"];
 
     private static readonly Dictionary<string, string> OutcomeLabels = new()
@@ -244,6 +249,8 @@ public static class SessionFiles
 
         if (!PyJson.IsNumber(freq) || PyJson.Number(freq) <= 0)
             problems.Add(L10n.F("Segment {0} needs a freq in beats per second.", index));
+        else if (PyJson.Number(freq) > MaxFreq)
+            problems.Add(L10n.F("Segment {0} plays {1} beats per second; the most a session can play is {2}.", index, PyJson.Str(freq), PyJson.F0(MaxFreq)));
         if (pattern is null)
         {
             problems.Add(L10n.F("Segment {0} needs a pattern name.", index));

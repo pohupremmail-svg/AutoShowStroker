@@ -444,6 +444,28 @@ public sealed class SessionFilesTests : IDisposable
         Assert.NotEmpty(SessionFiles.ValidateSession(saved));
     }
 
+    // A speed the settings could never be set to is not a session anyone can follow, and at 5000 a
+    // note gap is 0 ms - a file like that froze the app. The ceiling is the settings' own.
+    [Theory]
+    [InlineData(20.5)]
+    [InlineData(5000)]
+    public void a_beat_faster_than_the_settings_allow_is_refused(double freq)
+    {
+        var saved = Handwritten();
+        saved["segments"]![0]!["freq"] = freq;
+
+        Assert.Contains(SessionFiles.ValidateSession(saved), p => p.Contains("Segment 1", StringComparison.Ordinal) && p.Contains("20", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void the_fastest_beat_the_settings_allow_plays()
+    {
+        var saved = Handwritten();
+        saved["segments"]![0]!["freq"] = 20;
+
+        Assert.Empty(SessionFiles.ValidateSession(saved));
+    }
+
     [Fact]
     public void a_segment_without_a_length_is_refused()
     {

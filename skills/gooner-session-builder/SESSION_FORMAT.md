@@ -56,7 +56,7 @@ never a date. A replay starts whenever the user starts it.
 | `kind` | `"beat"`, `"pause"` or `"finale"`. |
 | `duration_sec` | Positive. |
 | `pattern` | A rhythm name (see below). `null` on a pause. |
-| `freq` | Beats per second, positive. `null` on a pause. |
+| `freq` | Beats per second, positive, at most `20`. `null` on a pause. |
 
 `"finale"` is the segment the climax happens during. It behaves exactly like a beat; the
 name only records that this is the run-in. Put the climax inside it and make it fast.

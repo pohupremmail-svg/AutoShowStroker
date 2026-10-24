@@ -265,6 +265,7 @@
   "Segment {0} needs a positive duration_sec.": "Segment {0} braucht eine positive duration_sec.",
   "Segment {0} is a pause, so it carries no pattern and no freq.": "Segment {0} ist eine Pause, hat also weder pattern noch freq.",
   "Segment {0} needs a freq in beats per second.": "Segment {0} braucht eine freq in Beats pro Sekunde.",
+  "Segment {0} plays {1} beats per second; the most a session can play is {2}.": "Segment {0} läuft mit {1} Beats pro Sekunde - mehr als {2} spielt keine Session.",
   "Segment {0} needs a pattern name.": "Segment {0} braucht einen pattern-Namen.",
   "Segment {0} plays '{1}', which is neither built in nor defined in custom_patterns.": "Segment {0} spielt „{1}“, der weder eingebaut noch in custom_patterns definiert ist.",
   "climax has to be an object with at_sec and outcome.": "climax muss ein Objekt mit at_sec und outcome sein.",

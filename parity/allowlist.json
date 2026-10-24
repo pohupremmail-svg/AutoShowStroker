@@ -2,7 +2,8 @@
   "_about": "Cases where the C# port deliberately answers differently from the Python oracle. Every entry says why. A difference that is not listed here is drift, and fails the parity run.",
   "session_files.validate": {
     "duration_bool": "Python treats a bool as an int, so \"duration_sec\": true passes as one second. The port refuses it - a session that says true there is wrong, and saying so beats playing a one-second session.",
-    "freq_bool": "Same quirk: \"freq\": true would play at one beat per second. The port refuses it."
+    "freq_bool": "Same quirk: \"freq\": true would play at one beat per second. The port refuses it.",
+    "freq_ceiling": "The port refuses a freq above 20, the ceiling the settings put on the beat. Python plays any positive freq; at 5000 a note gap rounds to 0 ms, and the engine froze on such a file."
   },
   "achievements.evaluate": {
     "booleans_where_numbers_go": "Python's min(True, 5000) hands back True itself, so a bool in a count field reports its progress as true/5000. The port reports 1/5000. What unlocks is still compared and agrees."
