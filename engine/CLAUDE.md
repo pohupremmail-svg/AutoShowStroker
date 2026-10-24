@@ -59,8 +59,13 @@ here unchanged. This file only adds what is specific to this side.
   GPL, no nonfree; H.264, MPEG-4, VP8/9, AAC, MP3, Opus, Vorbis - no HEVC); the wrapper is MIT.
   The package carries the LGPLv3/GPLv3 texts and the wrapper's MIT text (`engine/licenses`), and
   every release has the FFmpeg source of exactly that revision and the extension's source attached
-  (`engine/third_party/ffmpeg`, see its README). A new build of the extension replaces all of it
-  together; `Gooner.Build.Tests` and `LicenseShelfTests` fail until the archives and notices follow.
+  (`engine/third_party/ffmpeg`, see its README). The libraries have others linked in (libvorbis,
+  libogg, libopus, libiconv, zlib, the OpenCL loader, soxr, the MinGW-w64 runtime, winpthreads -
+  read off the binaries, not the configure line): each has its notice, and the two under the LGPL
+  (libiconv, soxr) go out with their source and the build scripts (the user's call, 2026-10-24: keep
+  this FFmpeg and add the notices rather than build our own). A new build of the extension replaces
+  all of it together; `Gooner.Build.Tests` and `LicenseShelfTests` fail until the archives and
+  notices follow.
 - **A picture or a GIF is never read on the main thread** (`Stage/MediaStage`): the player names the
   medium that comes next (`IMediaStage.Prepare`, from `PlaylistPlayer`; a replay's next recorded
   path through `SessionScript.PeekNextMediaPath`), and the stage reads and scales it on a worker
@@ -402,8 +407,8 @@ here unchanged. This file only adds what is specific to this side.
 The engine replaces the Python app in one release, planned for Christmas together with the new
 look (phase 7). Until that day the Python app on `main` is the product. On the day, in this order:
 
-1. **Open items closed**: the FFmpeg licence finding (TODO.md - its own build, or every statically
-   linked library's notice), and the phase 7 effect layer.
+1. **Open items closed**: the phase 7 effect layer. (The FFmpeg licence finding is closed: every
+   linked library has its notice, 2026-10-24.)
 2. **Remove the Python app** in one commit: `src/`, `tests/`, `main.py`, `scripts/`
    (`build.py`, `verify_frozen.py`), `requirements*.txt`, `ruff.toml`, `pytest.ini`, the Python jobs
    in `ci.yml` and `audit.yml`'s pip-audit. Everything is guarded on this side (the session format

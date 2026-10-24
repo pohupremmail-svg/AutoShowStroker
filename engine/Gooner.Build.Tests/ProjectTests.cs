@@ -65,7 +65,9 @@ public class ProjectTests
     [Fact]
     public void the_ffmpeg_source_is_the_revision_the_libraries_were_built_from()
     {
-        var archive = Path.GetFileName(Assert.Single(Directory.GetFiles(Repo.FfmpegSources, "FFmpeg-*-source.tar.gz")));
+        // FFmpeg-Builds-* is the scripts that built it, not FFmpeg.
+        var archive = Path.GetFileName(Assert.Single(Directory.GetFiles(Repo.FfmpegSources, "FFmpeg-*-source.tar.gz"),
+            f => !Path.GetFileName(f).StartsWith("FFmpeg-Builds-", StringComparison.Ordinal)));
         var commit = archive["FFmpeg-".Length..^"-source.tar.gz".Length];
         var avutil = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(Path.Combine(Repo.FfmpegLibraries, "avutil-58.dll")));
 
@@ -80,11 +82,39 @@ public class ProjectTests
         var notices = File.ReadAllText(Path.Combine(Repo.Licenses, "THIRD_PARTY_NOTICES.txt"));
         var archives = Directory.GetFiles(Repo.FfmpegSources, "*-source.tar.gz").Select(Path.GetFileName).ToList();
 
-        Assert.Equal(2, archives.Count);
+        // FFmpeg, the extension, the scripts that built the FFmpeg, and the two LGPL libraries built
+        // into it (see the next test).
+        Assert.Equal(["EIRTeam.FFmpeg-", "FFmpeg-", "FFmpeg-Builds-", "libiconv-", "soxr-"],
+            archives.Select(a => a![..(a!.LastIndexOf('-', a.Length - "-source.tar.gz".Length - 1) + 1)]).Order(StringComparer.Ordinal));
         foreach (var archive in archives)
             Assert.Contains(archive!, notices, StringComparison.Ordinal);
         Assert.Contains("engine/third_party/ffmpeg/*-source.tar.gz",
             File.ReadAllText(Path.Combine(Repo.Root, ".github", "workflows", "release-check.yml")), StringComparison.Ordinal);
+    }
+
+    // The FFmpeg libraries came out of a build that linked other people's libraries into them, and each
+    // has to be named, with its license text, in the notices; the two under the LGPL also go out with
+    // their source (the archives above). Found by reading the libraries themselves, not the build's
+    // configure line - which lists far more than was linked (2026-10-24). Each is told by text of its
+    // own inside the library it is in. A new build of the libraries fails here for whatever it no
+    // longer contains, and has to be read again for what it contains now.
+    [Theory]
+    [InlineData("avcodec-60.dll", "Xiph.Org libVorbis", "libvorbis")]
+    [InlineData("avcodec-60.dll", "Xiph.Org libVorbis", "libogg")]
+    [InlineData("avcodec-60.dll", "request not implemented", "libopus")]
+    [InlineData("avcodec-60.dll", "CSISOLATIN1", "libiconv")]
+    [InlineData("avformat-60.dll", "inflate 1.2.13 Copyright", "zlib")]
+    [InlineData("avutil-58.dll", "OCL_ICD", "OpenCL ICD Loader")]
+    [InlineData("swresample-4.dll", "SoX Resampler", "soxr")]
+    [InlineData("avutil-58.dll", "Mingw-w64 runtime failure", "MinGW-w64 runtime")]
+    [InlineData("libgdffmpeg.windows.template_release.x86_64.dll", "winpthread", "winpthreads")]
+    public void every_library_built_into_the_ffmpeg_libraries_has_its_notice(string library, string marker, string heading)
+    {
+        var binary = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(Path.Combine(Repo.FfmpegLibraries, library)));
+        var notices = File.ReadAllText(Path.Combine(Repo.Licenses, "THIRD_PARTY_NOTICES.txt"));
+
+        Assert.Contains(marker, binary, StringComparison.Ordinal);
+        Assert.Contains($"== {heading}", notices, StringComparison.Ordinal);
     }
 
     // Godot and its templates come from the cache when they can, and a cache entry is something

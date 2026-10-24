@@ -9,11 +9,19 @@ built into Godot, are shown there as well, read from the engine itself.
 
 Source code. FFmpeg is passed on under the GNU LGPL. It is bundled exactly as it was built for
 the video extension named below, unmodified, as dynamically linked libraries that can be
-replaced. Its complete source code at the revision given below is attached to every release of
-GoonerApp, in the same place as the program itself, together with the source of the video
-extension, whose build scripts say how that FFmpeg was built. We will provide both on request as
-well: open an issue in this project's repository. That offer stands for three years from the
-date of each release. GoonerApp's own source code is in the same repository.
+replaced. That build linked further libraries into the FFmpeg libraries; each is listed below.
+Two of them, libiconv and soxr, are under the GNU LGPL as well, and GoonerApp passes them on
+under its version 3, as both allow. Attached to every release of GoonerApp, in the same place as
+the program itself, are the complete source code of FFmpeg, libiconv and soxr at the revisions
+given below, the source of the video extension, and the scripts the FFmpeg libraries were built
+with (FFmpeg-Builds), which name every library and revision that went into them. We will provide
+all of it on request as well: open an issue in this project's repository. That offer stands for
+three years from the date of each release. GoonerApp's own source code is in the same repository.
+
+One part of that build cannot be pinned exactly: libiconv's build script fetches the Gnulib
+helper library as it was on the day of the build (2023-07-24) rather than at a fixed revision.
+Gnulib is free software under the GNU LGPL/GPL; its state of that day is commit b70b4f0 of
+https://git.savannah.gnu.org/git/gnulib.git.
 
 
 == Godot Engine 4.7.2 ==
@@ -34,6 +42,9 @@ License text: dotnet-MIT.txt, dotnet-THIRD-PARTY-NOTICES.txt
 == EIRTeam.FFmpeg (autobuild 84ea333) ==
 The Godot extension that plays video through FFmpeg: ffmpeg.gdextension and
 libgdffmpeg.windows.template_release.x86_64.dll. Copyright (c) 2018 Álex Román (EIRTeam).
+Built with MinGW-w64 GCC: it contains the MinGW-w64 runtime and winpthreads (below), and GCC's
+runtime libraries (libgcc, libstdc++), which the GCC Runtime Library Exception lets be passed on
+without conditions.
 Source: EIRTeam.FFmpeg-84ea333cb6b836b3a8951a70830b836d18c893d1-source.tar.gz
 License: MIT License
 License text: EIRTeam.FFmpeg-MIT.txt
@@ -58,3 +69,57 @@ LGPLv3. The build contains no GPL or nonfree parts.
 Source: FFmpeg-5b11ee94299fe4e07d3921a3b8f29fff72e1daa1-source.tar.gz
 License: GNU Lesser General Public License version 3 or later
 License text: LGPL-3.0.txt, GPL-3.0.txt
+Built by EIRTeam/FFmpeg-Builds, release autobuild-2023-07-24-08-52, variant win64-lgpl-godot.
+Build scripts: FFmpeg-Builds-0e1b9758c4a6b97fac077eb3ecf9596cf858adea-source.tar.gz
+The build linked the libraries below into the FFmpeg libraries, each named with the one it is in.
+
+== libvorbis 1.3.7 (revision 84c0236) ==
+In avcodec-60.dll: the Vorbis audio decoder. Copyright (c) 2002-2020 Xiph.org Foundation.
+License: BSD 3-Clause License
+License text: libvorbis-COPYING.txt
+
+== libogg (revision db5c7a4) ==
+In avcodec-60.dll, used by libvorbis. Copyright (c) 2002 Xiph.org Foundation.
+License: BSD 3-Clause License
+License text: libogg-COPYING.txt
+
+== libopus (revision 9fc8fc4) ==
+In avcodec-60.dll: the Opus audio decoder. Copyright 2001-2011 Xiph.Org, Skype Limited, Octasic,
+Jean-Marc Valin, Timothy B. Terriberry, CSIRO, Gregory Maxwell, Mark Borgerding, Erik de Castro
+Lopo.
+License: BSD 3-Clause License
+License text: libopus-COPYING.txt
+
+== zlib 1.2.13 (revision 04f42ce) ==
+In avformat-60.dll. (C) 1995-2022 Jean-loup Gailly and Mark Adler.
+License: zlib License
+License text: zlib-LICENSE.txt
+
+== OpenCL ICD Loader (revision 229410f) ==
+In avutil-58.dll. Copyright The Khronos Group Inc.
+License: Apache License 2.0
+License text: Apache-2.0.txt
+
+== libiconv (revision 6e2b31f, 2023-06-29) ==
+In avcodec-60.dll: character set conversion. Copyright Free Software Foundation, Inc.
+Source: libiconv-6e2b31f6d66739c5abd850338ea68c6bd2012812-source.tar.gz
+License: GNU Lesser General Public License version 2.1 or later; passed on under version 3
+License text: LGPL-2.1.txt, LGPL-3.0.txt
+
+== soxr (revision 945b592) ==
+In swresample-4.dll: the SoX Resampler Library. Copyright (c) 2007-18 robs@users.sourceforge.net.
+Source: soxr-945b592b70470e29f917f4de89b4281fbbd540c0-source.tar.gz
+License: GNU Lesser General Public License version 2.1 or later; passed on under version 3
+License text: soxr-LICENCE.txt, LGPL-2.1.txt, LGPL-3.0.txt
+
+== MinGW-w64 runtime (revision 3638d5e) ==
+In every FFmpeg library and in the video extension: the C runtime startup code the MinGW-w64
+compiler links into a program. Copyright (c) 2009-2013 by the mingw-w64 project.
+License: the MinGW-w64 runtime license (ZPL 2.1, MIT-style and public domain parts)
+License text: mingw-w64-COPYING.txt, mingw-w64-runtime-COPYING.txt
+
+== winpthreads (revision 3638d5e) ==
+In the FFmpeg libraries and the video extension: POSIX threads for Windows. Copyright (c) 2011
+mingw-w64 project.
+License: MIT License, with BSD-style parts
+License text: winpthreads-COPYING.txt
