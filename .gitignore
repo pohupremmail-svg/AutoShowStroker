@@ -1,10 +1,6 @@
-__pycache__/
-.pytest_cache/
 .idea/
 .aider*
-*.spec
 entwicklertagebuch.md
-.venv/
 build/
 dist/
 CLAUDE.local.md
@@ -12,3 +8,10 @@ TODO.md
 Road-to-1.0.md
 # Local test media - never belongs in the repo (the folder name says so).
 files_for_testing_DO_NOT_PUSH/
+
+# Characters stay on this machine - test figures, franchise ones, explicit variants - except the
+# app's own (Gooner.Build's Package.Characters): the user's VRoid figure, dressed, rights in hand.
+res/characters/*
+!res/characters/Zazurona.vrm
+res/props/
+res/vroids/

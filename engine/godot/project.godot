@@ -1,0 +1,36 @@
+; GoonerApp on Godot. Picture, sound, input and effects; everything else is Gooner.Core.
+
+config_version=5
+
+[application]
+
+config/name="GoonerApp"
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+
+[debug]
+
+; The app has its own opt-in diagnostic log (Gooner.Core.Logging.AppLog). Godot's would be a
+; second one, on by default, in the roaming profile - see engine/CLAUDE.md.
+file_logging/enable_file_logging=false
+file_logging/enable_file_logging.pc=false
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/size/mode=2
+window/size/resizable=true
+window/stretch/mode="disabled"
+window/vsync/vsync_mode=1
+
+[dotnet]
+
+project/assembly_name="Gooner.Engine"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+anti_aliasing/quality/msaa_2d=2
+shader_compiler/shader_cache/enabled=true
+rendering_device/pipeline_cache/enable=true

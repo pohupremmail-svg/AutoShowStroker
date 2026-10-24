@@ -3,7 +3,7 @@ name: add-callout-language
 description: Add or extend the localized teasing-line callouts in res/callouts/<lang>/<tone>.json - a new language, a new tone, or new phrases in an existing file - following the project's CONTRIBUTING.md structure. Use when the user asks to add a callout language, a callout tone, or new teasing phrases.
 ---
 
-Follow this to add or extend phrase files for `CalloutHandler` (`src/CalloutHandler.py`).
+Follow this to add or extend phrase files for `CalloutHandler` (`engine/Gooner.Core/Callouts/CalloutHandler.cs`).
 
 ## The layout
 
@@ -37,6 +37,12 @@ non-empty — a missing or typo'd key does not raise, the app just goes silent f
 - `edge_reached` - the user pressed "I reached my Edge". They are asking for mercy, and a pause
   plus a slower beat is already on its way, so answer the admission rather than narrating the
   pause (`pause_start` does that).
+- `main_menu` - not an event: the line under the app's name on the start screen, picked at
+  random each time it comes up. One short line, an invitation rather than an instruction - no
+  session is running yet.
+- `main_menu` - not an event: the line under the app's name on the engine's start screen, drawn
+  at random each time it comes up. One short line, an invitation rather than an instruction - no
+  session is running yet - and in the tone's voice like everything else.
 
 ## Adding phrases to an existing file
 
@@ -62,17 +68,18 @@ non-empty — a missing or typo'd key does not raise, the app just goes silent f
    draw time and marked `(not in <lang>)` in Settings, so a partial language is honest, not broken.
 3. Write in the target language rather than translating the English line for line; a callout that
    reads like a translation breaks the mood faster than a missing one would.
-4. No code changes are needed — `CalloutHandler._load_available_languages()` discovers both
-   languages and tones from the folder layout at startup, and the Settings dialog builds its
-   language combo and tone checkboxes from what it finds.
+4. No code changes are needed — `CalloutHandler.LoadAvailableLanguages()` discovers both
+   languages and tones from the folder layout at startup, and the Settings panel builds its
+   language choice and tone checkboxes from what it finds.
 
 ## Adding a brand-new tone
 
 1. Add `<tone>.json` to at least one language folder. Doing every language is nicer but not required.
-2. Add the tone to `CalloutHandler.TONE_LABELS` to give it a display name and a fixed position.
+2. Add the tone to `CalloutHandler.ToneLabels` to give it a display name and a fixed position.
    An undeclared tone still works (it is offered with a title-cased name), but the shipped set is
-   curated and `tests/test_callout_language_files.py` asserts it matches `TONE_LABELS` — that
-   assertion is what catches a typo'd file name.
+   curated and `CalloutLanguageFilesTests` asserts it matches `ToneLabels` — that assertion is
+   what catches a typo'd file name. The label is shown translated, so it needs a German and a
+   French entry in `res/locales/*/ui.json` (`LocaleFilesTests` names what is missing).
 3. Ask the user before inventing a tone: since several tones can already be ticked at once, a tone
    that is just "two existing ones blended" costs one file per language and adds no range.
 4. `CalloutHandler.DEFAULT_TONE` (`flirty`) is both the default selection and the fallback for an
@@ -81,17 +88,18 @@ non-empty — a missing or typo'd key does not raise, the app just goes silent f
 
 ## Verification
 
-`tests/test_callout_language_files.py` discovers every `res/callouts/*/*.json` and checks: valid
+`CalloutLanguageFilesTests` (`engine/Gooner.Core.Tests/Callouts/`) discovers every
+`res/callouts/*/*.json` and checks: valid
 JSON, all required trigger keys, no unknown/typo'd keys, values are lists of strings, no empty
 phrase list, no duplicate phrase inside a list, no phrase shared between two tones of one
 language, every language shipping at least the default tone, no stray phrase file left outside a
 language folder, and that every shipped tone has a declared label.
 
 ```bash
-python -m pytest tests/test_callout_language_files.py -v
+dotnet test engine/Gooner.Core.Tests --filter CalloutLanguageFilesTests
 ```
 
 This only validates structure, not content — it cannot tell you a translation reads awkwardly or
 that a phrase is in the wrong tone. After the automated check passes, still ask the user to run
-the app (`python main.py`), pick the new/changed language and tone in Settings > Callouts, and
-play through a session before claiming the work is fully verified.
+the app, pick the new/changed language and tone in Settings > Callouts, and play through a
+session before claiming the work is fully verified.

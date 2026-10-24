@@ -1,18 +1,19 @@
-# Builds the executable from what is actually committed, and refuses it if anything the
-# app needs did not survive PyInstaller.
+# Builds the release package from what is actually committed, and refuses it if anything the app
+# needs did not make it in.
 #
-# Only on a version tag. Building on every pull request would cost a minute and 60 MB that
-# nobody collects, on changes that by the project's own rules never get released.
+# Only on a version tag. Building on every pull request would mean fetching Godot's 1.2 GB of export
+# templates for a package nobody collects, on changes that by the project's own rules never get
+# released.
 #
-# This is not the same check as running scripts/verify_frozen.py locally, and it is worth
-# being clear about the difference: a local build uses your working tree, this one uses only
-# what is in the repository. A resource that exists on your disk but was never committed
-# passes locally and fails here - which is exactly the failure a local check cannot see.
+# This is not the same check as running the build tool locally, and it is worth being clear about
+# the difference: a local build uses your working tree, this one uses only what is in the
+# repository. A resource that exists on your disk but was never committed passes locally and fails
+# here - which is exactly the failure a local check cannot see.
 #
-# The executable it builds is the one that gets published: it is attached to a **draft**
-# release for the tag, which the maintainer then writes notes for and publishes. So the
-# binary users download is provably the one built from committed source and verified here,
-# and nothing becomes public without a human pressing the button.
+# The package it builds is the one that gets published: it is attached to a **draft** release for
+# the tag, which the maintainer then writes notes for and publishes. So the package users download
+# is provably the one built from committed source and verified here, and nothing becomes public
+# without a human pressing the button.
 name: Release check
 
 on:
@@ -22,26 +23,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  # Needed to attach the verified build to the tag's release. Nothing else here writes.
+  # Needed to attach the verified package to the tag's release. Nothing else here writes.
   contents: write
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  # Godot, pinned: the version engine/godot is built with, and the SHA-512 sums from that release's
+  # own SHA512-SUMS.txt - the same files the engine was developed and tested against.
+  GODOT_VERSION: "4.7.2-stable"
+  GODOT_TEMPLATES_DIR: "4.7.2.stable.mono"
+  GODOT_EDITOR_SHA512: "79229fd112b0c9cbeab82363a4ef7be18ea70f1caf86bf912789335b136fbe7e01db0053a33461438c5da1c680c17bbb10040bd09bedc51221cd4423d0367757"
+  GODOT_TEMPLATES_SHA512: "bb5c41d72370ed743660361f6228006f808ab04ca33abdc545d740b044f3fe057f32ae8cb7873a1bc86ddcd82ae683b9f6dfdfe4179852f2c0f1acde2ff6bd5a"
+
 jobs:
-  frozen-build:
+  package:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.13"
-          cache: "pip"
-          cache-dependency-path: requirements-dev.txt
-
-      - run: pip install -r requirements-dev.txt
-
-      # A tag that disagrees with VERSION means one of the two was typed by hand and got it
-      # wrong. verify_frozen.py compares the *bundled* VERSION against the repo's; nothing
-      # else compares either of them against the tag the release will carry.
+      # A tag that disagrees with VERSION means one of the two was typed by hand and got it wrong.
+      # The build tool compares the *packaged* VERSION against the repo's; nothing else compares
+      # either of them against the tag the release will carry.
       - name: The tag matches VERSION
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -54,25 +57,82 @@ jobs:
           fi
           echo "Tag $GITHUB_REF_NAME matches VERSION $version"
 
-      - run: python scripts/build.py
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: engine/global.json
 
-      - run: python scripts/verify_frozen.py
+      - name: Cached Godot
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/godot-downloads
+          key: godot-${{ env.GODOT_VERSION }}-mono-win64-${{ env.GODOT_TEMPLATES_SHA512 }}
 
-      # Only after the verification passes, so a refused build can never reach the Releases
-      # tab. Created as a draft: the release notes are written by hand in the app's own
-      # voice, and a tag push should not put anything in front of users on its own.
-      - name: Attach the verified build to the release
+      - name: Download Godot and its export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $base = "https://github.com/godotengine/godot-builds/releases/download/$env:GODOT_VERSION"
+          $dir = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/godot-downloads"
+          foreach ($name in "Godot_v$($env:GODOT_VERSION)_mono_win64.zip", "Godot_v$($env:GODOT_VERSION)_mono_export_templates.tpz") {
+            Invoke-WebRequest "$base/$name" -OutFile (Join-Path $dir $name)
+          }
+
+      # Refused unless both files are byte for byte the pinned ones - every run, a cache hit included:
+      # a cache entry can be written by another workflow run, and this job holds a token that writes
+      # to the repository.
+      - name: Check Godot against its pinned SHA-512
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP/godot-downloads"
+          $files = @{
+            "Godot_v$($env:GODOT_VERSION)_mono_win64.zip" = $env:GODOT_EDITOR_SHA512
+            "Godot_v$($env:GODOT_VERSION)_mono_export_templates.tpz" = $env:GODOT_TEMPLATES_SHA512
+          }
+          foreach ($name in $files.Keys) {
+            $hash = (Get-FileHash (Join-Path $dir $name) -Algorithm SHA512).Hash.ToLowerInvariant()
+            if ($hash -ne $files[$name]) { throw "$name does not match its pinned SHA-512" }
+          }
+
+      - name: Install Godot and its export templates
+        id: godot
+        shell: pwsh
+        run: |
+          $downloads = "$env:RUNNER_TEMP/godot-downloads"
+          Expand-Archive "$downloads/Godot_v$($env:GODOT_VERSION)_mono_win64.zip" "$env:RUNNER_TEMP/godot"
+          # The templates are a zip under another name; Expand-Archive only takes .zip.
+          Copy-Item "$downloads/Godot_v$($env:GODOT_VERSION)_mono_export_templates.tpz" "$env:RUNNER_TEMP/templates.zip"
+          Expand-Archive "$env:RUNNER_TEMP/templates.zip" "$env:RUNNER_TEMP/templates"
+          $installed = New-Item -ItemType Directory -Force "$env:APPDATA/Godot/export_templates/$env:GODOT_TEMPLATES_DIR"
+          Move-Item "$env:RUNNER_TEMP/templates/templates/*" $installed
+          $godot = Get-ChildItem "$env:RUNNER_TEMP/godot" -Recurse -Filter "*_console.exe" | Select-Object -First 1
+          "path=$($godot.FullName)" >> $env:GITHUB_OUTPUT
+
+      # Exports, puts res/, the licenses and VERSION beside the executable, starts it once, verifies
+      # it and packs dist/GoonerApp-<version>-windows-x64.zip. Fails on anything verify refuses.
+      - run: dotnet run --project engine/Gooner.Build -- build --godot "${{ steps.godot.outputs.path }}" --zip
+
+      # Only after the verification passes, so a refused package can never reach the Releases tab.
+      # Created as a draft: the release notes are written by hand in the app's own voice, and a tag
+      # push should not put anything in front of users on its own.
+      #
+      # The FFmpeg source - and the video extension's, whose build scripts say how that FFmpeg was
+      # built - goes with every release: the LGPL lets FFmpeg be passed on only with its source in
+      # the same place, and THIRD_PARTY_NOTICES.txt says it is there.
+      - name: Attach the verified package and the FFmpeg source to the release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          assets=("dist/GoonerApp-${GITHUB_REF_NAME#v}-windows-x64.zip" engine/third_party/ffmpeg/*-source.tar.gz)
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "Release $GITHUB_REF_NAME exists - replacing its asset with this build."
-            gh release upload "$GITHUB_REF_NAME" dist/GoonerApp.exe --clobber
+            echo "Release $GITHUB_REF_NAME exists - replacing its assets with this build."
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
           else
             notes="Draft - write the user-facing notes, then publish."
-            notes="$notes The attached build was made from this tag and passed scripts/verify_frozen.py."
-            gh release create "$GITHUB_REF_NAME" dist/GoonerApp.exe \
+            notes="$notes The attached package was built from this tag and passed the build tool's verification;"
+            notes="$notes the FFmpeg source it carries is attached beside it."
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               --draft --title "$GITHUB_REF_NAME" --notes "$notes"
           fi

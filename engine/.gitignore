@@ -1,0 +1,8 @@
+bin/
+obj/
+.godot/
+*.user
+TestResults/
+
+# The copy of the FFmpeg extension the Godot editor makes while it runs, so it can reload it.
+godot/addons/ffmpeg/win64/~*

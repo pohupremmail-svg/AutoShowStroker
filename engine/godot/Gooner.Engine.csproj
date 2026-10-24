@@ -1,0 +1,16 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <!-- The Godot side: scenes, audio, input and what is drawn. The logic it shows lives in
+       Gooner.Core, which knows nothing about Godot; this project adds nothing a test without an
+       engine could check instead. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Gooner.Engine</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gooner.Core\Gooner.Core.csproj" />
+  </ItemGroup>
+
+</Project>

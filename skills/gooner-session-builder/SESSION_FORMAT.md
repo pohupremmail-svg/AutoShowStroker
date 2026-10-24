@@ -56,7 +56,7 @@ never a date. A replay starts whenever the user starts it.
 | `kind` | `"beat"`, `"pause"` or `"finale"`. |
 | `duration_sec` | Positive. |
 | `pattern` | A rhythm name (see below). `null` on a pause. |
-| `freq` | Beats per second, positive. `null` on a pause. |
+| `freq` | Beats per second, positive, at most `20`. `null` on a pause. |
 
 `"finale"` is the segment the climax happens during. It behaves exactly like a beat; the
 name only records that this is the run-in. Put the climax inside it and make it fast.
@@ -126,7 +126,8 @@ This is the part worth reading twice.
   choreograph "slow, lingering images through the build, then rapid-fire into the finale".
 - The moments must run forwards and stay inside the session.
 - Sessions recorded by the app also carry a `"path"` on each entry. **Do not invent paths.**
-  A file with paths only works on the machine those files live on.
+  A file with paths only works on the machine those files live on, and a path has to be a
+  picture or clip on one of its drives (`C:\...`) - a network share or a URL is refused.
 
 ---
 

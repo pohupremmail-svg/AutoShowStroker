@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Plays a whole session in the console, without a screen, as fast as the machine runs - for
+       watching the core work before there is an engine around it. A developer tool; it ships
+       with nothing. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gooner.Harness</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gooner.Core\Gooner.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -7,7 +7,7 @@ We welcome contributions for our teasing lines component of the program.
 ### Adding New Teasing Phrases (Callouts)
 
 The application uses **JSON files** to manage all spoken teasing phrases (Callouts). You can easily contribute new
-phrases without touching the Python code.
+phrases without touching any code.
 
 #### 1. Locate the Files
 
@@ -60,13 +60,14 @@ The available Trigger Keys at the moment are:
 | `pause_end`           | Fired when the session resumes after a pause.                                                |
 | `media_skipped`       | Fired when the user skips the currently displayed media.                                     |
 | `media_repeated`      | Fired when the user decides to repeat the current media file by pressing the `previous` key. |
-| `session_started`     | Fired when the session is started using the `Set gooning folder and start` button.           |
+| `session_started`     | Fired when a session starts (Start Session on the start screen, or `Ctrl+O`).                |
 | `climax_real`         | Fired once per session when the climax system decides on a real orgasm outcome.              |
 | `climax_ruined`       | Fired once per session when the climax system decides on a ruined orgasm outcome.             |
 | `climax_denied`       | Fired once per session when the climax system decides the session ends without an orgasm.     |
 | `fake_climax_reveal`  | Fired a few seconds after a fake climax cue (which reuses `climax_real`) to reveal it was a joke. |
 | `fake_climax_fell_for` | Fired when the user answers a fake climax cue with "I Came". Must **not** give the joke away - the reveal is still a few seconds out, and that order is the point. |
 | `edge_reached`        | Fired when the user presses "I reached my Edge" (or `E`) - the one moment they ask the app for mercy. A pause and a gentler rhythm follow, so answer the admission rather than announcing the pause. |
+| `main_menu`           | Not an event: the line under the app's name on the start screen, one picked at random each time it comes up. Short - one line - and an invitation rather than an instruction, since no session is running yet. |
 
 The tones that ship today:
 
@@ -131,8 +132,8 @@ res/callouts/es/dominant.json    <- optional
 Adding a tone works the same way in the other direction, except you do not have to do every
 language at once — one `<tone>.json` in a single language folder already makes the tone appear.
 A tone nobody declared a label for still works and is offered with a title-cased name
-(`bratty.json` → "Bratty"); adding it to `CalloutHandler.TONE_LABELS` gives it a proper display
-name and a fixed position in the list.
+(`bratty.json` → "Bratty"); adding it to `CalloutHandler.ToneLabels` (`engine/Gooner.Core/Callouts/CalloutHandler.cs`) gives it
+a proper display name and a fixed position in the list.
 
 Before proposing a new tone, check it is a genuinely distinct voice rather than a few phrases the
 existing tones could hold — the user can already tick several tones at once, so a tone that is
@@ -145,14 +146,40 @@ will not throw an error — the app just silently stays quiet for that event, wh
 by playing the app alone. Before opening a PR, run the automated schema check:
 
 ```bash
-python -m pytest tests/test_callout_language_files.py -v
+dotnet test engine/Gooner.Core.Tests --filter CalloutLanguageFilesTests
 ```
+
+(You need the .NET SDK for that - the version `engine/global.json` names. No Godot needed.)
 
 It walks every `res/callouts/*/*.json` and verifies: valid JSON, all required Trigger Keys, no
 unknown/typo'd keys, every value a list of strings, no empty phrase lists, no duplicate phrases
 within a list, no phrase shared between two tones of the same language, every language shipping at
-least the default tone, and no stray phrase file outside a language folder. It does **not** check that your writing reads well — for that, still run the app
-(`python main.py`), pick your language and tone in Settings, and play through a session.
+least the default tone, and no stray phrase file outside a language folder. It does **not** check that your writing reads well — for that, still run the app (see
+"Building & Running" in the README), pick your language and tone in Settings > Callouts, and play
+through a session.
+
+### Translating the App Itself
+
+The app's own words - the start screen, the panels, the settings, the guide, What's New - are a
+separate thing from the callouts, and are picked separately (Settings > Playback > App Language).
+They live in `res/locales/<language>/*.json`: one folder per language, each file an object of
+English text -> translation. English has no folder; it is what the code says.
+
+- **Keep the English exactly as it is** - it is how the app finds the translation. Keep every
+  `{0}`, `{1}` (a number or a name the app fills in) and every tag (`<b>`, `<li>`, ...) of it.
+- **Write it the way a native speaker would say it**, in the app's own voice - the same rule as
+  for callouts. Address the user the way that language's callouts do (`du` in German, `tu` in
+  French).
+- The climax words over the picture (CUM / RUINED / DENIED) stay English in every language.
+- A new language needs its name in its own words in `Catalogue.NativeNames`
+  (`engine/Gooner.Core/Localization/Catalogue.cs`), and every text translated:
+
+```bash
+dotnet test engine/Gooner.Core.Tests --filter LocaleFilesTests
+```
+
+It fails on any text without a translation, any translation of a text that no longer exists, and
+any translation that lost a placeholder or a tag - and names each one, ready to copy.
 
 ---
 
@@ -177,11 +204,11 @@ Please ensure your commit messages are descriptive and reference the area you ar
 
 #### 3. Run the Checks
 
-Before pushing, run the full test suite and linter to make sure nothing else broke:
+Before pushing, run the full test suite to make sure nothing else broke (warnings count as
+errors, so a clean build is part of passing):
 
 ```bash
-python -m pytest
-ruff check .
+dotnet test engine/GoonerEngine.sln
 ```
 
 #### 4. Create the Pull Request (PR)

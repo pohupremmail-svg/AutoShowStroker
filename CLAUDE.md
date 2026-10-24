@@ -4,137 +4,567 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-PyQt6 desktop app ("GoonerApp", GitHub repo name `AutoShowStroker`) that turns a local folder of images/GIFs/videos into a randomized slideshow synced to a rhythm generator ("Strokemeter"), with multilingual text callouts. Entry point: `python main.py`.
+GoonerApp ("Auto Hero Generation", GitHub repo name `AutoShowStroker`): a desktop app that turns a
+local folder of images/GIFs/videos into a randomized slideshow synced to a rhythm generator (the
+"Strokemeter"), with multilingual text callouts, a climax system, device output through Intiface,
+and an optional VRM character of the user's own. Built on **Godot 4.7 + C# (.NET 10)**, in
+`engine/`.
 
-## Architecture
+Until 0.14.3 it was a PyQt6 app (`src/`, `main.py`, PyInstaller); 0.15.0 replaced it with this
+rebuild, and the Python code is gone from the tree (git history has it). What is left of it on
+purpose: an updating user's profile is carried over at the first start (see the Layout below), the
+file formats stay readable, the changelog entries up to 0.14.3 are its own, and many comments and
+test names still say which Python module or test a piece was ported from. Where the engine behaves
+differently from the Python app, the comment says so ("the Python app keeps it"), so it is never
+taken for an accident.
 
-- `src/GoonerApp.py` — main window and the session's conductor. Layout, keyboard shortcuts, the session lifecycle (`start`/`stop`/`_end_session`/`replay_session`/`save_current_session`), the menu bar, and `_setup_signal_handler`, which is the one place the whole architecture can be read at once — who hears what from whom. `__init__` is a list of named builders rather than one long breath (`_bootstrap`, `_load_settings`, `_init_state`, `_create_handlers`, `_create_timers`, `_build_window`); the concerns used to be interleaved, so none could be read without skipping over the others.
-- `src/PlaylistPlayer.py` — what is on screen and what replaces it: the two-page `QStackedWidget` (`QLabel` for images and GIFs, a `VideoDisplay` for clips), the playlist, the autoplay timer, and the recovery path for a video the backend will never finish. It knows two things about the session it serves and no more — whether one is running, and whether it is a replay — both handed to it by plain calls rather than read back off the window, which is what lets it be driven from a test without one. `recalc_autoplay_timer()` is here.
-- `src/VideoDisplay.py` — the surface a clip is painted on, and the reason it is not a `QVideoWidget`: that renders through a native surface outside Qt's widget painting, so everything drawn beside it — the callout, the record chase, the clock — was composited underneath and never reached the screen while Qt went on reporting it visible. A `QGraphicsVideoItem` in a view is drawn like any other content, so the layering works and, usefully, a `grab()` now contains the picture — which is the only reason the behaviour is testable at all. Costs about 30% of one core at 2560x1440 against 10%, measured, with no dropped frames either way; parenting the label *into* the video widget does not work, because the native surface covers its own children too. Reported by AppropriateLynx (#51).
-- `src/SessionHudWidget.py` — the captions laid over the media: the callout being said, the personal-record chase, the session clock. It owns whether a session is running, which removes an ordering trap rather than moving it: `is_running` used to have to be set *before* the session-started signal or these overlays hid themselves at the moment they were meant to appear.
-- `src/BeatHandler.py` — rhythm engine: beat patterns, audio feedback, visual blink, pause phases, difficulty ramping. The session is *planned*, not improvised: `start_beat()` builds a rolling buffer of `Segment`s (a rhythm, a pause, or the `finale` run-in) and `reset_beat_timer()` reads the next one off the plan instead of re-rolling. That is what lets anything make a promise about the future — `upcoming_beats()` predicts across pattern changes and through a running pause (the segment behind it is already planned, so its notes fly in instead of appearing halfway down the track), and `set_finale_at()` guarantees a fast rhythm across a given moment. `replan_from_next_segment()` rebuilds the queue after a settings change while the running segment plays out, and `hold_final_segment()` stops planning entirely once the climax has been announced so no new rhythm, pause or beat-change callout lands on top of it. A segment always starts **exactly** as it was planned - re-deriving it at start time re-drew its pattern and made the beat track jump, so drift is corrected in `_revalidate_finale()` while segments are still queued and nothing of them is on screen. BeatHandler knows nothing about climaxes; it is only ever told "be fast here".
-- `src/CalloutHandler.py` — loads text lines from `res/callouts/<lang>/<tone>.json`, keyed by trigger event (see `TRIGGER_KEYS`), fires random matching phrases. Language and tone are two independent axes: one language is active, any number of tones are, and `pick_phrase()` draws a tone first and then a line from it so every ticked tone gets an equal voice regardless of how many phrases someone wrote for it. Both languages and tones are discovered from the folder layout; `TONE_LABELS` only supplies display names and ordering. A language may ship a subset of the tones — `tones_for()` reports what it has, unavailable tones are skipped at draw time, and `SettingsDialog` marks them `(not in <lang>)` so the gap is visible. An unusable tone selection falls back to `DEFAULT_TONE`, never to "every tone on disk" — that is what keeps the `degrading`/`hard_degrading` tones strictly opt-in. `force_output_sentence()` bypasses the normal gating for scripted narrative beats (climax outcome, fake-climax reveal).
-- `src/ClimaxHandler.py` — climax announcement system (real/ruined/denied outcomes, fake climax cues). Consumes the session plan rather than rolling per beat-change: `on_session_planned()` places the climax `min/max_climax_after` seconds into the session, resolves its outcome there and then, arms its own timer (a segment boundary would drift), and calls `beat_handler.set_finale_at()`. The climax is measured from the session start, deliberately **not** from the end of the difficulty ramp: the ramp is a curve the user can switch off, and hanging the climax off it meant the Ramp duration sliders silently decided when the orgasm came even with ramping unticked. It also means the climax may be set to land while the ramp is still climbing, in which case the run-in is the top of the window it is *currently* in, not the absolute maximum. `climax_only_after_ramp` (on by default) is the opt-in version of the old coupling: it clamps the drawn moment forward to `BeatHandler.ramp_complete_at`, never backward, and does nothing while ramping is off because that property is then None. The pre-clamp moment is kept in `_drawn_finale_at` so unticking the box mid-session gives it back rather than re-rolling. Fake climaxes are pinned to planned segment indices in `on_plan_extended()` and fire in `on_segment_started()` — never on the finale boundary, and never leaked to anything that paints, since a fake only works while it is indistinguishable from the real thing. A replay whose recording has **no** climax (it was stopped before one, which is usually *why* it was saved) does not replay as a session that can never finish: `_draw_climax()` places one as usual, held back past the end of the recording so the recorded stretch plays untouched and the run-in can be built into drawn segments. Fake-outs resume there too — `on_plan_extended()` skips only segments the script itself provided, which it tells by index against `SessionScript.segment_count`.
-- `src/SessionRecorder.py` — the running session as an ordered timeline (which segment played when, which media were on screen during it, when the climax landed), feeding the Session Explorer. Deliberately *not* part of `ScoreTracker`: that aggregates numbers, this records a sequence, and keeping them apart means the code that writes `session_history.json` cannot pick this up. **Never logged, and it persists nothing itself** — it holds media paths, which is exactly what the privacy rules keep out of the data directory. Dropped when the next session starts. The one way out of it is the user pressing Save (see below).
-- `src/session_files.py` / `src/SessionScript.py` / `src/SavedSessionsDialog.py` — saving a session and playing it again. `session_files` serialises a `SessionRecorder` timeline into a file-safe form (every time an offset from the session start, never a wall clock; each segment's *planned* length rather than its measured one — a segment runs to the first note past its end, so replaying the measured figure made it overshoot a second time and every replayed segment came out longer than the one it reproduced; the last segment is the exception, since the climax holds it open and its plan is not what happened; only the custom patterns the session actually played, or a replay elsewhere hits a rhythm it has never heard of; `strip_paths()` for handing one on) and owns the capped `saved_sessions.json` shelf plus the `format` check that refuses a file from a newer build rather than half-reading it. `SessionScript` is what the deciders read instead of rolling dice, and it is the whole of the replay machinery: `BeatHandler.start_beat(script=)` pops recorded segments instead of drawing them, `ClimaxHandler.on_session_planned(..., script=)` takes the recorded moment and outcome (the script reaches it through `session_planned_event`, which carries it — the climax has no other route to the fact that this is a replay), and `PlaylistPlayer.recalc_autoplay_timer()` takes the recorded gap. Callouts are deliberately *not* recorded: they stay random, so a replay still varies while the beat — the part a user measures their progress against — is identical. `describe()` marks a recording with no climax as "Stopped early", because it replays differently (see `ClimaxHandler` above). **This is the one feature that writes media paths to disk**, on an explicit Save; it is disclosed and deletable under Help > Privacy & Data, and `SavedSessionsDialog`'s export asks about the paths *every time* rather than remembering an answer, because the right one depends on who is getting the file.
-- `src/SessionExplorerDialog.py` / `src/video_thumbnails.py` — the explorer (a seek bar over the session; scrub it and the preview shows what was on screen) and the async `VideoThumbnailQueue` that fills video previews without a nested event loop, unlike `MediaFolderPickerDialog`'s synchronous grabber. Both share `average_brightness`/`is_mostly_black`.
-- `src/achievements.py` / `src/AchievementsDialog.py` — the achievement catalogue and the explorer that shows it. Separate from `ScoreTracker` for the same reason `SessionRecorder` is: that aggregates numbers, this judges them, and a rule can be retuned without touching the code that writes `session_history.json`. A rule is a predicate over the session just played (`deliver_infos()`) and the history behind it, both plain dicts — evaluated **after** the session is in the history so a rule that counts sessions can count this one. Obedience counts only `denied`/`ruined` climaxes: being told to come and coming is doing what you were going to do anyway. A predicate that raises is skipped rather than costing the user every other unlock in the same session. The marks are monochrome stroked SVGs under `res/icons/achievements/`, tinted at paint time (`tinted_mark`) so one file serves both the grey locked state and the lit one — needs `QtSvg`, which ships with PyQt6 but has to survive PyInstaller.
-- `src/ScoreTracker.py` — session stats (beat count, pause count/duration, favorite pattern, skips/repeats, runtime, climax outcome).
-- `src/SettingsDialog.py` / `src/StatisticsDialog.py` — settings UI (tabbed) and end-of-session stats UI.
-- `src/crash_handler.py` — the `sys.excepthook` installed in `main.py`. Logs the traceback first and shows a dialog second, so a display that cannot be built cannot cost the record; the dialog carries the traceback in `detailedText()` because diagnostic logging is off by default, which makes the screen the only place most users will ever see it. **Installing a hook also stops PyQt6 aborting**: an exception escaping a slot is handed to the excepthook, and PyQt only kills the process while that is Python's default one. So the app now survives an unhandled error instead of vanishing — measured against a real slot, not assumed. That survival is why repeats are suppressed per fault (type plus where it was raised): something failing in a paint or a repeating timer would otherwise raise a modal box every time it fired. Every occurrence is still logged.
-- `src/ThirdPartyLicensesDialog.py` / `res/licenses/` — what the `.exe` carries of other people's software. Several of those licenses (Qt and the FFmpeg it plays video with are LGPL, PyQt6 is GPL, Python, NumPy and the rest want their notices kept) only allow passing the software on with its license text, so `THIRD_PARTY_NOTICES.txt` lists every bundled component and the folder holds the full texts, copied verbatim from each package. Bundled like the rest of `res/` and shown under Help > Third-Party Licenses, since a `--onefile` build has no folder anyone could open. **A dependency bump is not done until the notices say so**: `tests/test_third_party_licenses.py` checks every pin in `requirements.txt` against them, names Qt's FFmpeg DLLs file by file, and fails if a Qt update ever brings an FFmpeg built with GPL or nonfree parts.
-- `src/theme.py` — the app's color palette and global QSS stylesheet, applied once in `main.py`.
-- `src/changelog.py` / `src/WhatsNewDialog.py` — user-facing changelog data + the popup that displays it (see Versioning & Releases below).
-- Components communicate via PyQt signals/slots.
-- `src/utils.py` — `get_project_root()` resolves the project root correctly both when run as a script and when frozen by PyInstaller (via `sys._MEIPASS`). Any code that reads files under `res/` (or the root-level `VERSION` file — see `get_current_version()`) must go through this, not a hardcoded/relative path — hardcoding breaks the packaged `.exe`.
-- No `__init__.py` in `src/` — it's imported as `src.X` and relies on being run from the repo root (implicit namespace package), not installed as a package.
+## Layout
 
-Every object that reads a setting carries its own `DEFAULTS` and its own `SETTINGS_GROUP`, and no key is claimed by two of them — `SettingsDialog`'s "Reset to defaults" looks a fallback up on whichever object a field is bound to, and a second copy elsewhere would be a value to hold in step with a write to the wrong one going silently ignored. `tests/test_gooner_app.py` asserts the keys do not overlap.
+Everything lives in `engine/`; `res/` (phrase files, translations, icons, the click) is beside it
+at the repo root.
 
-## Build
+- `Gooner.Core/` — the app's logic, data and file formats. **No reference to Godot**, so it is
+  tested with plain `dotnet test` in seconds and never needs an engine to run. Anything a test
+  without an engine could check belongs here.
+- `Gooner.Core.Tests/` — xUnit, test names in `snake_case` (the ported ones mirror the Python test
+  they came from).
+- `Gooner.Harness/` — a console app that plays a whole session without a screen
+  (`dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240`). Developer tool,
+  ships with nothing. The wiring it runs is `Gooner.Core.Simulation.HeadlessSession`, which is
+  also the reference for how the engine wires the handlers together.
+- `godot/` — the Godot project (`Gooner.Engine`, Godot 4.7.2 .NET). It references `Gooner.Core`
+  and adds only picture, sound, input and effects; anything a test without an engine could check
+  belongs in the core instead. It has its own `Gooner.Engine.sln` because Godot's build and
+  export look for `<assembly name>.sln` beside `project.godot`; `GoonerEngine.sln` holds it too,
+  so one build compiles everything.
+- The window (`godot/scripts/Main.cs`) draws `Gooner.Core.App.GoonerApp`'s state and calls into
+  it; the lifecycle, the wiring and every rule about what may happen when live in the core, with
+  the ported tests of `test_gooner_app.py`. A widget here holds no state the core does not.
+- **An existing install is carried over at startup** (`Gooner.Core.Migration.ProfileMigration`,
+  before the stores are built): what is left in the old roaming folder moves out, as
+  `user_data.py` moves it; every value in the Python app's registry key
+  (`HKCU\Software\GoonerCock\GoonerApp`) goes into `settings.json`; the four data files that once
+  lived in the registry go into their files; the keys of removed features are dropped. A value
+  leaves the registry only once its copy reads back from the file, and what cannot be read stays
+  there - the `user_data.py` rule. The key goes once it is empty. `QSettingsRegistry` reads values
+  as QSettings does (checked against bytes a real PyQt6 QSettings wrote, while both apps were
+  compared).
+  The import runs before there is a log, so `GoonerApp` logs its report. It runs on the app's own
+  data folder only: a run with `--data-dir` imports nothing unless told where from, which is how a
+  copy of a real profile is tried out (`--legacy-registry=<key under HKCU>`,
+  `--legacy-data-dir=<folder>`). **Never point `--legacy-registry` at the app's own key, and never
+  start a development build without `--data-dir`** - it would carry the real profile over, and the
+  import deletes what it carries.
+- **Video is the FFmpeg extension EIRTeam.FFmpeg**, in `godot/addons/ffmpeg/`, committed as the
+  autobuild pinned in phase 0 left it (commit `84ea333`; release 1.1.4 never converts YUV on Godot
+  4.7) - plain git, not LFS (the user's call, 2026-10-17: 14 MB that never change). The stage
+  reaches the extension by class name, so a build without it still runs: every clip reports
+  unplayable and the player moves on. Its FFmpeg is an **LGPL v3** build (`--enable-version3`, no
+  GPL, no nonfree; H.264, MPEG-4, VP8/9, AAC, MP3, Opus, Vorbis - no HEVC); the wrapper is MIT.
+  The package carries the LGPLv3/GPLv3 texts and the wrapper's MIT text (`engine/licenses`), and
+  every release has the FFmpeg source of exactly that revision and the extension's source attached
+  (`engine/third_party/ffmpeg`, see its README). The libraries have others linked in (libvorbis,
+  libogg, libopus, libiconv, zlib, the OpenCL loader, soxr, the MinGW-w64 runtime, winpthreads -
+  read off the binaries, not the configure line): each has its notice, and the two under the LGPL
+  (libiconv, soxr) go out with their source and the build scripts (the user's call, 2026-10-24: keep
+  this FFmpeg and add the notices rather than build our own). A new build of the extension replaces
+  all of it together; `Gooner.Build.Tests` and `LicenseShelfTests` fail until the archives and
+  notices follow.
+- **A picture or a GIF is never read on the main thread** (`Stage/MediaStage`): the player names the
+  medium that comes next (`IMediaStage.Prepare`, from `PlaylistPlayer`; a replay's next recorded
+  path through `SessionScript.PeekNextMediaPath`), and the stage reads and scales it on a worker
+  while the current one is up; one not got ready ahead goes up when its worker is done, the last one
+  staying up meanwhile. Read in the frame, a 24-megapixel photo stalled it 0.8 s (measured with the
+  wall clock - Godot's `delta` is capped near 140 ms and hides it), the beat track and her hand
+  jumping by as much. **A clip is not got ready**: EIRTeam.FFmpeg makes its texture as it opens the
+  file, which only the render thread may do (`texture_clear` errors, a failing smoke run), and an
+  open costs 10-40 ms. Scaling halves first (`ShrinkX2`) while the picture is twice too big, then
+  Lanczos: Lanczos alone took half a second on 24 MP.
+- **Every dialog is a panel** (`godot/scripts/Panels/`), shown by the `PanelHost`
+  over the whole window - start screen included, as a modal dialog blocked everything behind it -
+  while the session plays on behind it. Panels are frosted glass (`Ui/Glass.cs`,
+  `shaders/glass.gdshader`) and can be dragged by their title and thrown. Panels stack; Esc and the
+  corner cross run the panel's own answer to being dismissed (`OnReject`; a question's escape
+  button). Nothing waits on a panel the way `QDialog.exec()` did: a question calls back.
+  `Confirm.Ask`/`Confirm.Tell` are `QMessageBox`.
+  The pattern for each dialog: its logic is a model in `Gooner.Core.Panels` (`SettingsForm`,
+  `StatisticsReport`, `PrivacyData`, `SavedSessionsShelf`, `SessionExplorer`, `MediaFolderPicker`,
+  ...) carrying the ported tests of the dialog's Python test file; the panel only draws it and
+  writes into it.
+- **Every panel has the settings' look** (the user's call, 2026-10-24: "alle Fenster im gleichen Style"):
+  built from `Widgets` (`Section` - a card with title, hint and a switch or button on its right -,
+  `Tile`, `Pill`, `Hint`) and the kit's styles in `UiTheme` (`Section`, `LitSection`, `Well`, `NavButton`,
+  `Segment`, `Chip`, `Danger`); a plain button is the quiet one, `PrimaryButton` the panel's answer,
+  `Danger` what deletes. Numbers are tiles, not tables; a panel of pages has a side navigation (Settings,
+  Guide). **What is to be deleted is ticked, never switched** - a switch beside "Session history" reads
+  as turning the history off (the user, on the Privacy mock).
+- **Panic is read in `_Input`, before any control**, so a focused button in a panel cannot take
+  Space for itself; only a text field keeps its spaces.
+- **There is no menu bar and no button row** (phase 7). Between sessions the **start screen**
+  (`Ui/StartScreen.cs`) has big cards for what one comes to do and every other menu entry along its
+  foot; during a session a **glass dock** (`Ui/Dock.cs`) floats over the picture - draggable,
+  throwable, fading while the pointer rests - with the session's buttons and a menu panel holding
+  the rest. The accelerators are keys (Ctrl+S settings, F1 guide, Ctrl+Q quit, Ctrl+O folder).
+  `GuideTests` fails while any text still sends the user to a menu, a footer or a button row the
+  window does not have.
+- **The Guide** (`Gooner.Core.Panels.Guide`) was ported from the Python app's and is this app's own
+  now: change it where it is wrong, and translate what changed. **The changelog entries up to
+  0.14.3** are the Python app's, word for word - they say what that app did.
+- **Device output (Intiface) is `Gooner.Core.Devices`.** The connection is an actor
+  (`IntifaceWorker`: one loop, one step at a time, as the Qt thread was), reporting to the window
+  through `GoonerAppOptions.Post` (`CallDeferred`). The user's rules stand: **no address ships with
+  the app**, and output is **off at every launch** until switched on, after a consent that names
+  the address. Tests run against a Buttplug server faked on loopback
+  (`Gooner.Core.Tests/Support/FakeIntifaceServer`); a test that switches output on uses a closed
+  loopback port, so nothing is resolved or contacted. A development run can drive a server of its
+  own: `-- --smoke-session ... --device=ws://127.0.0.1:<port>` (no consent question - never for a
+  user).
+- **An exception nobody catches** is caught by Godot and reported as an engine error;
+  `CrashLogger` (registered with `OS.AddLogger` first thing in `_Ready`) picks out the .NET ones
+  and hands them to `Gooner.Core.App.CrashReporter`: logged first, shown second, once per fault.
+  The app carries on.
+- **The licenses** are in `engine/licenses/` (the notices, GPLv3/LGPLv3, the .NET runtime's, every
+  library linked into FFmpeg), beside the executable once exported and shown under Third-Party
+  Licenses; Godot's are read from the engine itself. `LicenseShelfTests` keep the notices in step
+  with the Godot SDK, the .NET version and the FFmpeg DLLs. **A dependency bump is not done until
+  the notices say so.**
+- `res/` (callouts, click, icons) is read **from disk**, never through Godot's `res://`:
+  `Gooner.Core.Data.ResourceRoot` finds the repo's own copy from a dev run and the one beside the
+  executable once exported. The files never go through Godot's importer.
 
-Packaged with PyInstaller into a single windowed executable:
+## The look (phase 7)
+
+- **The look is settings** (`Gooner.Core.App.Look`, group `Look`): the note track (`highway`,
+  `ring`, `stream`, `tunnel`), the colour scheme, the effect strength, whether the Hypno Ring
+  wanders and what it does to the picture around it (`censor`: off, blur, mosaic, dark). A stored
+  choice this build does not know reads as the default. The Settings panel shows them on a Look tab.
+- **Colour schemes are `Gooner.Core.App.Palette.Schemes`** - Neon (the Python app's palette, unchanged)
+  and Boudoir. `Palette.Use` switches; everything asks `Palette` when it draws or builds, the window
+  rebuilds the theme and refreshes the glass when the setting changes. In every scheme the three
+  climax outcomes stay apart in colour (`PaletteTests`). The scheme also names the display face of
+  the big words (`UiTheme.Display`).
+- **The note track is drawn from `BeatHandler.Forecast`**: the exact note moments the click gets
+  (`UpcomingNotes` up to a pause) plus the stretches of the plan - so coming pauses and changes of
+  rhythm fly in with the notes, and the notes behind a pause are known. The geometry of each track
+  is in `Gooner.Core.Track`, and every track puts a note on its beat on the hit zone
+  (`TrackGeometryTests`) - that, and drawing from the click's own moments, is what lands a note on
+  its click. `godot/scripts/Track/NoteTrackView` paints it on two layers (normal and additive).
+- **A finale is drawn like any other rhythm**, and the climax overlay (`Fx/ClimaxOverlay`) reacts only
+  to what `ClimaxBanner` says: a fake climax is "cum" until it is revealed, so it runs the real one's
+  effects until then. Anything that painted the run-in differently would tell the user which climax
+  is the real one.
+- **The effect layer is sprites and shaders, not HDR**: glow is one radial texture tinted and drawn
+  additively (`Fx/Glow`), particles are drawn by hand (`Fx/Particles`, on their own time so the
+  climax can slow them - never the session clock). `shaders/stage_filter.gdshader` censors round the
+  Hypno Ring and splits the colours at the climax; it is not drawn at all while there is nothing to
+  do, so the screen is not copied for nothing.
+
+- **The start screen speaks in the app's voice**: a `main_menu` line of the phrase files, in the
+  language and tones picked (`CalloutHandler.TitleLine`), shown whether callouts are on or not.
+  **With her on the pedestal she says it** (the user's design, `Gooner.Core.Characters.Greeting`): in
+  a bubble hung beside her head (`CharacterView.BesideHead`, its tail at her head's height), typed
+  in with her mouth moving, faded in and out slowly as in a game, left to hang 7-14 s, then about 45 s of
+  quiet (`MinPause`..`MaxPause`, drawn each time) and the next line; a new one shortly after the screen
+  comes back or the voice changes. **Under the name** it stands only without her - no figure picked,
+  or hers would not load (`Figures.Failed`); while she loads, neither.
+- **The window opens full screen the first time** and after that as it was last left
+  (`Gooner.Core.App.WindowState`, remembered the moment the user switches).
+
+## The app's own language
+
+- **The app's own words come in English, German and French** (`Gooner.Core.Localization`), picked
+  under Settings > Playback > App Language - apart from the language the callouts speak in. It is
+  English until the user picks another, whatever Windows is set to (the user's call). `UiLanguage`
+  (group `Ui`) holds the choice; `GoonerApp` applies it before it builds anything that words
+  something, and the window builds the start screen, the dock and the answers under the climax
+  again when it changes (`Main.ApplyLanguage`) - a panel is worded when it opens.
+- **English is the code.** Every text is written in English where it is used and looked up in
+  `res/locales/<language>/*.json` (English text -> translation, every file of the folder together);
+  what a catalogue lacks stays English. So the English app is exactly the code.
+- **Only literals go in**: `L10n.T("...")`; `L10n.F("... {0}", value)` for a text with values in it,
+  never a `$"..."` into L10n; `L10n.P(count, one, other)` for a count, where French takes the
+  singular for none as well (a singular that shows the number says `{0}`, not `1`); `L10n.N("...")`
+  marks a name that is also stored or compared - a settings tab, a rhythm, a tone - which is
+  translated (`T`) only where it is shown. A static table of display texts is translated where it
+  is read, never in its initializer, which would keep whatever language was in use first. Log lines
+  are never translated.
+- **`LocaleFilesTests` holds every catalogue to the code**: `SourceTexts` reads every literal handed
+  to L10n out of Gooner.Core and the Godot scripts, and the test fails on a text without a
+  translation, a translation of a text that is gone, and one that lost a placeholder or a tag.
+  What is translated as a whole where it is shown is added from the running code: the Guide block by
+  block (`Guide.Translated`, `RichText.Blocks`), every What's New entry, every achievement. So a
+  changed text fails here until its translations follow - write them then, in the app's voice, as
+  the callouts are written (`du` in German, `tu` in French).
+- The climax words over the picture (CUM, RUINED, DENIED) stay English in every language (the
+  user's call). The field names in a saved session's problems (`duration_sec`, ...) stay as they
+  are written in the file.
+
+## Characters (phase 8, begun)
+
+- **Where models come from**: `res/characters/*.vrm`, and a folder of the user's own picked under
+  Settings > Look (`CharacterChoice`; "own/<name>" for one from there). That folder's path is treated
+  like a media folder: disclosed and deletable under Privacy & Data, **never logged** - nor is a
+  model's name (`Character loaded` names none). **The app's own figure is Zazurona**
+  (`res/characters/Zazurona.vrm`, the user's VRoid figure, dressed; `CharacterChoice.Default`): she
+  stands there until another is picked, is the one file of `res/characters` in git (the `.gitignore`
+  exception) and in the package (`Package.Characters`), and is credited in the notices.
+  `ProjectTests` fail if she is not committed or her VRM meta names anyone but `GoonerCock`. Every
+  other file there is a local test figure - franchise, explicit, or not ours to pass on - and stays
+  out of git and the package. A new own figure needs rights in writing, must be unmistakably adult
+  and not explicit, and goes into `Package.Characters` and the notices. The chosen one stands on the
+  start screen's pedestal; none, or one that will not load, leaves the logo there.
+- **A figure that takes the app down is switched off** (`CharacterChoice.LoadStarting/LoadSettled`,
+  `Main.WatchCharacterLoad`): the pick is loaded at every start, so a model that crashes the app
+  while it loads, or as it is first drawn, would crash every start after it, with no way into the
+  settings. Which one is loading goes into `settings.json` (`Character/loading`) and comes out once it
+  has been on screen 3 s, or when the app is closed; a start that still finds it switches that figure
+  to none and says so (`CharacterChoice.Abandoned`). Picking it again tries it again.
+- **One figure, shared** (`Characters/Figure.cs`): `Figures` loads the chosen model once, and
+  whichever `CharacterView` is on screen takes it into its own 3D world - the pedestal between
+  sessions, the telepathy frame during one. A view leaving the tree takes the figure out of its
+  world first, so a view being freed (the start screen rebuilt for a language) never frees it.
+- **The face is driven, not played** (`FaceRig`): godot-vrm makes each expression an animation that
+  only writes the shapes it keys, so one played after another left the first one's shapes behind
+  (the eyes stayed shut). Every expression is read as blend shapes at their full weight, any number
+  are mixed at once - mood, blink, the vowel being said - and every touched shape is written each
+  frame; the AnimationPlayer is never played.
+- **The telepathy frame** (`Ui/TelepathyFrame`, `shaders/telepathy.gdshader`): her bust at the top
+  right from the session's start to its end, a neon oval or an old tube screen (`Look.TelepathyFrame`,
+  the user's two picks), off with `Character/in_session`. Each callout draws it closer and brighter;
+  she wears `Reactions.For(trigger, tone)` and her mouth follows `Visemes` of the line. **The line
+  goes in a speech bubble beside her** (`Ui/SpeechBubble`, the user's pick of three mocks: dark glass
+  with the frame's neon rim), typed in on the mouth's own timeline (`Visemes.Shown`), its tail at the
+  height of her mouth - found a twentieth of her height below her eyes, since the head bone sits at
+  the mouth on one model and at the neck on another. Only while she is in the frame
+  (`TelepathyFrame.Present`): without a figure, with the frame switched off or while she still loads,
+  the line is the big one over the picture as before. A fake climax
+  speaks with `climax_real`'s lines until revealed, so it gets the same face - keep it that way.
+- **She stands as a person stands** (`Gooner.Core.Characters.IdleMotion`, applied in `CharacterView`),
+  on the pedestal and in the frame alike - the user found her stiff, "nicht wirklich menschlich":
+  her weight on one leg and then the other (held 6-14 s, moved over in 1.4 s), hips over it and
+  tilted, spine and chest leaning against it, the free knee forward and its heel up while the feet
+  stay put (`Figure.Plant`, two-bone IK, `Hold` keeps the foot flat); a breath in quicker than out
+  with a rest; a wander on three slow incommensurate waves rather than a sine; arms loose and not
+  alike; hands at ease (`Figure.Ease`, curled towards the palm the hand itself reports); eyes that
+  rest and dart, now and then glancing aside with the head following slower. Pure sines read as a
+  machine - that was the old pose. Judge motion from a video, not stills: Godot's Movie Maker mode
+  writes every frame at a fixed rate (`--write-movie out.avi --fixed-fps 30` before the `--`, then
+  `--smoke-panel=start --wait=20 --screenshot=...` or a smoke session), ffmpeg from the spikes
+  crops it. D.Va's and Shadowheart's exports carry no spring bones, so their hair does not move -
+  an export-side job; the VRoid sample's does.
+- **Her face is never blank** (`Gooner.Core.Characters.FaceMotion`, laid under the callout's face in
+  `CharacterView.Face` - the user found it "tot", "lustlos"): a smile that never quite goes and
+  drifts; every 2.5-7 s a micro-expression (a smile breaking through, raised brows, a contented look);
+  while she strokes in the frame heavier lids, lips parted and breathing, a wink every 15-40 s; a
+  small smile after each line. A cross or sad callout face takes the smile away as it comes, and
+  heavy lids plus a smile that narrows the eyes never add up to closed ones. `--face-closeup` puts
+  the camera on her face in the frame, for a Movie Maker recording.
+- **She moves to the beat** (`CharacterView.Rhythm`, fed the notes either side of the clock and one
+  beyond each by `Main`): one stroke per note - the hand down on the note, up near the tip halfway to
+  the next (the user's spec: the beat is the stroke's frequency) - leaning and nodding with it; in a
+  pause she eases to a stop. **A fast beat gets a shorter stroke, kept at the top**
+  (`Gooner.Core.Characters.StrokeMotion`, the user's call): a whole one at five notes a second moved a
+  quarter of the toy per frame and read as the hand teleporting. A note's depth is set by the shorter
+  of the gaps either side of it, known ahead because the beat is planned, so the hand is already up
+  when a fast run begins and never jumps at a note. What still jumps is a long frame - a media change
+  that stalls the main thread is a stroke skipped. The arm reaches by two-bone IK, the **forearm takes the roll**
+  (a wrist turned alone twists a long glove's cuff into a loop), the hand is turned so the palm faces
+  the shaft and the fingers run round its front, and each finger is laid **joint by joint as chords of
+  the circle round the shaft through its own knuckle** (`Figure.Reach`, `Orient`, `Wrap`) - aimed, not
+  bent by set angles, which is what fits any model's hands. The fingers go round the front from the
+  palm, the **thumb the other way round**, behind the shaft, lying on it - as a hand closes on
+  anything (the user's correction: a thumb running the fingers' way is not how anyone holds it). The palm's
+  side comes from the hand's chirality (little finger to index across the knuckles, wrist to middle
+  knuckle along), never from the fingers' bend at rest, which some models have slightly backwards.
+  What does not change - where the toy stands (a set gap in front of her belly and clothes over its whole
+  height, from what sticks out of it towards her, `Figure.FrontAt`; and far enough out that her
+  **wrist** is clear too - the hand closes on the shaft from in front, so the wrist is a hand's length
+  behind the knuckles, and on wide figures it sat in her belly; when her arm cannot reach both ends of
+  the stroke it is first held up to 6 cm higher, then brought back towards her - **an arm is never
+  stretched, the toy goes into her belly instead**, the user's rule; it follows her hips as they sway),
+  which way her elbow bends (out to her side and back, unless that takes her arm through her - a wide
+  waist did, the user saw it - then the nearest direction, forward, back or raised out to her side,
+  where neither part of the arm passes through her rest-pose points at either end of the stroke,
+  `Gooner.Core.Characters.ElbowChoice`), how far down her free arms hang (by her side, unless her hips
+  are in the way - then up to 25 degrees further out, `ArmHang`; her hair is not counted as her body,
+  `Figure.RestPoints`),
+  the hand's size, the fingers' wrap - is measured once per figure; per frame only the arm and the
+  hand move. Check by eye with `--grip-closeup --grip-down=<0..1>` on a smoke session (the camera on
+  the hand, the stroke held; `--grip-turn=90` from her left, `--grip-tilt=40` from above, to see the
+  thumb behind the shaft), on several models. A hand that folds its palm in half to close a finger
+  is a model mapped wrong, not a grip to tune: its "proximal" finger bones are the ones in the palm,
+  starting at the wrist (D.Va's export did that - `Index1` is her metacarpal). **The toy is the first
+  `.glb` in `res/props`** (`Characters/Toy.cs`), read once off the main thread under the same lock as a
+  character (godot-vrm's extensions are global while one loads) and **measured where it is read**
+  (`Gooner.Core.Characters.ToyShape`): length, shaft thickness slice by slice, the middle of the shaft
+  at each height - a real one curves, and a straight line through its foot left her fingers standing off
+  it - and how far balls and foot stand out behind it, which side goes towards her and sets the gap
+  from her belly. Real size, times her size. Her hand waits the moment it takes to read. `res/props` is
+  gitignored and never packaged (the user's model, licensed to them, not ours to pass on) - the `.glb`
+  is made from it by `GoonerSpikes/blender/scripts/prop_export.py` (decimated, colour baked, 2K
+  textures). **Without one she holds the app's own** (`Gooner.Core.Characters.ToyModel`, the user's
+  pick of a procedural one over a model file, 2026-10-24): built from code - suction foot, a shaft
+  curving up away from its balls with veins on top and a seam below, a head whose ridge falls towards
+  the seam, a slit, two balls in one folded sac - so it needs no licence, puts nothing explicit on
+  GitHub and is in every package. **Its colour is a setting** (Settings > Look > Toy colour,
+  `Look.ToyColor`; `ToyColours`: seven skin tones from ebony to rosy, then ogre, orc, pink, blue,
+  purple - the user's list): the mesh carries what part each vertex is (head, vein, sac, near the foot)
+  in its vertex colour, and `shaders/toy.gdshader` mixes the picked colours from that exactly as
+  `ToyTint.Albedo` does, so a change shows at once and a preview rendered from the core is what the
+  engine draws. Its head leans towards the seam by turning about its axis, not by lowering the
+  underside - that left a step below the tip. `ToyModelTests` hold it to what `ToyShape` reads off it; judge its
+  looks from a render, not the frame (`--built-toy` leaves `res/props` aside for a smoke run). Only
+  if building it fails is there the stand-in of primitives in `CharacterView`.
+- Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
+  Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
+  `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,
+  bone poses reset. Do not "simplify" any of it; each one was a crash or a distorted mesh.
+- A model loads **off the main thread** (`Figures`, one at a time - godot-vrm's extensions are
+  registered globally for the length of a load); the logo holds the pedestal until the figure fades
+  in. A large model takes minutes (an 878 MB one, 100 s). Quitting while one loads ends the process
+  with `OS.Kill` at the end of `Main.Quit`, after everything of the app's own is written: Godot's
+  import running on into the engine going down segfaults (reproduced, exit 139). Panic only
+  minimizes, so it is not affected.
+- Motion is written against humanoid bone names, in model space (`CharacterView.Turn`), never in a
+  bone's local axes - that is what makes one motion fit every model.
+- **Cut-out materials get soft edges** (`Figure.SmoothCutouts`): hair cards, lashes and lace come in
+  as alpha scissor, all or nothing per pixel, which sorts cleanly but steps their edges; with the
+  views' MSAA, alpha to coverage softens them. Sheer stockings are blended in the export itself
+  (`GoonerSpikes/blender/scripts/vrm_materials.py`), and hair, tail and breasts swing on VRM spring
+  bones the exports add (`vrm_springs.py`) - godot-vrm runs them.
+
+## How the core keeps time
+
+- **No timer fires on its own.** Every timer is a `ClockTimer` on a
+  `Timing.ClockScheduler`, and the host calls `Advance()` once a frame: everything that came due
+  fires in due order (a tie goes to the timer created first), each at the moment it was due. One
+  scheduler is shared by everything on the session clock, so the climax can never be overtaken by
+  notes due after it.
+- **The rhythm reads an `ISessionClock`** - seconds as a double. In the engine that is the audio
+  clock. Not a `TimeProvider` for the rhythm: those count in 100 ns ticks. Wall-clock things
+  (ScoreTracker, the recorder, callout teases) keep a `TimeProvider`.
+- **Dice come from an `IRandomSource`**, with Python's `random.uniform/randint/choice/choices`
+  reproduced on top of it, so a seed replays a whole session (the harness, the tests).
+- Note gaps are **whole milliseconds** - exact at 48 kHz, and what a saved session records.
+- **In the engine the clock is the audio** (`godot/scripts/Audio/SessionAudio.cs`): the frames
+  the mixer has consumed, so an underrun delays the clock instead of breaking the rhythm. The
+  stream is filled from its own thread, never from a frame. Each frame the picture clock
+  (`Timing.PictureClock`) follows it into a `FrameClock`, the scheduler is advanced, and
+  `BeatHandler.UpcomingNotes` - the exact moments, not `UpcomingBeats`' approximation - goes to
+  the `Audio.ClickTrack`, which mixes each click on its note's own frame. A note is committed
+  once written, so how far ahead the stream is written (80 ms, more if the device runs dry) is
+  how late a note can be learned of and still click on time.
+
+## Rules
+
+- **.NET 10, not 8.** .NET 8 leaves support in November 2026; Godot 4.7 exports .NET 10 fine
+  (measured). The SDK is pinned in `global.json`.
+- **Warnings are errors** (`Directory.Build.props`), analyzers on. That is this side's `ruff`.
+- **Logging and privacy**: see Logging below. The crash panel and its log line are cut like a log
+  line (`AppLog.Scrub`).
+- **The data directory is `%LOCALAPPDATA%\GoonerCock\GoonerApp`**, resolved through
+  `Environment.SpecialFolder.LocalApplicationData` - the Python app's folder too. Never Godot's
+  `user://`, which is the roaming profile the Python app deliberately moved away from (OneDrive,
+  folder redirection).
+- **File formats stay readable from what the Python app wrote** - an updating user's history,
+  patterns and saved sessions. The saved-session format is a public contract
+  (`skills/gooner-session-builder/`).
+- **Every object that reads a setting carries its own `Defaults` and its own `SettingsGroup`**
+  (`ISettingsOwner`), and no key is claimed by two of them - Reset to defaults looks a fallback up on
+  whichever object a field is bound to, and a second copy elsewhere would be a value to hold in step.
+- **Settings are `settings.json`, never the registry** - only Windows has one, and a portable app
+  has no uninstaller to clean it up. The Python app's key is read once, by the import.
+
+## Build and release
+
+- **The package is a folder, zipped**: `GoonerApp.exe` with the `.pck` embedded, the .NET runtime
+  and assemblies in `data_Gooner.Engine_windows_x86_64/`, the FFmpeg libraries, and beside them
+  what the engine reads from disk - of `res/` only `callouts/`, `locales/`, `icons/`, the click and
+  the app's own figures (named in `Package`, never "all but": the rest is gitignored and private),
+  `licenses/` (`engine/licenses`) and `VERSION`. About 200 MB unpacked, 84 MB zipped.
+- **`engine/Gooner.Build`** builds and checks it (`Package`, `ExportCheck`, `RunCheck`): every part
+  present and byte-identical to the repository's, the release FFmpeg libraries, **no file holding
+  the builder's home folder** (a build path carries a name), and a headless smoke start of the
+  result that finds `res/` and leaves no Godot folder behind. Do not publish a package it refuses.
+  It only ever builds and never talks to a server.
+- **Godot writes its shader and pipeline caches, and nothing else**: its file log is off in
+  `project.godot`; the caches are on (the user's call, 2026-10-21 - they had been off so that nothing
+  of Godot's was left behind). They live in `%APPDATA%\Godot\app_userdata\GoonerApp` (`shader_cache`,
+  `vulkan\pipelines.*.cache`; 7 MB after one session) and are shown and deletable under Privacy &
+  Data as the graphics cache (`PrivacyData`, given `OS.GetUserDataDir()`). Measured with them: the
+  start a second faster, her first appearance in the frame 176 -> 69 ms. Without them every start
+  compiled all shaders again and the first session stalled on it. What is left at the start of a
+  session (about 120 ms) is first-draw work, not compiling - check with Godot's
+  `Performance.Monitor.PipelineCompilations*` monitors and the wall clock, not `delta`. The empty
+  folder Godot makes at every start is still removed when nothing is in it
+  (`Main.RemoveGodotUserDir`). `Gooner.Build.Tests` holds these settings, the export preset (no
+  console wrapper, no debug symbols) and `godot/icon.ico` - a copy of `res/icons/favicon.ico` the
+  export embeds as the executable's icon.
+- **An exported build has no `res://` on disk**: `GlobalizePath("res://")` is empty there, so
+  anything found relative to the Godot project needs a fallback beside the executable (`AppPaths`).
+- **The release check** (`.github/workflows/release-check.yml`, on a version tag) installs Godot and
+  its export templates pinned by SHA-512, runs the build tool and attaches the zip to a draft
+  release. Godot's export templates are 1.2 GB, which is why packages are not built on every PR.
+- The first export after a change compiles the C# project and can take minutes; later ones take
+  seconds.
+
+## Commands
+
 ```
-pyinstaller --noconfirm --onefile --windowed --add-data "res;res" --add-data "VERSION;." --icon "res/icons/favicon.ico" --name "GoonerApp" main.py
+dotnet build engine/GoonerEngine.sln
+dotnet test engine/GoonerEngine.sln
+dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240   # options: top of Program.cs
+dotnet build engine/godot/Gooner.Engine.csproj
+"$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
+"$GODOT" --headless --path engine/godot -- --smoke        # exit code 0 = the engine starts
+"$GODOT" --path engine/godot -- --smoke-beat [--long]     # 0 = every click on its own frame
+"$GODOT" --path engine/godot -- --smoke-session --media=DIR --data-dir=TMP [--climax-at=S] [--stop [--answer=came]] [--device=ws://...] [--panel=NAME] [--say=TRIGGER] [--face-closeup] [--grip-closeup [--grip-turn=DEG] [--grip-tilt=DEG]] [--grip-down=0..1] [--size=WxH] [--screenshot=PNG [--shots=N]]
+"$GODOT" --path engine/godot -- --smoke-panel=NAME --data-dir=TMP --screenshot=PNG [--wait=S] [--media=DIR] [--scrub=S] [--size=WxH]
+"$GODOT" --path engine/godot -- --data-dir=COPY --legacy-registry='Software\Scratch\GoonerApp' [--legacy-data-dir=ROAMING_COPY] ...
+dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # dist/GoonerApp(-<version>-windows-x64.zip)
+dotnet run --project engine/Gooner.Build -- verify [--dir DIR]
 ```
-Output: `dist/GoonerApp.exe`. `GoonerApp.spec` is gitignored (regenerated by the command above, not checked in). `scripts/build.py` runs this exact command — use it instead of retyping the flags. `VERSION` is bundled the same way as `res/` since the running app reads it at startup (`utils.get_current_version()`) to decide whether to show the "What's New" popup.
 
-## Python version
+The registry tests (`WindowsLegacySettingsTests`) write throwaway keys of their own under
+`HKCU\Software` and delete them again - never the app's key.
 
-**3.13.** CI runs it, `ruff.toml` targets it, the venv has it, and PyInstaller bundles it into the shipped `.exe` (so end users need no Python). Don't reintroduce a lower floor without also testing it in CI — the README used to claim 3.8+ while the code already required 3.10+, which is the kind of unverified promise this note exists to prevent.
+`--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
+`settings`, `settings-look`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`,
+`crash`, `menu`, `start` - the start screen alone - ...), waits for it to fade in and saves
+the window - how every panel was checked by eye. `--size=1280x720` checks a small laptop screen
+(a panel of a set height scrolls its body rather than run off the window); `--panel=NAME` on a
+smoke session opens the panel over a running session, to see the glass over a picture.
 
-Note the bare `python` on the maintainer's PATH is 3.10, so anything that must match the project's interpreter has to name the venv explicitly — that is why the `py_syntax_check` hook in `.claude/settings.json` resolves `.venv/Scripts/python.exe` rather than calling `python`.
+The smoke runs never touch a real data folder when given `--data-dir`; give them one. A look to
+check by eye goes into that folder's `settings.json` first (`{"Look/note_track":"ring",
+"Look/censor":"blur"}`). HDR 2D stays off - the effect layer glows with sprites - because with it on
+a screenshot of the viewport comes out in linear colour and every check of the palette reads too
+dark.
 
-## Linting
+`$GODOT` is the Godot 4.7.2 .NET *console* binary (`Godot_v4.7.2-stable_mono_win64_console.exe`);
+the plain one detaches from the terminal and its exit code is lost. Godot's own packages restore
+from the NuGet cache the editor fills, so there is deliberately no `nuget.config` here.
 
-`ruff check .` (config in `ruff.toml`: `E`, `F`, `W`, `I`, `B`, `UP`). Install dev deps with `pip install -r requirements-dev.txt`.
-
-## Dependency auditing
-
-`pip-audit --strict --requirement requirements-dev.txt` (it is in `requirements-dev.txt`, so
-`pip install -r requirements-dev.txt` gets you the tool). `.github/workflows/audit.yml` runs
-exactly that weekly, on a pull request that touches either requirements file, and on demand.
-
-Deliberately **not** part of the CI job: the pins do not change on their own but the advisory
-database does, so a finding is almost never about the commit being tested, and gating every PR
-on it would let an advisory published overnight turn unrelated work red.
-
-Audit the requirements file, not the environment - `pip-audit` with no arguments also reports
-the venv's own `pip`/`setuptools`, which are neither declared here nor bundled into the `.exe`.
-
-Python pins are **not** on Dependabot (`.github/dependabot.yml` covers the workflow actions
-only). A version bump here is not "merge the green PR": the shipped executable bundles these
-versions, so it means rebuilding with PyInstaller and opening the result to confirm Qt, QtSvg,
-QtWebSockets and the bundled resources all survived the freeze - see the `verify_frozen` check
-that caught a build shipping without its plugin. A queue of robot PRs that each need a manual
-build is noise that trains you to ignore the one that matters.
+Both test projects run their tests in sequence (`AssemblyInfo.cs`): the log is one sink for the
+whole process, and a test with file logging on would otherwise catch other tests' warnings.
 
 ## Logging
 
-**Never use `print()` in `src/`.** The shipped app is built `--windowed`, where `sys.stdout` is `None` and every `print()` is silently discarded — a user's bug report then has no artifact at all to look at. Use `src/applog.py` instead:
+**Never `Console.WriteLine` in `Gooner.Core`.** The shipped app has no console, so it would go
+nowhere and a user's bug report would have nothing to show. Use `AppLog` (`Gooner.Core.Logging`):
 
-```python
-from src import applog
-
-log = applog.get_logger(__name__)   # module scope, right after the imports
-...
-log.warning("Could not load the callout file %s: %s", json_file.name, error)
-```
-
-- **Pass values as `%s` arguments, never f-strings.** Formatting is then skipped entirely when the message is filtered out, and the call site stays greppable.
-- **Levels: `INFO` is the floor.** There is deliberately no `DEBUG`/`TRACE` — this log exists to explain a problem to a human, not to trace execution, and per-beat chatter would bury the one line that matters. Use `INFO` for lifecycle events worth seeing in order (session start/end, settings saved, update check, data migration, a destructive action the user asked for), `WARNING` for something the app recovered from (a skipped pattern, an unreadable file, a rejected setting), `ERROR` for something the user will actually notice being broken, and `log.exception(...)` inside an `except` when the traceback matters.
-- **Privacy rules — these are not negotiable in this app.** Never log a media *folder* path: that reveals where the collection lives on disk, which is exactly what the Privacy & Data work exists to keep under the user's control. Prefer counts (`"Playlist loaded: %d files"`). A bare *filename* is allowed in a `WARNING`/`ERROR` about that one file, because "which file breaks the thumbnailer" is unanswerable without it. Paths the app itself owns (the data directory, `res/`) are fine.
-- The log is **opt-in** (`GoonerApp/diagnostic_log`, default off) and the user picks its threshold (`GoonerApp/diagnostic_log_level`, one of `applog.LEVELS`). Both controls, plus deletion, live in **Help > Privacy & Data** — not in Settings. It writes extra data about the user, so it belongs where that data is disclosed and deleted, and the dialog applies both immediately since it has no Save button. A `StreamHandler` is always attached, so `python main.py` from a terminal shows everything regardless of the setting.
-- `applog.configure()` runs once in `GoonerApp.__init__`, before anything else, so the earliest warnings are captured. Tests must not leave a file handler attached — see `tests/test_applog.py`'s autouse reset fixture.
+- **Values go in as arguments** (`AppLog.Warning(Log, "Could not load the callout file {0}: {1}", name,
+  AppLog.Describe(e))`), never an interpolated string - formatting is skipped when the line is
+  filtered out, and the call site stays greppable.
+- **Levels: `INFO` is the floor.** There is deliberately no debug/trace level - this log exists to
+  explain a problem to a human, not to trace execution, and per-beat chatter would bury the one
+  line that matters. `INFO` for lifecycle events worth seeing in order (session start/end, settings
+  saved, update check, data migration, a destructive action the user asked for), `WARNING` for
+  something the app recovered from, `ERROR` for something the user will notice being broken.
+- **Privacy rules - not negotiable in this app.** Never log a media *folder* path: that reveals
+  where the collection lives, which is exactly what Privacy & Data exists to keep under the user's
+  control. Nor the folder of the user's own characters, nor a model's name. Prefer counts
+  (`"Playlist loaded: {0} files"`). A bare *file name* is allowed in a warning or error about that
+  one file. Paths the app itself owns (the data directory, `res/`) are fine. **An exception goes in
+  as `AppLog.Describe(e)`, never `e.Message`**: .NET writes the whole path into it, and `Describe`
+  cuts every path to its file name (`LogPrivacyTests` fails on a `.Message` in a log call).
+- The log is **opt-in** (off by default) and the user picks its threshold; both controls, plus
+  deletion, live in **Privacy & Data**, not in Settings - it writes extra data about the user, so it
+  belongs where that data is disclosed and deleted. A development run's console shows everything
+  regardless.
+- Log lines are never translated.
 
 ## Testing
 
-`python -m pytest` (config in `pytest.ini`; use `python -m pytest`, not bare `pytest`, so the repo root is on `sys.path` for `from src.X import Y` imports). Uses `pytest` + `pytest-qt`; `tests/conftest.py` forces `QT_QPA_PLATFORM=offscreen` so the suite runs without a real window. `QSettings`/`QSoundEffect` are the two things that bite you here:
+`dotnet test engine/GoonerEngine.sln` (set `DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1`). The
+logic is tested without an engine; what only Godot can show is checked by smoke runs and by eye
+(see Commands).
 
-- `BeatHandler` and `CalloutHandler` accept an injectable `settings` param — tests must pass a temp-file-backed `QSettings(str(tmp_path / "x.ini"), QSettings.Format.IniFormat)`, never the real `QSettings("GoonerCock", "GoonerApp")`, or they'll write to the user's actual registry entry. `GoonerApp.__init__` and `SettingsDialog.accept_settings` were refactored the same way (`GoonerApp(settings=...)`, reusing `self.main_app.settings`) specifically so this stays possible.
-- Never let a test construct a real `QSoundEffect` (`BeatHandler.init_beat_sound`) — it hits the real Windows audio backend and reliably stalls the Qt event loop for every test that runs after it in the same session (this cost real debugging time once already). The autouse `_no_real_audio` fixture in `tests/conftest.py` monkeypatches `init_beat_sound` with a fake — extend that pattern rather than removing it.
-- Never let a test call a real `QDialog.exec()` (`SettingsDialog`/`StatisticsDialog`) — it opens a real modal event loop and blocks forever with nothing to click. The autouse `_no_modal_dialogs` fixture in `tests/conftest.py` monkeypatches `QDialog.exec` globally, plus `QMessageBox.exec` and the static shortcuts (`information`/`warning`/`critical`/`about`/`question`). Those statics build and run their own box down in C++, so patching `exec` does not reach them — the first test to trip one hangs the whole suite. `question` answers `No`, so a test can never silently confirm a destructive action; a test that needs a different answer patches the call in its own module (`monkeypatch.setattr("src.X.QMessageBox.question", ...)`) or, better, the dialog's own seam method.
-- For `GoonerApp`/`SettingsDialog` tests, use the shared `app` fixture (`tests/conftest.py`) rather than constructing `GoonerApp()` directly — it wires up the temp-file `QSettings` and registers the window with `qtbot` for cleanup. Don't let `load_media`'s video branch touch the real `QMediaPlayer`/`QAudioOutput` — monkeypatch `app.media_player`/`app.audio_output` with `MagicMock()` for those tests (see `test_gooner_app.py`), same reasoning as the audio/dialog stubs above.
-
-Coverage: `ScoreTracker`, `utils`, `BeatHandler`, `CalloutHandler` (including directory-loading edge cases — missing dir, empty dir, invalid JSON), `StatisticsDialog` (time formatting, table population, conclusion text, table sizing), `GoonerApp` (fullscreen, folder scanning, playlist navigation, media-type dispatch, start/stop lifecycle, next/prev buttons), `SettingsDialog` (field init from target object, accept_settings writing back to targets/QSettings/beat patterns/callout handler). `tests/test_callout_language_files.py` parametrizes over every actual file in `res/callouts/*/*.json` (not synthetic fixtures) and validates schema: valid JSON, all required trigger keys from `CalloutHandler.TRIGGER_KEYS` present, no unknown/typo'd keys, values are lists of strings, no empty phrase list, no duplicate phrase within a list, no phrase shared between two tones of one language, every language shipping at least `DEFAULT_TONE`, and no stray phrase file outside a language folder — this is what a contributor adding a language or a tone should run first (see `.claude/skills/add-callout-language/SKILL.md`). Also covered: `ClimaxHandler`, `changelog.entries_since`/`parse_version`, `WhatsNewDialog`, `utils.get_current_version`, `session_files`/`SessionScript`/`SavedSessionsDialog` (round-trip, offsets rather than wall clock, path stripping, a refused format, the capped shelf, and the export question being asked every time). Frozen-mode behaviour is covered from the other side: `scripts/verify_frozen.py` reads the built `.exe` (see Build above), and `tests/test_verify_frozen.py` keeps *its* list honest without needing a build — it fails if a module under `src/plugins/` is not checked for, if the list names one that is gone, or if a plugin is checked for but never passed to PyInstaller as a `--hidden-import`. What still is not covered is the app actually *running* frozen; the checker reads the archive rather than launching it.
-
-**Work test-driven from here on**: for new behavior or bug fixes, write the failing test first, then implement. When expected behavior is unclear or you'd be guessing/assuming intent (edge cases, ambiguous UX, "what should happen when..."), ask the user before writing the test rather than encoding an assumption.
+- **Work test-driven**: for new behaviour or a bug fix, write the failing test first and see it
+  fail, then implement. When the expected behaviour is unclear (edge cases, ambiguous UX, "what
+  should happen when..."), ask the user before writing the test rather than encoding a guess.
+- Tests never touch real data: every store takes its base directory as a parameter, the registry
+  import takes an `ILegacySettings` (`FakeLegacySettings`), and the reader is tested against a
+  throwaway key of its own. Never the real data folder, never the app's registry key.
+- **What guards what:** `CalloutLanguageFilesTests` every phrase file in `res/callouts` (schema,
+  keys, tones - run it first when adding a language or tone, see
+  `.claude/skills/add-callout-language/SKILL.md`); `LocaleFilesTests` every translation;
+  `SessionFormatDocTests` the session format document in `skills/`; `LicenseShelfTests` and
+  `Gooner.Build.Tests` the notices, the FFmpeg sources and what the package carries;
+  `GuideTests` the in-app Guide.
+- **No tombstone tests**: never assert that removed code is gone - such a test can never fail
+  again.
 
 ## Git workflow
 
-Use feature branches + PRs for changes, not direct commits to `main` — this is a deliberate move away from older direct-to-main history in this repo, so don't treat past commits as precedent. Never push to the remote (`origin`) without explicit user approval for that specific push. Do not add Claude/AI attribution (e.g. "Co-Authored-By: Claude") to commit messages in this repo. Commit immediately after each meaningful change lands, rather than batching several changes into one commit — squashing into fewer commits can still happen later, right before opening the PR, if desired.
+Feature branches and PRs into `main`, never direct commits to `main`. **Never push without the
+user's approval for that push, and never merge a PR** - the merge is the user's review gate. No
+Claude/AI attribution in commit messages. Commit each meaningful change as it lands rather than
+batching; squashing can happen before the PR if wanted.
 
-## Versioning & Releases
+## Versioning & releases
 
-Version lives in `VERSION` at the repo root (plain semver, e.g. `0.2.0`) — the single source of truth, nowhere else.
+The version lives in `VERSION` at the repo root (plain semver), nowhere else. The packaged app
+reads it, and the What's New panel shows the changelog entries newer than the last version the user
+saw.
 
-- **Before opening a PR, ask the user whether this change should bump the version right now, and to what number** — don't just mechanically apply the feat/fix rules below. A small feature may not be worth its own release and can be folded into a nearby patch instead, with the next MINOR held back for a more substantial build. (Confirmed 2026-07-19: a small Socials-menu + in-app Guide dialog feature was folded into `0.5.1` instead of getting its own `0.6.0`.) Once the user confirms a number, the rest of this section is the default mechanics to follow.
-- **`feat:` PRs bump MINOR** (`0.1.0` → `0.2.0`) as the final commit on the feature branch — after tests pass, right before push — in its own commit: `chore: bump version to 0.2.0`. **Add a `CHANGELOG` entry for the new version in `src/changelog.py` in the same commit** — plain, user-facing language describing what's new (not a commit-log dump), shown in the app's "What's New" popup (`src/WhatsNewDialog.py`, triggered from `GoonerApp.maybe_show_whats_new_on_startup()` and the Help menu). Do this without being asked — it's part of the bump, not a separate step.
-- **Critical `fix:` PRs bump PATCH** (`0.2.0` → `0.2.1`) the same way, including a `CHANGELOG` entry. "Critical" = crash, data loss, or a core feature completely broken — a judgment call; ask the user if unsure.
-- **Routine `fix:`/`test:`/`content:`/`docs:`/`chore:` PRs** don't bump the version and don't trigger a build.
-- **After a version-bumping PR is merged**, as part of the usual post-merge sync + branch cleanup:
-  1. Build: `.venv\Scripts\python.exe scripts/build.py` — produces `dist/GoonerApp.exe`.
-  2. Verify: `.venv\Scripts\python.exe scripts/verify_frozen.py` — opens the `.exe` and checks that the plugin modules, `Qt6WebSockets`, `QtSvg`, `VERSION` and the bundled `res/` trees are all inside it, and that the bundled VERSION matches the repo. **Do not publish a build this refuses.** A release has already shipped without its device plugin and without `Qt6WebSockets`, with nothing to show for it but a line in the log; this exists so that is loud instead.
-  3. Tag and push the tag on its own: `git tag v<VERSION> && git push origin v<VERSION>`.
-  4. The **Release check** workflow (`.github/workflows/release-check.yml`) then rebuilds the `.exe` on a clean runner from what is *committed*, runs the same verification, and — only if it passes — attaches that build to a **draft** release for the tag. It also refuses a tag that disagrees with `VERSION`.
-  5. Open the draft in the Releases tab, write the notes in the app's own voice, and publish it.
-- **The published binary is the one CI built, not the one on your disk.** That is the point of doing it this way: step 2 can only inspect a build made from your working tree, so a resource that exists locally but was never committed passes it and fails in CI. Shipping the CI build closes that gap instead of just reporting it.
-- **The tag goes up before the release on purpose.** `gh release create` makes the tag itself, so cutting the release by hand would fire the workflow *after* the asset was already public — a detector rather than a gate.
-- **Nothing reaches users without a person pressing publish.** The workflow creates a draft, never a published release. Release notes are written by hand anyway (see the CHANGELOG rules above), and a tag push should not put anything in front of users on its own.
-- Manual, Claude-driven step (no CI) — follow this after merging a qualifying PR without waiting to be asked, same as branch cleanup already happens automatically after every merge.
-- `scripts/build.py` deliberately only builds — it never calls `gh` or touches GitHub in any way, so anyone who clones the repo can safely run it to build their own copy locally. The same goes for `scripts/verify_frozen.py`: it reads a file and prints what is wrong with it. **Keep it that way — never put GitHub-push/release capability into a script in this repo**, because those scripts are meant to be run by strangers on their own machines.
-  The `release-check.yml` workflow does upload a release asset, which is the one exception and a different thing: a workflow runs only in this repository's own context with a token GitHub issues to it, and somebody who forks the repo gets a workflow that can write to *their* fork and nothing else. It is also scoped as narrowly as the job allows — `contents: write`, only on a `v*` tag, only after the verification passes, and only ever into a draft.
+- **Before opening a PR, ask the user whether it bumps the version, and to what** - don't apply the
+  rules below mechanically; a small feature may be folded into a nearby patch.
+- `feat:` bumps MINOR, a critical `fix:` (crash, data loss, a core feature broken) bumps PATCH,
+  as the last commit on the branch: `chore: bump version to X.Y.Z`. **The same commit adds the
+  `Changelog.Entries` entry** (`engine/Gooner.Core/App/Changelog.cs`) in the app's own flirty,
+  teasing voice - a suggestive lead, a short list of what is new, a closing hook; not a commit log -
+  **and its German and French translations** (`res/locales/*/changelog.json`; `ChangelogTests` fails
+  without the entry, `LocaleFilesTests` without the translations).
+- Routine `fix:`/`test:`/`content:`/`docs:`/`chore:` PRs bump nothing.
+- **After a version-bumping PR is merged**:
+  1. Build and check: `dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" --zip`.
+     **Do not publish a package it refuses.**
+  2. Tag and push the tag on its own: `git tag v<VERSION> && git push origin v<VERSION>`.
+  3. The **Release check** workflow (`.github/workflows/release-check.yml`) refuses a tag that
+     disagrees with `VERSION`, builds the package on a clean runner from what is *committed*, runs
+     the same checks, and - only if they pass - attaches the zip and the FFmpeg source archives to a
+     **draft** release for the tag.
+  4. The user writes the notes in the app's own voice and publishes the draft.
+- **The published package is the one CI built**, not the one on a disk: a local build can only
+  check the working tree, so a file that exists locally but was never committed passes there and
+  fails in CI. **The tag goes up before the release** on purpose - `gh release create` would make
+  the tag itself and fire the workflow after the asset was public. **Nothing reaches users without
+  a person pressing publish.**
+- `Gooner.Build` only builds and checks - it never calls `gh` or touches GitHub. **Keep it that
+  way**: anyone who clones the repo runs it on their own machine. The release workflow is the one
+  exception, scoped to `contents: write`, a `v*` tag, a passed check, and a draft.
+- New or changed shortcuts go into the Guide's shortcut list (`Guide.cs`, translated) and the
+  README by hand; nothing generates them.
 
 ## Session files people write by hand
 
-`skills/gooner-session-builder/` is a self-contained folder someone drops into their own AI assistant: `SKILL.md` (how to shape a session worth playing) plus `SESSION_FORMAT.md` (the field reference). It lives at the repo root rather than in `.claude/skills/` on purpose — that directory only reaches Claude Code working *in this repo*, which is the wrong audience entirely.
+`skills/gooner-session-builder/` is a self-contained folder someone drops into their own AI
+assistant: `SKILL.md` (how to shape a session worth playing) plus `SESSION_FORMAT.md` (the field
+reference). It lives at the repo root rather than in `.claude/skills/` on purpose - that directory
+only reaches Claude Code working *in this repo*, which is the wrong audience entirely.
 
-`session_files.validate_session()` is what makes that safe to offer: a hand-written file gets every detail wrong that a serialiser gets right for free, and `read_session_file()` used to check only that `format` and `segments` existed. It collects every problem rather than raising on the first, because somebody iterating on a generated file wants the whole list. `tests/test_session_format_doc.py` keeps the spec honest — it fails if the document names a rhythm the app cannot play, omits one it can, or carries an example the validator would reject.
+`SessionFiles.ValidateSession` is what makes that safe to offer: a hand-written file gets every
+detail wrong that a serialiser gets right for free. It collects every problem rather than raising on
+the first, because somebody iterating on a generated file wants the whole list. Its messages are a
+public contract, word for word. `SessionFormatDocTests` keeps the document honest - it fails if it
+names a rhythm the app cannot play, omits one it can, or carries an example the validator rejects.
 
 ## Content note
 
-`res/callouts/*/*.json` contain sexually explicit text (this is an adult-themed app by design) — expected content when editing those files. The `degrading` and `hard_degrading` tones are humiliation play by design and are deliberately harsher than the rest (`hard_degrading` is small-penis humiliation throughout); both stay opt-in and are never part of a default or fallback selection.
+`res/callouts/*/*.json` contain sexually explicit text (this is an adult-themed app by design) -
+expected content when editing those files. The `degrading` and `hard_degrading` tones are
+humiliation play by design and are deliberately harsher than the rest (`hard_degrading` is
+small-penis humiliation throughout); both stay opt-in and are never part of a
+default or fallback selection. Callouts in German and French are written natively, never
+translated line for line.
+
+**Nothing explicit goes on GitHub beyond those texts**: no explicit character models, no explicit
+screenshots (GitHub's Acceptable Use Policy covers release assets too). Bundled characters need
+rights in writing, must be unmistakably adult and are dressed; explicit variants stay local. No
+public screenshot shows a figure holding the toy.
 
 ## Naming
 
-The local folder is `Gooner`, the GitHub repo is `AutoShowStroker`, and the app itself is `GoonerApp`. All three refer to the same project.
+The local folder is `Gooner`, the GitHub repo is `AutoShowStroker`, and the app itself is
+`GoonerApp`. All three refer to the same project.
