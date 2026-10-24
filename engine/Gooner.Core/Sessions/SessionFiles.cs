@@ -114,10 +114,14 @@ public static class SessionFiles
     // it was planned to be; handing the measured figure back to the planner makes the replay
     // overshoot a second time. The last segment is the exception: the climax holds it open, or
     // the user stopped partway through it, so there what it actually ran is the truth.
+    //
+    // And a segment that ran shorter than planned was cut short - by an edge, for its pause - so what
+    // it ran is the truth there too: saved at its plan, the replay played on past the cut. The Python
+    // app saves the plan (parity/allowlist.json).
     private static double LengthToReplay(RecordedSegment data, bool isLast)
     {
         var measured = data.End - data.Start;
-        return isLast ? measured : data.PlannedSec ?? measured;
+        return isLast ? measured : Math.Min(data.PlannedSec ?? measured, measured);
     }
 
     // Only the custom rhythms this session actually played. Without the definitions a replay on

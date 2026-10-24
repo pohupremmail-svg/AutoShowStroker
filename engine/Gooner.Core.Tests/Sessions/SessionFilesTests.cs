@@ -359,6 +359,18 @@ public sealed class SessionFilesTests : IDisposable
         Assert.Equal(125.0, Num(Save(recorded)["segments"]![2]!["duration_sec"]), 6); // 5075 -> 5200
     }
 
+    // ... unless it ran shorter than planned: an edge cuts the segment on the air short for its pause,
+    // and saved at its planned length the replay played on past the cut - the pause came 2.7 s late
+    // (harness, seed 42, edge at 60 s). Found by the parity run; the Python app keeps it
+    // (parity/allowlist.json).
+    [Fact]
+    public void a_segment_cut_short_keeps_the_length_it_ran()
+    {
+        var recorded = Timeline(segments: s => [s[0] with { PlannedSec = 70.0 }, s[1], s[2]]); // planned 70, cut at 60
+
+        Assert.Equal(60.0, Num(Save(recorded)["segments"]![0]!["duration_sec"]), 6);
+    }
+
     [Fact]
     public void a_segment_without_a_planned_length_falls_back_to_what_it_measured() =>
         Assert.Equal(60.0, Num(Save(Timeline())["segments"]![0]!["duration_sec"]), 6);
