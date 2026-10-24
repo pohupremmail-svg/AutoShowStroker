@@ -192,7 +192,7 @@ here unchanged. This file only adds what is specific to this side.
   like a media folder: disclosed and deletable under Privacy & Data, **never logged** - nor is a
   model's name (`Character loaded` names none). The bundled ones are **gitignored** until there are
   ones the app may pass on (rights in writing, nothing explicit on GitHub, unmistakably adult), and
-  the package leaves every `.vrm` out (`Package.BesideExecutable`). The chosen one stands on the
+  the package takes none of `res/characters` (`Package.BesideExecutable`). The chosen one stands on the
   start screen's pedestal; none, or one that will not load, leaves the logo there.
 - **One figure, shared** (`Characters/Figure.cs`): `Figures` loads the chosen model once, and
   whichever `CharacterView` is on screen takes it into its own 3D world - the pedestal between
@@ -275,9 +275,9 @@ here unchanged. This file only adds what is specific to this side.
   at each height - a real one curves, and a straight line through its foot left her fingers standing off
   it - and how far balls and foot stand out behind it, which side goes towards her and sets the gap
   from her belly. Real size, times her size. Her hand waits the moment it takes to read; without one
-  she holds a stand-in built from primitives. `res/props` is gitignored (the user's model, licence
-  unchecked, explicit), and the package leaves a prop's `.blend` source out - the `.glb` is made from
-  it by `GoonerSpikes/blender/scripts/prop_export.py` (decimated, colour baked, 2K textures).
+  she holds a stand-in built from primitives. `res/props` is gitignored and never packaged (the user's
+  model, licensed to them, not ours to pass on) - the `.glb` is made from it by
+  `GoonerSpikes/blender/scripts/prop_export.py` (decimated, colour baked, 2K textures).
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
   Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
   `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,
@@ -350,7 +350,8 @@ here unchanged. This file only adds what is specific to this side.
 
 - **The package is a folder, zipped**: `GoonerApp.exe` with the `.pck` embedded, the .NET runtime
   and assemblies in `data_Gooner.Engine_windows_x86_64/`, the FFmpeg libraries, and beside them
-  what the engine reads from disk - `res/` (without `res/licenses`, which is the Python app's),
+  what the engine reads from disk - of `res/` only `callouts/`, `locales/`, `icons/` and the click
+  (named in `Package`, never "all but": the rest is the Python app's or gitignored and private),
   `licenses/` (`engine/licenses`) and `VERSION`. About 200 MB unpacked, 84 MB zipped.
 - **`engine/Gooner.Build`** builds and checks it (`Package`, `ExportCheck`, `RunCheck`): every part
   present and byte-identical to the repository's, the release FFmpeg libraries, **no file holding

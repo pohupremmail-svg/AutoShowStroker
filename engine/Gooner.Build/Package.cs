@@ -12,8 +12,12 @@ public static class Package
 
     public static readonly IReadOnlyList<string> Assemblies = ["Gooner.Engine.dll", "Gooner.Core.dll", "GodotSharp.dll"];
 
-    // res/licenses is the Python app's - Qt, PyQt6, NumPy - none of which ships with the engine.
-    private const string PythonLicenses = "licenses";
+    // The folders of res/ the engine reads, and nothing else: what goes is named, not what stays. The
+    // rest of res/ is the Python app's (licenses: Qt, PyQt6, NumPy) or the developer's own and
+    // gitignored - test figures in characters/, a licensed prop in props/, VRoid sources in vroids/ -
+    // and a blocklist once packed the prop into a local build. A folder added to res/ later stays out
+    // until it is named here.
+    private static readonly string[] ResFolders = ["callouts", "locales", "icons"];
 
     // Every file that goes beside the executable, as (path in the package, path in the repository).
     public static IReadOnlyList<(string Relative, string Source)> BesideExecutable(Repository repo)
@@ -23,11 +27,10 @@ public static class Package
         foreach (var file in Files(repo.Res))
         {
             var inRes = Path.GetRelativePath(repo.Res, file);
-            if (inRes.Split(Path.DirectorySeparatorChar)[0] == PythonLicenses) continue;
-            // The developer's own test figures: gigabytes, and none the app may pass on yet.
-            if (string.Equals(Path.GetExtension(file), ".vrm", StringComparison.OrdinalIgnoreCase)) continue;
-            // A prop's Blender source: the app loads the .glb made from it.
-            if (string.Equals(Path.GetExtension(file), ".blend", StringComparison.OrdinalIgnoreCase)) continue;
+            var parts = inRes.Split(Path.DirectorySeparatorChar);
+            // The click, the one file at the top of res/ the engine plays.
+            var isClick = parts.Length == 1 && string.Equals(Path.GetExtension(file), ".wav", StringComparison.OrdinalIgnoreCase);
+            if (!isClick && !(parts.Length > 1 && ResFolders.Contains(parts[0]))) continue;
             files.Add((Path.Combine("res", inRes), file));
         }
         files.AddRange(Files(repo.Licenses).Select(file => (Path.Combine("licenses", Path.GetRelativePath(repo.Licenses, file)), file)));

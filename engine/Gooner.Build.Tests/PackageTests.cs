@@ -32,17 +32,36 @@ public sealed class PackageTests : IDisposable
         Assert.DoesNotContain(Listed(), f => f.EndsWith(".vrm", StringComparison.Ordinal));
     }
 
-    // A prop's Blender source is tens of megabytes the app never reads; the .glb made from it is what
-    // it loads, and that goes along.
+    // res/props holds a licensed model nobody may pass on, res/vroids the VRoid Studio sources of
+    // figures - both are the developer's own, gitignored, and were packed into a local build because
+    // the package took all of res/ but what it named.
     [Fact]
-    public void a_props_blender_source_stays_out_and_its_export_goes_along()
+    public void props_and_vroid_sources_stay_out()
     {
         _fake.Write("res/props/TOY.blend", "source");
         _fake.Write("res/props/toy.glb", "export");
+        _fake.Write("res/props/toy.json", "{}");
+        _fake.Write("res/vroids/model.vroid", "vroid");
 
         var listed = Listed();
-        Assert.DoesNotContain(listed, f => f.EndsWith(".blend", StringComparison.Ordinal));
-        Assert.Contains("res/props/toy.glb", listed);
+        Assert.DoesNotContain(listed, f => f.StartsWith("res/props/", StringComparison.Ordinal));
+        Assert.DoesNotContain(listed, f => f.StartsWith("res/vroids/", StringComparison.Ordinal));
+    }
+
+    // What goes is named, not what stays: a folder that turns up in res/ later is the developer's until
+    // it is added here on purpose.
+    [Fact]
+    public void only_what_the_engine_reads_goes_along()
+    {
+        _fake.Write("res/locales/de/ui.json", "{}");
+        _fake.Write("res/whatever/notes.txt", "private");
+        _fake.Write("res/stray.png", "png");
+
+        var res = Listed().Where(f => f.StartsWith("res/", StringComparison.Ordinal)).ToList();
+        Assert.Contains("res/locales/de/ui.json", res);
+        Assert.All(res, f => Assert.True(
+            f.StartsWith("res/callouts/", StringComparison.Ordinal) || f.StartsWith("res/locales/", StringComparison.Ordinal)
+            || f.StartsWith("res/icons/", StringComparison.Ordinal) || f == "res/click.wav", f));
     }
 
     [Fact]

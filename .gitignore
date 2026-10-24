@@ -17,3 +17,4 @@ files_for_testing_DO_NOT_PUSH/
 # nothing explicit on GitHub). The test model's own licence forbids passing it on.
 res/characters/*.vrm
 res/props/
+res/vroids/
