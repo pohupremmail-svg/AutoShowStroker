@@ -975,6 +975,18 @@ def _no_fake_at_the_start(climax):
     return on_plan_extended
 
 
+def _set_finale_at_as_the_engine_does(original):
+    """BeatHandler.set_finale_at as the engine has it: a moment the plan already has is no reason to
+    replan. An edge moves the marker itself and the climax then confirms the same moment; the Python
+    app replans there, which draws the gentle rhythm behind the pause afresh at full speed, so the
+    edge never slows anything down while a climax is planned (allowlist: _oracle_adjusted)."""
+    def set_finale_at(self, when):
+        if when == self._finale_at:
+            return
+        original(self, when)
+    return set_finale_at
+
+
 def _play(config, steps, seed, climax_config=None):
     """One session through BeatHandler - and, given a climax_config, through ClimaxHandler as
     well, wired the way GoonerApp wires them. Returns the draws and the event log."""
@@ -990,6 +1002,7 @@ def _play(config, steps, seed, climax_config=None):
             mock.patch("src.ClimaxHandler.QTimer", _FakeTimer),
             mock.patch("time.time", lambda: _Clock.now),
             mock.patch.object(BeatHandler, "init_beat_sound", lambda self, path: None),
+            mock.patch.object(BeatHandler, "set_finale_at", _set_finale_at_as_the_engine_does(BeatHandler.set_finale_at)),
             *recorder.patches(),
         ]:
             stack.enter_context(patch)

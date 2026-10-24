@@ -252,9 +252,13 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
     }
 
     // Asks the planner to guarantee a fast rhythm across the given moment - "be fast here", not
-    // "the orgasm is here". Null withdraws it. Replans what is queued, so it works mid-session.
+    // "the orgasm is here". Null withdraws it. Replans what is queued, so it works mid-session -
+    // unless the moment is the one the plan already has: an edge moves the marker itself and the
+    // climax then confirms the same moment, and replanning there drew the gentle rhythm behind the
+    // pause afresh at full speed. The Python app replans (parity/allowlist.json).
     public void SetFinaleAt(double? moment)
     {
+        if (moment == FinaleAt) return;
         FinaleAt = moment;
         if (CurrentSegment is not null)
             ReplanFromNextSegment();

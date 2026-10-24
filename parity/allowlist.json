@@ -2,7 +2,8 @@
   "_about": "Cases where the C# port deliberately answers differently from the Python oracle. Every entry says why. A difference that is not listed here is drift, and fails the parity run.",
   "_oracle_adjusted": {
     "_about": "Deliberate fixes the engine has and the Python app will not get (the user's call, 2026-10-24: no more work on the Python side). Taking whole sessions out of the comparison would lose everything else they check, so parity/generate.py brings the oracle into line for exactly this one decision, and the sessions are compared in full.",
-    "climax.no_fake_at_the_start": "Segment 0 starts with the session; a fake planned there opened one session in twenty (at the default 5 %) with \"I'm coming\". The engine never plans one there. Its die is still cast on both sides, so the draws stay the same."
+    "climax.no_fake_at_the_start": "Segment 0 starts with the session; a fake planned there opened one session in twenty (at the default 5 %) with \"I'm coming\". The engine never plans one there. Its die is still cast on both sides, so the draws stay the same.",
+    "beat.no_replan_for_the_same_finale": "An edge moves the finale marker itself and the climax then confirms the same moment. The Python app replans there, which draws the gentle rhythm behind the pause afresh at full speed - with a climax planned, the edge never slowed anything down. The engine does not replan for a moment the plan already has."
   },
   "session_files.validate": {
     "duration_bool": "Python treats a bool as an int, so \"duration_sec\": true passes as one second. The port refuses it - a session that says true there is wrong, and saying so beats playing a one-second session.",

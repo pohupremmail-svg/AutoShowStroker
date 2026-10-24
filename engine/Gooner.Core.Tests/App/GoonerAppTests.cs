@@ -740,6 +740,27 @@ public sealed class GoonerAppTests : IDisposable
         Assert.Equal(1, App.Score.EdgeCount);
     }
 
+    // The relief behind the pause has to survive the climax being pushed back. It did not: postponing
+    // set the planner's finale again, that replanned the queue, and the replan drew the gentle
+    // rhythm afresh at full speed - with a climax planned, the edge never slowed anything down.
+    // Found by the parity run; the Python app keeps it (parity/allowlist.json).
+    [Fact]
+    public void the_rhythm_after_an_edge_is_gentle_with_a_climax_planned_too()
+    {
+        App.Beat.RampingActive = false;
+        App.Beat.MinBeatFreq = 1.0;
+        App.Beat.MaxBeatFreq = 5.0;
+        App.Climax.ClimaxActive = true;
+        App.Climax.MinClimaxAfter = App.Climax.MaxClimaxAfter = 600.0;
+        App.Climax.ClimaxOnlyAfterRamp = false;
+        StartWith();
+
+        App.EdgeReached();
+
+        var next = App.Beat.PlannedSegments.First(s => s.Kind != "pause");
+        Assert.Equal(1.0, next.Freq!.Value, 9);
+    }
+
     [Fact]
     public void reaching_your_edge_gets_its_own_line()
     {
