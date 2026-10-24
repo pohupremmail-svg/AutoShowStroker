@@ -84,10 +84,19 @@ public sealed class GifDecoder : IDisposable
         _canvas = new byte[Width * Height * 4];
     }
 
-    // Back to the first frame, for looping.
+    // Back to the first frame, for looping. A file that has gone in the meantime ends instead.
     public void Rewind()
     {
-        _stream.Position = _dataStart;
+        try
+        {
+            _stream.Position = _dataStart;
+        }
+        catch (IOException)
+        {
+            Warn("the file could not be read again");
+            Ended = true;
+            return;
+        }
         Array.Clear(_canvas);
         _pendingDisposal = 0;
         _gceDisposal = 0;
@@ -132,6 +141,14 @@ public sealed class GifDecoder : IDisposable
         catch (EndOfStreamException)
         {
             Warn("file ends early");
+            Ended = true;
+            return null;
+        }
+        // A file that goes while it plays - an unplugged drive, a deleted file - ends like one cut
+        // short. The player decodes on a thread of its own, where anything thrown ends the process.
+        catch (IOException)
+        {
+            Warn("the rest of the file could not be read");
             Ended = true;
             return null;
         }
@@ -257,22 +274,26 @@ public sealed class GifDecoder : IDisposable
         _pendingDisposal = 0;
     }
 
+    // Both take the part of the frame that is on the canvas. A frame may lie partly or wholly off it,
+    // and its rows then started past the end of a canvas row - or of the canvas.
     private void ClearRect(int x0, int y0, int w, int h)
     {
         var x1 = Math.Min(Width, x0 + w);
         var y1 = Math.Min(Height, y0 + h);
+        if (x0 >= x1) return;
         for (var y = y0; y < y1; y++)
-            Array.Clear(_canvas, (y * Width + x0) * 4, Math.Max(0, x1 - x0) * 4);
+            Array.Clear(_canvas, (y * Width + x0) * 4, (x1 - x0) * 4);
     }
 
     private void CopyRect(byte[] from, byte[] to, int x0, int y0, int w, int h)
     {
         var x1 = Math.Min(Width, x0 + w);
         var y1 = Math.Min(Height, y0 + h);
+        if (x0 >= x1) return;
         for (var y = y0; y < y1; y++)
         {
             var o = (y * Width + x0) * 4;
-            Buffer.BlockCopy(from, o, to, o, Math.Max(0, x1 - x0) * 4);
+            Buffer.BlockCopy(from, o, to, o, (x1 - x0) * 4);
         }
     }
 

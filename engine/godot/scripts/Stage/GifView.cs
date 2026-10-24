@@ -138,7 +138,24 @@ public partial class GifView : TextureRect
         return image;
     }
 
+    // The safety boundary of the decoding thread: anything thrown on a thread of our own ends the
+    // process in .NET, so whatever escapes the decoder ends this GIF instead - the frame on screen
+    // stays up, and the session goes on.
     private void Work(GifDecoder decoder)
+    {
+        try
+        {
+            Decode(decoder);
+        }
+#pragma warning disable CA1031 // The boundary: a GIF from anywhere must never be able to end the app.
+        catch (Exception e)
+#pragma warning restore CA1031
+        {
+            AppLog.Warning(Log, "Stopped playing {0}: {1}", System.IO.Path.GetFileName(_path), e.GetType().Name);
+        }
+    }
+
+    private void Decode(GifDecoder decoder)
     {
         using (decoder)
         {
@@ -167,6 +184,8 @@ public partial class GifView : TextureRect
                     // stops asking and this thread idles out.
                     if (Volatile.Read(ref _cacheComplete)) return;
                     decoder.Rewind();
+                    // The file has gone: what was shown last stays up.
+                    if (decoder.Ended) return;
                     continue;
                 }
                 _queue.Enqueue((ToImage(frame.Rgba, decoder.Width, decoder.Height, _target), frame.DelayMs, false));

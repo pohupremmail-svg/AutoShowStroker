@@ -168,6 +168,102 @@ public class GifDecoderTests
         Assert.Throws<InvalidDataException>(() => new GifDecoder(stream, ownsStream: false));
     }
 
+    // A 10x10 canvas, white on black: a 2x2 frame at (left, top) that hands `disposal` on, then one at
+    // the origin. Encoders do put frames partly or wholly off the canvas.
+    private static byte[] TwoFrames(int left, int top, int disposal)
+    {
+        var gif = new List<byte>();
+        gif.AddRange("GIF89a"u8.ToArray());
+        gif.AddRange(new byte[] { 10, 0, 10, 0, 0x80, 0, 0, 0, 0, 0, 255, 255, 255 });
+        foreach (var (x, y, d) in new[] { (left, top, disposal), (0, 0, 0) })
+        {
+            gif.AddRange(new byte[] { 0x21, 0xF9, 4, (byte)(d << 2), 10, 0, 0, 0 });
+            gif.AddRange(new byte[] { 0x2C, (byte)x, 0, (byte)y, 0, 2, 0, 2, 0, 0 });
+            // LZW, code size 2: clear, four times colour 1, end.
+            gif.AddRange(new byte[] { 2, 2, 0x4C, 0x0A, 0 });
+        }
+        gif.Add(0x3B);
+        return [.. gif];
+    }
+
+    // The disposal of a frame off the canvas used to clear or restore from where the canvas ends - out
+    // of its array - and that ended the process: the GIF player decodes on a thread of its own.
+    [Theory]
+    [InlineData(20, 8, 2)]
+    [InlineData(20, 8, 3)]
+    [InlineData(4, 30, 2)]
+    [InlineData(250, 250, 3)]
+    public void a_frame_off_the_canvas_is_disposed_of_without_reading_outside_it(int left, int top, int disposal)
+    {
+        using var decoder = new GifDecoder(new MemoryStream(TwoFrames(left, top, disposal)), ownsStream: true);
+
+        var frames = new List<GifFrame>();
+        while (decoder.ReadNextFrame() is { } frame) frames.Add(frame);
+
+        Assert.Equal(2, frames.Count);
+        // The second frame is drawn at the origin, and nothing else is.
+        Assert.Equal([255, 255, 255, 255], frames[1].Rgba[..4]);
+        Assert.Equal(0, frames[1].Rgba[(10 * 9 + 9) * 4 + 3]);
+    }
+
+    // A file that goes away while it plays - a drive unplugged, the file deleted - ends the GIF, as the
+    // end of the file would. Thrown, it ended the process: the player decodes on a thread of its own.
+    [Fact]
+    public void a_read_that_fails_while_playing_ends_the_file()
+    {
+        var bytes = TwoFrames(0, 0, 0);
+        // Fails once the first frame has been read: 19 bytes of header and palette, 23 of the frame.
+        using var decoder = new GifDecoder(new FailingStream(bytes, failAfter: 42), ownsStream: true);
+
+        Assert.NotNull(decoder.ReadNextFrame());
+        Assert.Null(decoder.ReadNextFrame());
+        Assert.True(decoder.Ended);
+        Assert.Contains(decoder.Warnings, w => w.Contains("could not be read", StringComparison.Ordinal));
+        Assert.Null(decoder.ReadNextFrame());
+    }
+
+    // Rewinding a file that has gone is the same: the GIF is over, nothing is thrown.
+    [Fact]
+    public void rewinding_a_file_that_has_gone_ends_it()
+    {
+        var stream = new FailingStream(TwoFrames(0, 0, 0), failAfter: int.MaxValue);
+        using var decoder = new GifDecoder(stream, ownsStream: true);
+        while (decoder.ReadNextFrame() is not null) { }
+        stream.FailNow = true;
+
+        decoder.Rewind();
+
+        Assert.True(decoder.Ended);
+        Assert.Null(decoder.ReadNextFrame());
+    }
+
+    private sealed class FailingStream(byte[] data, int failAfter) : MemoryStream(data)
+    {
+        public bool FailNow { get; set; }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (FailNow || Position >= failAfter) throw new IOException("The device is not ready.");
+            return base.Read(buffer, offset, (int)Math.Min(count, failAfter - Position));
+        }
+
+        public override int ReadByte()
+        {
+            if (FailNow || Position >= failAfter) throw new IOException("The device is not ready.");
+            return base.ReadByte();
+        }
+
+        public override long Position
+        {
+            get => base.Position;
+            set
+            {
+                if (FailNow) throw new IOException("The device is not ready.");
+                base.Position = value;
+            }
+        }
+    }
+
     // 4096 x 4096 RGBA is 64 MB a canvas; a header claiming more is refused rather than allocated.
     [Fact]
     public void a_canvas_too_large_to_hold_is_refused()
