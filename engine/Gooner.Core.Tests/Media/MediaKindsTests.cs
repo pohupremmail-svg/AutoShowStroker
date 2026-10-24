@@ -1,4 +1,5 @@
 using Gooner.Core.Media;
+using Gooner.Core.Tests.Support;
 
 namespace Gooner.Core.Tests.Media;
 
@@ -6,8 +7,15 @@ namespace Gooner.Core.Tests.Media;
 public sealed class MediaKindsTests : IDisposable
 {
     private readonly DirectoryInfo _dir = Directory.CreateTempSubdirectory("gooner-media-");
+    private readonly List<string> _junctions = [];
 
-    public void Dispose() => _dir.Delete(recursive: true);
+    // The junctions go first, each on its own: deleted non-recursively, only the link goes, never what
+    // it points at - and a recursive delete refuses one ("access denied").
+    public void Dispose()
+    {
+        foreach (var link in _junctions) Directory.Delete(link);
+        _dir.Delete(recursive: true);
+    }
 
     private void Touch(string relative)
     {
@@ -89,4 +97,70 @@ public sealed class MediaKindsTests : IDisposable
     [Fact]
     public void find_supported_files_survives_a_folder_it_cannot_list() =>
         Assert.Empty(MediaKinds.FindSupportedFiles(Path.Combine(_dir.FullName, "does-not-exist")));
+
+    // A junction is how Windows hangs a folder from elsewhere into a tree, and the walk follows one
+    // as the Python one does - but a junction back up the tree used to be walked round and round
+    // until the path grew too long, and that error then cost the whole folder: nothing was found.
+    private void Junction(string relative, string target)
+    {
+        var link = Path.Combine(_dir.FullName, relative);
+        using var mklink = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe")
+        {
+            ArgumentList = { "/c", "mklink", "/J", link, Path.Combine(_dir.FullName, target) },
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            CreateNoWindow = true,
+        })!;
+        mklink.WaitForExit();
+        _junctions.Add(link);
+        Assert.True(Directory.Exists(link), "mklink /J failed");
+    }
+
+    [WindowsFact]
+    public void a_junction_back_up_the_tree_is_walked_once()
+    {
+        Touch(Path.Combine("media", "a.png"));
+        Touch(Path.Combine("media", "sub", "b.gif"));
+        Junction(Path.Combine("media", "sub", "back"), "media");
+
+        var found = MediaKinds.FindSupportedFiles(Path.Combine(_dir.FullName, "media"));
+
+        Assert.Equal(["a.png", "b.gif"], found.Select(Path.GetFileName).Order(StringComparer.Ordinal));
+    }
+
+    [WindowsFact]
+    public void a_folder_hung_in_by_a_junction_is_found_under_the_junctions_name()
+    {
+        Touch(Path.Combine("media", "a.png"));
+        Touch(Path.Combine("elsewhere", "c.mp4"));
+        Junction(Path.Combine("media", "linked"), "elsewhere");
+
+        var found = MediaKinds.FindSupportedFiles(Path.Combine(_dir.FullName, "media"));
+
+        Assert.Contains(Path.Combine(_dir.FullName, "media", "linked", "c.mp4"), found);
+        Assert.Equal(2, found.Count);
+    }
+
+    [WindowsFact]
+    public void a_folder_reached_twice_is_listed_once()
+    {
+        Touch(Path.Combine("elsewhere", "c.mp4"));
+        Directory.CreateDirectory(Path.Combine(_dir.FullName, "media"));
+        Junction(Path.Combine("media", "one"), "elsewhere");
+        Junction(Path.Combine("media", "two"), "elsewhere");
+
+        Assert.Single(MediaKinds.FindSupportedFiles(Path.Combine(_dir.FullName, "media")));
+    }
+
+    // One subtree that cannot be walked costs that subtree, not what was found everywhere else.
+    [WindowsFact]
+    public void a_junction_whose_target_is_gone_costs_nothing_else()
+    {
+        Touch(Path.Combine("media", "a.png"));
+        Touch(Path.Combine("gone", "x.png"));
+        Junction(Path.Combine("media", "dangling"), "gone");
+        Directory.Delete(Path.Combine(_dir.FullName, "gone"), recursive: true);
+
+        Assert.Equal(["a.png"], MediaKinds.FindSupportedFiles(Path.Combine(_dir.FullName, "media")).Select(Path.GetFileName));
+    }
 }
