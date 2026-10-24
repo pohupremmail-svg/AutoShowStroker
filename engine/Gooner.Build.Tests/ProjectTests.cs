@@ -87,6 +87,30 @@ public class ProjectTests
             File.ReadAllText(Path.Combine(Repo.Root, ".github", "workflows", "release-check.yml")), StringComparison.Ordinal);
     }
 
+    // Godot and its templates come from the cache when they can, and a cache entry is something
+    // another workflow run can write. The job that builds the release holds a token that writes to
+    // the repository, so what it runs is checked against the pinned SHA-512 every time - not only
+    // when it was just downloaded.
+    [Fact]
+    public void the_release_build_checks_godot_whether_it_came_from_the_cache_or_not()
+    {
+        var workflow = File.ReadAllText(Path.Combine(Repo.Root, ".github", "workflows", "release-check.yml")).ReplaceLineEndings("\n");
+        var steps = workflow.Split("\n      - ").Skip(1).ToList();
+
+        var checking = steps.Where(step => step.Contains("Get-FileHash", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(checking);
+        Assert.All(checking, step => Assert.DoesNotContain("cache-hit", step, StringComparison.Ordinal));
+        Assert.All(checking, step =>
+        {
+            Assert.Contains("GODOT_EDITOR_SHA512", step, StringComparison.Ordinal);
+            Assert.Contains("GODOT_TEMPLATES_SHA512", step, StringComparison.Ordinal);
+        });
+        // ... and before anything of it is unpacked or run.
+        var check = steps.FindIndex(step => step.Contains("Get-FileHash", StringComparison.Ordinal) && !step.Contains("cache-hit", StringComparison.Ordinal));
+        var install = steps.FindIndex(step => step.Contains("Expand-Archive", StringComparison.Ordinal));
+        Assert.True(check >= 0 && check < install, "the check has to run before Godot is unpacked");
+    }
+
     // The executable's icon has to sit inside the Godot project for the export to embed it; it is a
     // copy of the one both apps use, and has to stay one.
     [Fact]

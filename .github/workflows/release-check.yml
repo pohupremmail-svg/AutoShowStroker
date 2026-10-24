@@ -68,21 +68,29 @@ jobs:
           path: ${{ runner.temp }}/godot-downloads
           key: godot-${{ env.GODOT_VERSION }}-mono-win64-${{ env.GODOT_TEMPLATES_SHA512 }}
 
-      # Refused unless both files are byte for byte the pinned ones.
       - name: Download Godot and its export templates
         if: steps.godot-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $base = "https://github.com/godotengine/godot-builds/releases/download/$env:GODOT_VERSION"
           $dir = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP/godot-downloads"
+          foreach ($name in "Godot_v$($env:GODOT_VERSION)_mono_win64.zip", "Godot_v$($env:GODOT_VERSION)_mono_export_templates.tpz") {
+            Invoke-WebRequest "$base/$name" -OutFile (Join-Path $dir $name)
+          }
+
+      # Refused unless both files are byte for byte the pinned ones - every run, a cache hit included:
+      # a cache entry can be written by another workflow run, and this job holds a token that writes
+      # to the repository.
+      - name: Check Godot against its pinned SHA-512
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP/godot-downloads"
           $files = @{
             "Godot_v$($env:GODOT_VERSION)_mono_win64.zip" = $env:GODOT_EDITOR_SHA512
             "Godot_v$($env:GODOT_VERSION)_mono_export_templates.tpz" = $env:GODOT_TEMPLATES_SHA512
           }
           foreach ($name in $files.Keys) {
-            $target = Join-Path $dir $name
-            Invoke-WebRequest "$base/$name" -OutFile $target
-            $hash = (Get-FileHash $target -Algorithm SHA512).Hash.ToLowerInvariant()
+            $hash = (Get-FileHash (Join-Path $dir $name) -Algorithm SHA512).Hash.ToLowerInvariant()
             if ($hash -ne $files[$name]) { throw "$name does not match its pinned SHA-512" }
           }
 
