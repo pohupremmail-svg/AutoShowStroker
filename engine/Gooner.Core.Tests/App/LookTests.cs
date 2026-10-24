@@ -26,6 +26,7 @@ public sealed class LookTests : IDisposable
         Assert.True(look.FocusWanders);
         Assert.Equal("off", look.Censor);
         Assert.Equal("oval", look.TelepathyFrame);
+        Assert.Equal("fair", look.ToyColor);
     }
 
     [Fact]
@@ -38,6 +39,7 @@ public sealed class LookTests : IDisposable
         store.SetValue("Look/focus_wanders", false);
         store.SetValue("Look/censor", "mosaic");
         store.SetValue("Look/telepathy_frame", "crt");
+        store.SetValue("Look/toy_color", "orc");
 
         var look = new Look(store);
 
@@ -47,6 +49,7 @@ public sealed class LookTests : IDisposable
         Assert.False(look.FocusWanders);
         Assert.Equal("mosaic", look.Censor);
         Assert.Equal("crt", look.TelepathyFrame);
+        Assert.Equal("orc", look.ToyColor);
     }
 
     // A later build may know more of them; this one reads what it cannot draw as its default.

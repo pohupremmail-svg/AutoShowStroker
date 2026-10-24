@@ -228,10 +228,11 @@ public sealed class SettingsForm
             _toggles[name] = new ToggleSetting(name, label, group, (bool)defaults[name], value, write, tooltip);
             return new ToggleRow(name);
         }
+        // More than a row of buttons holds goes in a list.
         ChoiceRow LookChoice(string name, string label, string value, Action<string> write)
         {
             var options = Look.Choices[name].Select(option => option with { Label = L10n.T(option.Label) }).ToList();
-            _choices[name] = new ChoiceSetting(name, label, Look.SettingsGroup, options, (string)Look.Defaults[name], value, write);
+            _choices[name] = new ChoiceSetting(name, label, Look.SettingsGroup, options, (string)Look.Defaults[name], value, write) { Dropdown = options.Count > 5 };
             return new ChoiceRow(name);
         }
 
@@ -343,6 +344,7 @@ public sealed class SettingsForm
             Toggle("in_session", L10n.T("Shown during a session, closer with each callout"), CharacterChoice.SettingsGroup, CharacterChoice.Defaults,
                 app.Character.InSession, v => app.Character.InSession = v),
             LookChoice("telepathy_frame", L10n.T("Frame:"), look.TelepathyFrame, v => look.TelepathyFrame = v),
+            LookChoice("toy_color", L10n.T("Toy colour:"), look.ToyColor, v => look.ToyColor = v),
             new NoteRow(L10n.T("Choose a folder of your own .vrm models, and every one in it is offered here.")),
             new ResetRow("Look"),
         ]));

@@ -1,3 +1,4 @@
+using Gooner.Core.Characters;
 using Gooner.Core.Localization;
 using Gooner.Core.Settings;
 
@@ -22,6 +23,7 @@ public sealed class Look : ISettingsOwner
         ["focus_wanders"] = true,
         ["censor"] = "off",
         ["telepathy_frame"] = "oval",
+        ["toy_color"] = ToyColours.Default,
     };
 
     // Every choice, in the order the settings offer it; the settings show the label translated.
@@ -32,6 +34,7 @@ public sealed class Look : ISettingsOwner
         ["effects"] = [new("subtle", L10n.N("Subtle")), new("normal", L10n.N("Normal")), new("wild", L10n.N("Wild"))],
         ["censor"] = [new("off", L10n.N("Clear")), new("blur", L10n.N("Blur")), new("mosaic", L10n.N("Mosaic")), new("dark", L10n.N("Dark"))],
         ["telepathy_frame"] = [new("oval", L10n.N("Neon Oval")), new("crt", L10n.N("Tube Screen"))],
+        ["toy_color"] = [.. ToyColours.Names.Select(name => new LookOption(name, ToyColours.Labels[name]))],
     };
 
     public Look(ISettingsStore? settings)
@@ -41,6 +44,7 @@ public sealed class Look : ISettingsOwner
         Effects = Choice(settings, "effects");
         Censor = Choice(settings, "censor");
         TelepathyFrame = Choice(settings, "telepathy_frame");
+        ToyColor = Choice(settings, "toy_color");
         var wanders = (bool)Defaults["focus_wanders"];
         FocusWanders = settings?.GetBool($"{SettingsGroup}/focus_wanders", wanders) ?? wanders;
     }
@@ -66,6 +70,9 @@ public sealed class Look : ISettingsOwner
 
     // The window the character is seen in during a session: a neon oval, or an old tube screen.
     public string TelepathyFrame { get; set; }
+
+    // The colour of the toy in her hand - the app's own; a model in res/props keeps its own colours.
+    public string ToyColor { get; set; }
 
     // What the effects are scaled by: how many particles, how hard the shake and the flashes.
     public double EffectScale => Effects switch

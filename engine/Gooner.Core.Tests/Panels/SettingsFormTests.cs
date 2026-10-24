@@ -727,6 +727,14 @@ public sealed class SettingsFormTests : IDisposable
         Assert.False(Form.Choices["note_track"].Dropdown);
     }
 
+    // Twelve colours are no row of buttons either.
+    [Fact]
+    public void the_toy_colour_is_picked_from_a_list()
+    {
+        Assert.True(Form.Choices["toy_color"].Dropdown);
+        Assert.Equal(ToyColours.Names, Form.Choices["toy_color"].Options.Select(o => o.Value));
+    }
+
     private string OwnModels()
     {
         var own = Directory.CreateDirectory(Path.Combine(_tmp.FullName, "own"));

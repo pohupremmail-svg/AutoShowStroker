@@ -224,6 +224,8 @@ public partial class Main : Control
         if (_scheme != _app.Look.ColorScheme) ApplyScheme();
         if (_frameStyle != _app.Look.TelepathyFrame && _telepathy is not null) BuildTelepathy();
         if (_language != L10n.Language || _character != _app.Character.Path) ApplyLanguage();
+        Toy.Wanted = _app.Look.ToyColor;
+        Toy.Loaded?.Tint(Toy.Wanted);
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
         // The notes either side of now and one beyond each, for the character to move to.

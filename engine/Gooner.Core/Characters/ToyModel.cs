@@ -2,9 +2,11 @@ using System.Numerics;
 
 namespace Gooner.Core.Characters;
 
-// A mesh as the engine takes it: per vertex a position, a normal and an sRGB colour, and triangles
-// counter-clockwise seen from outside, three indices each. In metres, Y up.
-public sealed record ToyMesh(IReadOnlyList<Vector3> Positions, IReadOnlyList<Vector3> Normals, IReadOnlyList<Vector4> Colors, IReadOnlyList<int> Indices);
+// A mesh as the engine takes it: per vertex a position, a normal and what part of the toy it is, and
+// triangles counter-clockwise seen from outside, three indices each. In metres, Y up. The parts are
+// weights from 0 to 1 - X head, Y vein, Z sac, W near the foot - and the colour is mixed from them
+// where it is drawn (ToyTint.Albedo), so the one the user picks is laid on without building it again.
+public sealed record ToyMesh(IReadOnlyList<Vector3> Positions, IReadOnlyList<Vector3> Normals, IReadOnlyList<Vector4> Regions, IReadOnlyList<int> Indices);
 
 // The toy the app brings itself, built from code: it needs no model file, so it is the app's own, has
 // no licence to clear, puts nothing explicit on GitHub and is in every package. A model in res/props
@@ -22,14 +24,15 @@ public static class ToyModel
     public const float Length = 0.202f;
 
     // The neck under the head and the head's ridge, at the height they reach on the shaft's sides.
-    public const float Neck = 0.1624f;
-    public const float Rim = 0.1709f;
+    public const float Neck = 0.1635f;
+    public const float Rim = 0.1722f;
 
     // How far its tip curves away from its balls.
     private const float Bend = 0.013f;
 
-    // How much lower the ridge sits on the underside than on top.
-    private const float Dip = 0.0052f;
+    // How far the head leans towards the underside, so its ridge sits lower there than on top: a tilt,
+    // not a lowering of the underside alone - that left the tip where it was and a step below it.
+    private const float Tilt = 0.19f;
 
     private const int Around = 128;
     private const int Along = 260;
@@ -40,20 +43,12 @@ public static class ToyModel
         new(0, 0), new(0.012f, 0), new(0.024f, 0.00005f), new(0.0305f, 0.0004f), new(0.0336f, 0.0019f),
         new(0.0334f, 0.0036f), new(0.0300f, 0.0055f), new(0.0245f, 0.0080f), new(0.0203f, 0.0125f),
         new(0.0189f, 0.0220f), new(0.0187f, 0.0400f), new(0.0193f, 0.0750f), new(0.0198f, 0.1100f),
-        new(0.0193f, 0.1420f), new(0.0184f, 0.1560f), new(0.0176f, 0.1635f), new(0.0186f, 0.1668f),
-        new(0.0218f, 0.1697f), new(0.0232f, 0.1722f),
+        new(0.0193f, 0.1420f), new(0.0186f, 0.1560f), new(0.0180f, 0.1635f), new(0.0185f, 0.1668f),
+        new(0.0203f, 0.1697f), new(0.0213f, 0.1722f),
         // The head: a rounded dome, a quarter ellipse from the ridge to the tip.
-        new(0.02241f, 0.17991f), new(0.02009f, 0.18710f), new(0.01640f, 0.19327f), new(0.01160f, 0.19801f),
-        new(0.00717f, 0.20054f), new(0.00323f, 0.20171f), new(0, Length),
+        new(0.02057f, 0.17991f), new(0.01845f, 0.18710f), new(0.01506f, 0.19327f), new(0.01065f, 0.19801f),
+        new(0.00658f, 0.20054f), new(0.00296f, 0.20171f), new(0, Length),
     ];
-
-    private static readonly Vector3 Body = Srgb(0.90f, 0.68f, 0.60f);
-    private static readonly Vector3 BodyLow = Srgb(0.84f, 0.60f, 0.53f);
-    private static readonly Vector3 Head = Srgb(0.86f, 0.50f, 0.51f);
-    private static readonly Vector3 Vein = Srgb(0.68f, 0.47f, 0.58f);
-    private static readonly Vector3 Sac = Srgb(0.80f, 0.56f, 0.50f);
-
-    private static Vector3 Srgb(float r, float g, float b) => new(r, g, b);
 
     public static ToyMesh Build()
     {
@@ -68,7 +63,7 @@ public static class ToyModel
     private static void Shaft(Builder mesh)
     {
         var outline = Resample(Outline, Along);
-        var rows = new List<(Vector3[] Points, Vector3[] Colours)>();
+        var rows = new List<(Vector3[] Points, Vector4[] Regions)>();
         for (var i = 0; i < outline.Length; i++)
         {
             var (r0, h) = (outline[i].X, outline[i].Y);
@@ -76,25 +71,24 @@ public static class ToyModel
             {
                 // The middle of the foot and the very tip: one point each.
                 var at = Axis(h);
-                rows.Add(([at], [h > Length / 2 ? Head : BodyLow]));
+                rows.Add(([at], [h > Length / 2 ? new Vector4(1, 0, 0, 0) : new Vector4(0, 0, 0, 1)]));
                 continue;
             }
             var points = new Vector3[Around];
-            var colours = new Vector3[Around];
+            var regions = new Vector4[Around];
             for (var j = 0; j < Around; j++)
             {
                 var theta = 2 * MathF.PI * j / Around;
                 var (cos, sin) = (MathF.Cos(theta), MathF.Sin(theta));
                 var (raised, veined) = Relief(h, theta, r0);
-                // The ridge and everything above it fall towards the underside (+Z, theta 0).
-                var head = Smooth(0.150f, 0.168f, h) * (1 - Smooth(0.198f, Length, h));
-                var fall = (1 + cos) / 2;
-                var y = h - Dip * head * fall * fall;
+                // The head leans towards the underside (+Z, theta 0): turned about its axis, so its tip,
+                // where it is no width at all, stays where it is and the dome runs smoothly up to it.
+                var y = h - Tilt * Smooth(0.150f, 0.168f, h) * (r0 + raised) * cos;
                 var (centre, ventral, side) = Frame(y);
                 points[j] = centre + (r0 + raised) * (cos * ventral + sin * side);
-                colours[j] = Colour(h, head, veined);
+                regions[j] = Region(h, veined);
             }
-            rows.Add((points, colours));
+            rows.Add((points, regions));
         }
         mesh.Grid(rows);
     }
@@ -151,13 +145,11 @@ public static class ToyModel
         new(0.088f, 0.136f, 0.0008f, 0.0013f, 4.1f, h => MathF.PI + 0.32f * MathF.Sin(h * 34 + 0.5f) - 0.95f * Smooth(0.088f, 0.136f, h)),
     ];
 
-    private static Vector3 Colour(float h, float head, float veined)
+    // The head from its ridge up, the neck flushed a little towards it; darker towards the foot.
+    private static Vector4 Region(float h, float veined)
     {
-        var body = Vector3.Lerp(BodyLow, Body, Smooth(0.01f, 0.09f, h));
-        // The neck flushes towards the head.
-        body = Vector3.Lerp(body, Head, 0.35f * Smooth(0.145f, 0.163f, h));
-        var colour = Vector3.Lerp(body, Head, Smooth(0.6f, 0.95f, head));
-        return Vector3.Lerp(colour, Vein, 0.55f * veined);
+        var head = 1 - (1 - 0.35f * Smooth(0.145f, 0.163f, h)) * (1 - Smooth(0.157f, 0.166f, h));
+        return new Vector4(head, veined, 0, 1 - Smooth(0.01f, 0.09f, h));
     }
 
     // --- the balls ---
@@ -167,22 +159,23 @@ public static class ToyModel
     private static void Balls(Builder mesh)
     {
         const int rings = 48, around = 72;
-        var rows = new List<(Vector3[] Points, Vector3[] Colours)>();
+        var rows = new List<(Vector3[] Points, Vector4[] Regions)>();
         for (var i = 0; i <= rings; i++)
         {
             var lat = -MathF.PI / 2 + MathF.PI * i / rings;
             var count = i == 0 || i == rings ? 1 : around;
             var points = new Vector3[count];
-            var colours = new Vector3[count];
+            var regions = new Vector4[count];
             for (var j = 0; j < count; j++)
             {
                 var lon = 2 * MathF.PI * j / around;
                 var dir = new Vector3(MathF.Sin(lon) * MathF.Cos(lat), MathF.Sin(lat), MathF.Cos(lon) * MathF.Cos(lat));
                 points[j] = Surface(SacMiddle, dir);
                 var seam = MathF.Exp(-(points[j].X * points[j].X) / (0.002f * 0.002f));
-                colours[j] = Vector3.Lerp(Sac, Vein, 0.25f * seam * Smooth(SacMiddle.Z, SacMiddle.Z + 0.01f, points[j].Z));
+                // The sac's seam a shade darker, as a vein would be.
+                regions[j] = new Vector4(0, 0.45f * seam * Smooth(SacMiddle.Z, SacMiddle.Z + 0.01f, points[j].Z), 1, 0);
             }
-            rows.Add((points, colours));
+            rows.Add((points, regions));
         }
         mesh.Grid(rows);
     }
@@ -284,17 +277,17 @@ public static class ToyModel
     private sealed class Builder
     {
         private readonly List<Vector3> _positions = [];
-        private readonly List<Vector3> _colours = [];
+        private readonly List<Vector4> _regions = [];
         private readonly List<int> _indices = [];
 
-        public void Grid(List<(Vector3[] Points, Vector3[] Colours)> rows)
+        public void Grid(List<(Vector3[] Points, Vector4[] Regions)> rows)
         {
             var starts = new List<int>();
-            foreach (var (points, colours) in rows)
+            foreach (var (points, regions) in rows)
             {
                 starts.Add(_positions.Count);
                 _positions.AddRange(points);
-                _colours.AddRange(colours);
+                _regions.AddRange(regions);
             }
             for (var i = 0; i < rows.Count - 1; i++)
             {
@@ -334,7 +327,7 @@ public static class ToyModel
             }
             for (var k = 0; k < normals.Length; k++)
                 normals[k] = normals[k].LengthSquared() > 0 ? Vector3.Normalize(normals[k]) : Vector3.UnitY;
-            return new ToyMesh(_positions, normals, [.. _colours.Select(c => new Vector4(c, 1))], _indices);
+            return new ToyMesh(_positions, normals, _regions, _indices);
         }
     }
 }

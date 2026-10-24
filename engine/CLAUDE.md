@@ -281,7 +281,13 @@ here unchanged. This file only adds what is specific to this side.
   pick of a procedural one over a model file, 2026-10-24): built from code - suction foot, a shaft
   curving up away from its balls with veins on top and a seam below, a head whose ridge falls towards
   the seam, a slit, two balls in one folded sac - so it needs no licence, puts nothing explicit on
-  GitHub and is in every package. `ToyModelTests` hold it to what `ToyShape` reads off it; judge its
+  GitHub and is in every package. **Its colour is a setting** (Settings > Look > Toy colour,
+  `Look.ToyColor`; `ToyColours`: seven skin tones from ebony to rosy, then ogre, orc, pink, blue,
+  purple - the user's list): the mesh carries what part each vertex is (head, vein, sac, near the foot)
+  in its vertex colour, and `shaders/toy.gdshader` mixes the picked colours from that exactly as
+  `ToyTint.Albedo` does, so a change shows at once and a preview rendered from the core is what the
+  engine draws. Its head leans towards the seam by turning about its axis, not by lowering the
+  underside - that left a step below the tip. `ToyModelTests` hold it to what `ToyShape` reads off it; judge its
   looks from a render, not the frame (`--built-toy` leaves `res/props` aside for a smoke run). Only
   if building it fails is there the stand-in of primitives in `CharacterView`.
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)

@@ -49,6 +49,37 @@ public sealed class ToyModelTests
         Assert.True(Across(ToyModel.Rim) > Across(ToyModel.Neck) + 0.002f);
     }
 
+    // ... but by a few millimetres, no more: the user found a ridge standing 3.7 mm proud of the shaft
+    // too much.
+    [Fact]
+    public void the_head_stands_out_by_little_more_than_two_millimetres()
+    {
+        float Across(float y) => Mesh.Positions.Where(p => Math.Abs(p.Y - y) < 0.0008f).Max(p => Math.Abs(p.X));
+        Assert.InRange(Across(ToyModel.Rim) - Across(0.14f), 0.0005f, 0.0025f);
+    }
+
+    // The head is a dome all the way to its tip. Its ridge slants down towards the seam, and done by
+    // lowering the underside alone that left a step just below the tip, where the head rose back up to
+    // a tip that had stayed put: along the underside the outline only ever bends inwards.
+    [Fact]
+    public void the_head_rounds_off_to_its_tip_without_a_step()
+    {
+        var shape = Shape;
+        var underside = Mesh.Positions
+            .Where(p => Math.Abs(p.X) < 0.0004f && p.Y > ToyModel.Rim + 0.002f && p.Y < ToyModel.Length - 0.004f)
+            .Select(p => (p.Y, Out: p.Z - shape.CentreAt((p.Y - shape.Foot.Y) / shape.Length).Z))
+            .Where(p => p.Out > 0)
+            .OrderBy(p => p.Y)
+            .ToList();
+        Assert.True(underside.Count > 8);
+        var slopes = underside.Zip(underside.Skip(1))
+            .Where(pair => pair.Second.Y - pair.First.Y > 1e-4f)
+            .Select(pair => (pair.Second.Out - pair.First.Out) / (pair.Second.Y - pair.First.Y))
+            .ToList();
+        for (var i = 1; i < slopes.Count; i++)
+            Assert.True(slopes[i] <= slopes[i - 1] + 0.15f, $"the outline bends outwards at step {i}: {slopes[i - 1]:0.00} -> {slopes[i]:0.00}");
+    }
+
     // Veins stand out of the shaft on the side facing away from the balls; the shaft is not a turned
     // cylinder.
     [Fact]
@@ -86,13 +117,29 @@ public sealed class ToyModelTests
         Assert.True(inward == 0, $"{inward} triangles face in");
     }
 
+    // Not a colour but where it goes - head, vein, sac, how near the foot - so that the colour the user
+    // picks is laid on at once, without building it again (ToyColours).
     [Fact]
-    public void every_vertex_has_a_normal_and_a_colour()
+    public void every_vertex_has_a_normal_and_says_what_part_it_is()
     {
         Assert.Equal(Mesh.Positions.Count, Mesh.Normals.Count);
-        Assert.Equal(Mesh.Positions.Count, Mesh.Colors.Count);
+        Assert.Equal(Mesh.Positions.Count, Mesh.Regions.Count);
         Assert.All(Mesh.Normals, n => Assert.Equal(1f, n.Length(), 3));
-        Assert.All(Mesh.Colors, c => Assert.True(c.X is >= 0 and <= 1 && c.Y is >= 0 and <= 1 && c.Z is >= 0 and <= 1 && c.W == 1));
+        Assert.All(Mesh.Regions, r => Assert.True(r.X is >= 0 and <= 1 && r.Y is >= 0 and <= 1 && r.Z is >= 0 and <= 1 && r.W is >= 0 and <= 1));
+    }
+
+    [Fact]
+    public void the_parts_are_where_they_are()
+    {
+        var p = Mesh.Positions;
+        var r = Mesh.Regions;
+        var tip = Enumerable.Range(0, p.Count).MaxBy(i => p[i].Y);
+        Assert.Equal(1f, r[tip].X, 2);
+        var ball = Enumerable.Range(0, p.Count).MaxBy(i => p[i].Z);
+        Assert.Equal(1f, r[ball].Z, 2);
+        Assert.True(Enumerable.Range(0, p.Count).Any(i => r[i].Y > 0.8f), "no vein");
+        var foot = Enumerable.Range(0, p.Count).First(i => p[i].Y < 0.001f && Math.Abs(p[i].X) > 0.03f);
+        Assert.Equal(1f, r[foot].W, 2);
     }
 
     // The same toy every time: nothing in it is drawn from dice.
