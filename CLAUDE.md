@@ -192,9 +192,14 @@ at the repo root.
 - **Where models come from**: `res/characters/*.vrm`, and a folder of the user's own picked under
   Settings > Look (`CharacterChoice`; "own/<name>" for one from there). That folder's path is treated
   like a media folder: disclosed and deletable under Privacy & Data, **never logged** - nor is a
-  model's name (`Character loaded` names none). The bundled ones are **gitignored** until there are
-  ones the app may pass on (rights in writing, nothing explicit on GitHub, unmistakably adult), and
-  the package takes none of `res/characters` (`Package.BesideExecutable`). The chosen one stands on the
+  model's name (`Character loaded` names none). **The app's own figure is Zazurona**
+  (`res/characters/Zazurona.vrm`, the user's VRoid figure, dressed; `CharacterChoice.Default`): she
+  stands there until another is picked, is the one file of `res/characters` in git (the `.gitignore`
+  exception) and in the package (`Package.Characters`), and is credited in the notices.
+  `ProjectTests` fail if she is not committed or her VRM meta names anyone but `GoonerCock`. Every
+  other file there is a local test figure - franchise, explicit, or not ours to pass on - and stays
+  out of git and the package. A new own figure needs rights in writing, must be unmistakably adult
+  and not explicit, and goes into `Package.Characters` and the notices. The chosen one stands on the
   start screen's pedestal; none, or one that will not load, leaves the logo there.
 - **A figure that takes the app down is switched off** (`CharacterChoice.LoadStarting/LoadSettled`,
   `Main.WatchCharacterLoad`): the pick is loaded at every start, so a model that crashes the app
@@ -362,8 +367,8 @@ at the repo root.
 
 - **The package is a folder, zipped**: `GoonerApp.exe` with the `.pck` embedded, the .NET runtime
   and assemblies in `data_Gooner.Engine_windows_x86_64/`, the FFmpeg libraries, and beside them
-  what the engine reads from disk - of `res/` only `callouts/`, `locales/`, `icons/` and the click
-  (named in `Package`, never "all but": the rest is gitignored and private),
+  what the engine reads from disk - of `res/` only `callouts/`, `locales/`, `icons/`, the click and
+  the app's own figures (named in `Package`, never "all but": the rest is gitignored and private),
   `licenses/` (`engine/licenses`) and `VERSION`. About 200 MB unpacked, 84 MB zipped.
 - **`engine/Gooner.Build`** builds and checks it (`Package`, `ExportCheck`, `RunCheck`): every part
   present and byte-identical to the repository's, the release FFmpeg libraries, **no file holding
@@ -544,8 +549,8 @@ translated line for line.
 
 **Nothing explicit goes on GitHub beyond those texts**: no explicit character models, no explicit
 screenshots (GitHub's Acceptable Use Policy covers release assets too). Bundled characters need
-rights in writing and must be unmistakably adult; until there are such ones, `res/characters` is
-gitignored and never packaged.
+rights in writing, must be unmistakably adult and are dressed; explicit variants stay local. No
+public screenshot shows a figure holding the toy.
 
 ## Naming
 

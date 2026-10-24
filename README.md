@@ -1,6 +1,6 @@
 # Auto Hero Generation (GoonerApp)
 
-A specialized, interactive multimedia application, built on the Godot engine, designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter"), motivational text instructions (callouts) - and, if you bring one, a 3D character of your choice who watches you, talks to you and strokes along with the beat.
+A specialized, interactive multimedia application, built on the Godot engine, designed to transform your local media library (images, GIFs, and videos) into a dynamic, personalized "Cock Hero" session. The app combines a randomized playlist with a configurable, interactive rhythm generator ("Strokemeter"), motivational text instructions (callouts) - and a 3D character, Zazurona or one of your own, who watches you, talks to you and strokes along with the beat.
 
 **100% local and private.** Your media, session history, and settings never leave your machine — no account, no login, no telemetry, no cloud calls of any kind. There are exactly two opt-in exceptions, both off until you ask for them: **Check for Updates** pings GitHub.com when you explicitly click it, and optional device output (Settings > Device) connects to an Intiface server whose address you type in yourself. That second one ships disabled, switches itself off again at every launch, and asks before it connects — see below.
 
@@ -14,7 +14,7 @@ One thing there is worth naming: a session you explicitly **save** records the p
 * **Interactive Strokemeter:** A rhythm generator with automatically varying beat frequencies and rhythm patterns (e.g., *Standard Beat*, *Quick Swing*, *Simple Bounce*, *Double Tap*), a click on every beat, and optional difficulty ramping that gradually intensifies the session as it goes on.
 * **Four Note Tracks:** Watch every beat coming before you hear it — notes land in the hit zone exactly on the click. Pick a **Highway** running into the picture, a **Hypno Ring** that can wander across the screen and drag your eyes along (blurring, pixelating or darkening everything outside it, if you like), the classic **Stream**, or a **Tunnel** to fall into.
 * **A Look That Hits Back:** Neon Pink or Boudoir colours, effects from subtle to wild, and a climax that takes over the whole screen — flash, shake, colours tearing apart. A fake-out runs exactly the same effects, right up until it is revealed.
-* **Characters:** Bring your own `.vrm` model. She waits for you on the start screen, watches you from a frame during the session, comes closer with every callout, says her lines in a speech bubble, and strokes in time with your beat. [How to add one](#-characters-your-own-vrm-models).
+* **Characters:** Zazurona comes with the app; bring your own `.vrm` model for anyone else. She waits for you on the start screen, watches you from a frame during the session, comes closer with every callout, says her lines in a speech bubble, and strokes in time with your beat. [How to add one](#-characters-your-own-vrm-models).
 * **Custom Beat Patterns:** Build your own rhythm patterns in the built-in Pattern Editor and mix them in alongside the presets.
 * **Optional Device Output (Beta):** Drive a linear stroker through Intiface Central in time with the Strokemeter, using predictive position-and-duration commands — with a configurable stroke range, test movements and an emergency stop. Off by default and off again at every launch.
 * **Random Pause Phases:** The Strokemeter unexpectedly takes a controlled break — and the notes behind it fly in while it lasts, so you can see the beat coming back.
@@ -59,7 +59,7 @@ One thing there is worth naming: a session you explicitly **save** records the p
 
 ## 🧍 Characters (Your Own VRM Models)
 
-GoonerApp ships without a character — you bring your own. A character is a **`.vrm`** model (VRM 0.x or 1.0), the format [VRoid Studio](https://vroid.com/en/studio) exports and most avatar sites offer.
+GoonerApp comes with a character of its own, **Zazurona**, who stands on the start screen until you pick another. Any other character is a **`.vrm`** model (VRM 0.x or 1.0), the format [VRoid Studio](https://vroid.com/en/studio) exports and most avatar sites offer.
 
 **Where to put them:**
 
@@ -223,7 +223,7 @@ which Trigger Key fires for which in-app event, how to validate your files, and 
   <tr>
     <td width="50%">
       <img src="demo_screens/start_screen.png" alt="Start Screen" width="100%">
-      <p align="center"><em>The start screen - your character stands on the pedestal once you pick one.</em></p>
+      <p align="center"><em>The start screen, with Zazurona on her pedestal.</em></p>
     </td>
     <td width="50%">
       <img src="demo_screens/session_highway.png" alt="Running Session" width="100%">

@@ -156,15 +156,15 @@ public static class Guide
             "whole question off in Settings &gt; Climax.</p>"),
         new("Characters",
             "<h3>Who is talking to you</h3>" +
-            "<p>A character of your choice stands on the start screen, and during a session she " +
+            "<p>Zazurona, the app's own, or a character of your choice stands on the start screen, " +
+            "and during a session she " +
             "watches you from a frame at the top right: every callout draws her closer, her face " +
             "follows what she says, the line appears in a speech bubble beside her, and she " +
             "strokes in time with the beat. The toy in her hand is the app's own - its colour is " +
             "yours to pick under Settings &gt; Look &gt; Toy colour.</p>" +
             "<h3>Bringing your own</h3>" +
-            "<p>A character is a <b>.vrm</b> model - VRM 0.x or 1.0, the format VRoid Studio " +
-            "exports and most avatar sites offer. GoonerApp ships without one, so here is where " +
-            "yours go:</p>" +
+            "<p>Any other character is a <b>.vrm</b> model - VRM 0.x or 1.0, the format VRoid " +
+            "Studio exports and most avatar sites offer. Here is where yours go:</p>" +
             "<ol>" +
             "<li>Put your <code>.vrm</code> files together in a folder of their own, anywhere on " +
             "your machine - outside the app's folder, so they stay where they are when you unpack " +

@@ -8,10 +8,13 @@ namespace Gooner.Core.Characters;
 // Picked in Settings > Look. Kept are the file's name - "own/<name>" for one from the user's folder -
 // and that folder's path, which is the user's to see and to delete (Privacy & Data) and is never
 // logged: like a media folder, it says where their collection lives. Until one is picked, and when
-// the picked one is gone, the first by name.
+// the picked one is gone, the app's own figure (Default) - or, without her, the first by name.
 public sealed class CharacterChoice : ISettingsOwner
 {
     public const string None = "none";
+
+    // The app's own figure, in res/characters of every package (Gooner.Build's Package.Characters).
+    public const string Default = "Zazurona.vrm";
 
     private const string OwnPrefix = "own/";
 
@@ -83,7 +86,7 @@ public sealed class CharacterChoice : ISettingsOwner
     public string File { get; private set; }
 
     // What a reset goes back to.
-    public string First => Values.FirstOrDefault() ?? None;
+    public string First => Values.Contains(Default) ? Default : Values.FirstOrDefault() ?? None;
 
     // The file to load, or null for no character.
     public string? Path => PathOf(File);

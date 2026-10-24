@@ -62,6 +62,15 @@ V-Sekai Contributors, (c) 2018 Masataka SUMI.
 License: MIT License
 License text: Godot-MToon-Shader-MIT.txt
 
+== Zazurona (the app's own character) ==
+res/characters/Zazurona.vrm, made for GoonerApp by GoonerCock in VRoid Studio. Her body, face,
+hair and clothes are built from VRoid Studio's preset items, which pixiv Inc. holds the rights to
+and licenses to any individual or company, for any purpose, under the VRoid Studio Terms of Use.
+License: VRM Public License 1.0, as the model's own metadata states: anyone may use her as an
+avatar, commercially too and in sexual content, pass her on, and modify her and pass the result
+on; no credit is needed. Not for excessively violent, political or religious, or antisocial or
+hateful use.
+
 == FFmpeg N-111611-g5b11ee9429 (2023-07-24) ==
 Bundled with EIRTeam.FFmpeg: avcodec-60.dll, avfilter-9.dll, avformat-60.dll, avutil-58.dll,
 swresample-4.dll, swscale-7.dll. This software uses libraries from the FFmpeg project under the

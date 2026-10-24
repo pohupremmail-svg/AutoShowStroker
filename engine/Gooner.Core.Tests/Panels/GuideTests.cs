@@ -115,6 +115,15 @@ public sealed class GuideTests
             Assert.Contains(expected, text);
     }
 
+    // The app comes with a figure of its own; the Guide names her rather than saying there is none.
+    [Fact]
+    public void characters_tab_introduces_the_apps_own_figure()
+    {
+        var text = Text("Characters");
+        Assert.Contains(Path.GetFileNameWithoutExtension(Gooner.Core.Characters.CharacterChoice.Default), text);
+        Assert.DoesNotContain("ships without", text);
+    }
+
     // A model is somebody's work, and the app does not read its terms for the user.
     [Fact]
     public void characters_tab_says_the_model_licence_is_the_users_to_check() =>

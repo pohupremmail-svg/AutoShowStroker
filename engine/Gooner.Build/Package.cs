@@ -13,11 +13,15 @@ public static class Package
     public static readonly IReadOnlyList<string> Assemblies = ["Gooner.Engine.dll", "Gooner.Core.dll", "GodotSharp.dll"];
 
     // The folders of res/ the engine reads, and nothing else: what goes is named, not what stays. The
-    // rest of res/ is the Python app's (licenses: Qt, PyQt6, NumPy) or the developer's own and
-    // gitignored - test figures in characters/, a licensed prop in props/, VRoid sources in vroids/ -
-    // and a blocklist once packed the prop into a local build. A folder added to res/ later stays out
-    // until it is named here.
+    // rest of res/ is the developer's own and gitignored - test figures in characters/, a licensed
+    // prop in props/, VRoid sources in vroids/ - and a blocklist once packed the prop into a local
+    // build. A folder added to res/ later stays out until it is named here.
     private static readonly string[] ResFolders = ["callouts", "locales", "icons"];
+
+    // The app's own figures in res/characters, by name - the rest of that folder is test figures that
+    // are not the app's to pass on. Each is committed (the one exception in .gitignore) and credited
+    // in the notices; the first is the default (CharacterChoice.Default).
+    public static readonly IReadOnlyList<string> Characters = ["Zazurona.vrm"];
 
     // Every file that goes beside the executable, as (path in the package, path in the repository).
     public static IReadOnlyList<(string Relative, string Source)> BesideExecutable(Repository repo)
@@ -30,7 +34,8 @@ public static class Package
             var parts = inRes.Split(Path.DirectorySeparatorChar);
             // The click, the one file at the top of res/ the engine plays.
             var isClick = parts.Length == 1 && string.Equals(Path.GetExtension(file), ".wav", StringComparison.OrdinalIgnoreCase);
-            if (!isClick && !(parts.Length > 1 && ResFolders.Contains(parts[0]))) continue;
+            var isOwnFigure = parts.Length == 2 && parts[0] == "characters" && Characters.Contains(parts[1]);
+            if (!isClick && !isOwnFigure && !(parts.Length > 1 && ResFolders.Contains(parts[0]))) continue;
             files.Add((Path.Combine("res", inRes), file));
         }
         files.AddRange(Files(repo.Licenses).Select(file => (Path.Combine("licenses", Path.GetRelativePath(repo.Licenses, file)), file)));

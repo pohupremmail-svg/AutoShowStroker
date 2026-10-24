@@ -44,6 +44,24 @@ public sealed class CharacterChoiceTests : IDisposable
         Assert.Equal(Path.Combine(Dir, "a.vrm"), new CharacterChoice(_settings, Dir).Path);
     }
 
+    // The app's own figure stands there until another is picked - whatever else sorts before her.
+    [Fact]
+    public void the_apps_own_figure_until_one_is_picked()
+    {
+        Write("a.vrm");
+        Write(CharacterChoice.Default);
+
+        var choice = new CharacterChoice(_settings, Dir);
+
+        Assert.Equal(CharacterChoice.Default, choice.File);
+        Assert.Equal(CharacterChoice.Default, choice.First);
+    }
+
+    // She ships in res/characters; a checkout or a package without her falls back to the first.
+    [Fact]
+    public void the_apps_own_figure_is_in_the_repository() =>
+        Assert.True(File.Exists(Path.Combine(Support.Repo.PathTo("res/characters"), CharacterChoice.Default)));
+
     [Fact]
     public void a_pick_is_kept()
     {

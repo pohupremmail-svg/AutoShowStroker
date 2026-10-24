@@ -387,10 +387,11 @@ public static class Changelog
             "<li><b>Rebuilt from the ground up on a real game engine.</b> Every note lands " +
             "on its click to the frame, every effect runs on the graphics card, and the rhythm " +
             "you know is exactly the rhythm you get</li>" +
-            "<li><b>She can finally look at you.</b> Bring your own <code>.vrm</code> character - " +
-            "she waits for you on the start screen, watches you from her frame through the whole " +
-            "session, comes closer with every line she says, and strokes right along with your " +
-            "beat. Where to put her is in the Guide, under Characters</li>" +
+            "<li><b>She can finally look at you.</b> Meet Zazurona - she waits for you on the " +
+            "start screen, watches you from her frame through the whole session, comes closer " +
+            "with every line she says, and strokes right along with your beat. Fancy someone " +
+            "else? Bring your own <code>.vrm</code> - the Guide shows where she goes, under " +
+            "Characters</li>" +
             "<li><b>Four ways to watch the beat come for you:</b> a Highway racing at you, a " +
             "Hypno Ring that wanders across the picture and drags your eyes along - blurring, " +
             "pixelating or darkening the rest if you ask nicely - a Stream, or a Tunnel to fall " +

@@ -148,4 +148,33 @@ public class ProjectTests
     public void the_executable_icon_is_the_apps() =>
         Assert.Equal(File.ReadAllBytes(Path.Combine(Repo.Res, "icons", "favicon.ico")),
             File.ReadAllBytes(Path.Combine(Repo.GodotProject, "icon.ico")));
+
+    // The app's own figures go out with every package and so onto GitHub: each has to be committed and
+    // credited, and its VRM meta has to name no one but the app - an export writes whatever the author field
+    // held, a real name included.
+    [Fact]
+    public void the_apps_own_figures_are_committed_and_name_no_one_but_the_app()
+    {
+        Assert.NotEmpty(Package.Characters);
+        foreach (var name in Package.Characters)
+        {
+            var file = Path.Combine(Repo.Res, "characters", name);
+            Assert.True(File.Exists(file), $"{name} is not in res/characters");
+            var meta = VrmMeta(file);
+            Assert.Equal(["GoonerCock"], meta["authors"]!.AsArray().Select(a => (string?)a));
+            Assert.Null(meta["contactInformation"]);
+            Assert.Null(meta["references"]);
+            // Credited in the notices, with the licence its meta gives it.
+            Assert.Contains($"== {Path.GetFileNameWithoutExtension(name)} ", File.ReadAllText(Path.Combine(Repo.Licenses, "THIRD_PARTY_NOTICES.txt")), StringComparison.Ordinal);
+        }
+    }
+
+    // The VRMC_vrm meta of a .vrm - a binary glTF whose first chunk is its JSON.
+    private static System.Text.Json.Nodes.JsonObject VrmMeta(string file)
+    {
+        var bytes = File.ReadAllBytes(file);
+        var length = BitConverter.ToInt32(bytes, 12);
+        var gltf = System.Text.Json.Nodes.JsonNode.Parse(bytes.AsSpan(20, length))!;
+        return gltf["extensions"]!["VRMC_vrm"]!["meta"]!.AsObject();
+    }
 }

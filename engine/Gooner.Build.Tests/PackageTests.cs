@@ -23,13 +23,18 @@ public sealed class PackageTests : IDisposable
     }
 
     // Character models in res/characters are the developer's own test figures, gigabytes of them, and
-    // none the app may pass on yet; a user brings their own through Settings > Look.
+    // not the app's to pass on - all but the app's own, which are named; a user brings their own
+    // through Settings > Look.
     [Fact]
-    public void character_models_stay_out()
+    public void character_models_stay_out_but_the_apps_own()
     {
         _fake.Write("res/characters/Someone - Nude.vrm", "model");
+        _fake.Write("res/characters/sub/Other.vrm", "model");
+        foreach (var name in Package.Characters)
+            _fake.Write($"res/characters/{name}", "model");
 
-        Assert.DoesNotContain(Listed(), f => f.EndsWith(".vrm", StringComparison.Ordinal));
+        Assert.Equal(Package.Characters.Select(name => $"res/characters/{name}").Order(StringComparer.Ordinal),
+            Listed().Where(f => f.EndsWith(".vrm", StringComparison.Ordinal)));
     }
 
     // res/props holds a licensed model nobody may pass on, res/vroids the VRoid Studio sources of
@@ -61,7 +66,8 @@ public sealed class PackageTests : IDisposable
         Assert.Contains("res/locales/de/ui.json", res);
         Assert.All(res, f => Assert.True(
             f.StartsWith("res/callouts/", StringComparison.Ordinal) || f.StartsWith("res/locales/", StringComparison.Ordinal)
-            || f.StartsWith("res/icons/", StringComparison.Ordinal) || f == "res/click.wav", f));
+            || f.StartsWith("res/icons/", StringComparison.Ordinal) || f == "res/click.wav"
+            || Package.Characters.Any(name => f == $"res/characters/{name}"), f));
     }
 
     [Fact]
