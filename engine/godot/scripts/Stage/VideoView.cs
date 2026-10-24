@@ -8,7 +8,7 @@ namespace Gooner.Engine.Stage;
 // its end, or it will never play.
 //
 // The extension is reached by class name, so a build without it compiles and runs: Available is
-// false, and every clip is reported unplayable. It is not in git yet (see engine/CLAUDE.md).
+// false, and every clip is reported unplayable.
 //
 // A backend that cannot open a file says so in the Qt app; this one mostly just shows nothing. So
 // it is watched instead - no picture in its first seconds, or a picture that stops moving while the

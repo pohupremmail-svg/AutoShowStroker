@@ -42,7 +42,7 @@ int Build(string? godot, bool zip)
     }
     if (Package.FfmpegLibraries(repo).Count == 0)
     {
-        Console.Error.WriteLine($"The FFmpeg extension is missing from {repo.FfmpegLibraries}; see engine/CLAUDE.md.");
+        Console.Error.WriteLine($"The FFmpeg extension is missing from {repo.FfmpegLibraries}; it is committed in engine/godot/addons/ffmpeg - see CLAUDE.md.");
         return 2;
     }
     // Only ever a package of ours is replaced - never a folder someone pointed --out at by mistake.
