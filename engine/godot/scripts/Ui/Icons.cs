@@ -23,6 +23,10 @@ public static class Icons
         ["trophy"] = "<path d='M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z'/><path d='M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3'/>",
         ["stats"] = "<path d='M4 20V10M10 20V4M16 20v-7M22 20H2'/>",
         ["power"] = "<path d='M12 3v9'/><path d='M18.4 6.6a9 9 0 1 1-12.8 0'/>",
+        ["rhythm"] = "<path d='M2 12h4l2-6 4 12 3-9 2 3h5'/>",
+        ["climax"] = "<path d='M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6l-5.4 2.9 1.2-6-4.5-4.2 6.1-.7Z'/>",
+        ["voice"] = "<path d='M4 5h16v10H9l-5 4V5Z'/>",
+        ["look"] = "<circle cx='12' cy='12' r='9'/><circle cx='8.5' cy='10' r='1.3'/><circle cx='13.5' cy='8' r='1.3'/><circle cx='15.5' cy='13' r='1.3'/>",
         ["device"] = "<rect x='7' y='2' width='10' height='20' rx='5'/><path d='M12 7v3'/>",
         ["grip"] = "<circle cx='9' cy='6' r='1'/><circle cx='15' cy='6' r='1'/><circle cx='9' cy='12' r='1'/><circle cx='15' cy='12' r='1'/><circle cx='9' cy='18' r='1'/><circle cx='15' cy='18' r='1'/>",
     };

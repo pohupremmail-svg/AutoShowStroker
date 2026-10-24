@@ -54,7 +54,7 @@ public sealed class TranslatedModelsTests : IDisposable
         Assert.Equal("⟦Min. duration (s):⟧", form.Numbers["min_dur"].Label);
         Assert.Equal("⟦Climax prompts active⟧", form.Toggles["climax_active"].Label);
         Assert.StartsWith("⟦", form.Toggles["ask_for_outcome"].Tooltip, StringComparison.Ordinal);
-        Assert.Contains(form.Tabs[0].Rows.OfType<HeaderRow>(), header => header.Text == "⟦General Settings⟧");
+        Assert.Contains(form.Tabs[0].Rows.OfType<SectionRow>(), section => section.Title == "⟦Sound⟧");
         Assert.Equal("⟦Highway⟧", form.Choices["note_track"].Options[0].Label);
         Assert.Equal("Playback", form.Tabs[0].Title);
         Assert.Equal("⟦Playback⟧", form.Tabs[0].DisplayTitle);

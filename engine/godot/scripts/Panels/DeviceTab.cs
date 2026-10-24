@@ -2,26 +2,26 @@ using System;
 using Gooner.Core.App;
 using Gooner.Core.Devices;
 using Gooner.Core.Localization;
+using Gooner.Core.Panels;
 using Gooner.Engine.Ui;
+using Gooner.Engine.Ui.Controls;
 using Godot;
 
 namespace Gooner.Engine.Panels;
 
-// IntifaceSettingsWidget: the Device tab, drawn from Gooner.Core.Devices.DeviceSettings. Ticking the
-// box connects there and then - after the consent - while the address and the stroke range are
-// applied with the rest of the settings on Save.
+// IntifaceSettingsWidget: the Device tab, drawn from Gooner.Core.Devices.DeviceSettings in the
+// redesign's cards (2026-10-24): the beta warning, the switch with what is connected at a glance, then
+// the connection - its address, the stroke range as one slider with two handles, the tests, and the
+// emergency stop set apart. Switching it on connects there and then - after the consent - while the
+// address and the stroke range are applied with the rest of the settings on Save.
 public partial class DeviceTab : VBoxContainer
 {
     private readonly DeviceSettings _device;
     private readonly PanelHost _host;
-    private readonly CheckBox _enabled;
+    private readonly ToggleSwitch _enabled;
     private readonly LineEdit _server;
-    private readonly SpinBox _minimum;
-    private readonly SpinBox _maximum;
     private readonly Label _error;
-    private readonly Label _status;
-    private readonly Label _deviceLine;
-    private readonly Label _syncLine;
+    private readonly (ColorRect Dot, Label Text)[] _states;
     private readonly Button _testUp;
     private readonly Button _testDown;
     private readonly Button _resume;
@@ -31,63 +31,116 @@ public partial class DeviceTab : VBoxContainer
     {
         _device = device;
         _host = host;
-        AddThemeConstantOverride("separation", 8);
+        AddThemeConstantOverride("separation", 12);
         SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        AddChild(Widgets.Text(DeviceSettings.BetaNotice, 13, Palette.Text, wrap: true));
-        _enabled = new CheckBox { Text = L10n.T("Enable device output"), ButtonPressed = device.Enabled, FocusMode = FocusModeEnum.None };
+
+        var banner = new PanelContainer();
+        var warm = UiTheme.Box(UiTheme.Of(Palette.Ruined, 0.13f), 12, 12);
+        warm.SetBorderWidthAll(1);
+        warm.BorderColor = UiTheme.Of(Palette.Ruined, 0.4f);
+        banner.AddThemeStyleboxOverride("panel", warm);
+        banner.AddChild(Widgets.Text(DeviceSettings.BetaNotice, 13, Palette.Text, wrap: true));
+        AddChild(banner);
+
+        var (output, outputRows) = Card();
+        var head = new HBoxContainer();
+        head.AddChild(new Label { Text = L10n.T("Enable device output"), ThemeTypeVariation = "SectionTitle", SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        _enabled = new ToggleSwitch(device.Enabled);
         _enabled.Toggled += EnableClicked;
-        AddChild(_enabled);
-        AddChild(Widgets.Text(DeviceSettings.AddressHint, 13, Palette.Text, wrap: true));
-
-        var form = new GridContainer { Columns = 2 };
-        form.AddThemeConstantOverride("h_separation", 10);
-        form.AddChild(new Label { Text = L10n.T("Server:") });
-        _server = new LineEdit { Text = device.Server, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _server.TextChanged += text => _device.Server = text;
-        form.AddChild(_server);
-        form.AddChild(new Label { Text = L10n.T("Minimum position (DOWN):") });
-        _minimum = Percent(device.MinimumPercent, value => _device.MinimumPercent = value);
-        form.AddChild(_minimum);
-        form.AddChild(new Label { Text = L10n.T("Maximum position (UP):") });
-        _maximum = Percent(device.MaximumPercent, value => _device.MaximumPercent = value);
-        form.AddChild(_maximum);
-        AddChild(form);
-
+        head.AddChild(_enabled);
+        outputRows.AddChild(head);
+        var states = new HBoxContainer();
+        states.AddThemeConstantOverride("separation", 10);
+        _states = new (ColorRect, Label)[3];
+        for (var i = 0; i < 3; i++)
+        {
+            var tile = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            tile.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDarkest), 12, 10));
+            var line = new HBoxContainer();
+            line.AddThemeConstantOverride("separation", 8);
+            var dot = new ColorRect { CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            var text = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            text.AddThemeFontSizeOverride("font_size", 13);
+            line.AddChild(dot);
+            line.AddChild(text);
+            tile.AddChild(line);
+            states.AddChild(tile);
+            _states[i] = (dot, text);
+        }
+        outputRows.AddChild(states);
         _error = Widgets.Text("", 13, Palette.Denied, wrap: true);
-        _status = Widgets.Text("", 13, Palette.Text, wrap: true);
-        _deviceLine = Widgets.Text("", 13, Palette.Text, wrap: true);
-        _syncLine = Widgets.Text("", 13, Palette.Text, wrap: true);
-        foreach (var label in new[] { _error, _status, _deviceLine, _syncLine }) AddChild(label);
+        outputRows.AddChild(_error);
+        AddChild(output);
+
+        var (connection, rows) = Card();
+        rows.AddChild(new Label { Text = DeviceSettings.AddressHint, ThemeTypeVariation = "Hint", AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        _server = new LineEdit { Text = device.Server, PlaceholderText = L10n.T("the address Intiface Central shows") };
+        _server.TextChanged += text => _device.Server = text;
+        rows.AddChild(Pair(L10n.T("Server:"), _server));
+        var stroke = new SliderSpec(0, 1, 0.001, ValueUnit.Percent);
+        var slider = new SliderBar(stroke, device.MinimumPercent / 100, device.MaximumPercent / 100);
+        var badge = new ValueBadge(stroke, range: true);
+        badge.Show(device.MinimumPercent / 100, device.MaximumPercent / 100);
+        void Take(double low, double high)
+        {
+            _device.MinimumPercent = Math.Round(low * 100, 1);
+            _device.MaximumPercent = Math.Round(high * 100, 1);
+            badge.Show(low, high);
+        }
+        slider.Changed += Take;
+        badge.Typed += (low, high) =>
+        {
+            Take(low, high);
+            slider.Set(low, high);
+        };
+        var range = new HBoxContainer();
+        range.AddThemeConstantOverride("separation", 14);
+        range.AddChild(slider);
+        range.AddChild(badge);
+        rows.AddChild(Pair(L10n.T("Stroke range (DOWN - UP):"), range));
 
         var buttons = new HBoxContainer();
-        _testUp = Button(L10n.T("Test Up"), device.TestUp);
+        buttons.AddThemeConstantOverride("separation", 8);
         _testDown = Button(L10n.T("Test Down"), device.TestDown);
-        buttons.AddChild(_testUp);
-        buttons.AddChild(_testDown);
-        buttons.AddChild(Button(L10n.T("Emergency Stop"), device.EmergencyStop));
-        AddChild(buttons);
-        _resume = Button(L10n.T("Resume Device Sync"), device.Resume);
-        AddChild(_resume);
+        _testUp = Button(L10n.T("Test Up"), device.TestUp);
         _scan = Button(L10n.T("Scan for Devices"), device.Scan);
-        AddChild(_scan);
-        AddChild(Widgets.Text(DeviceSettings.SyncNote, 13, Palette.Text, wrap: true));
+        _resume = Button(L10n.T("Resume Device Sync"), device.Resume);
+        foreach (var button in new[] { _testDown, _testUp, _scan, _resume }) buttons.AddChild(button);
+        buttons.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        var stop = Button(L10n.T("Emergency Stop"), device.EmergencyStop);
+        stop.ThemeTypeVariation = "Danger";
+        buttons.AddChild(stop);
+        rows.AddChild(buttons);
+        rows.AddChild(new Label { Text = DeviceSettings.SyncNote, ThemeTypeVariation = "Hint", AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        AddChild(connection);
 
         _device.Changed += Refresh;
         TreeExiting += () => _device.Changed -= Refresh;
         Refresh();
     }
 
-    private static SpinBox Percent(double value, Action<double> changed)
+    private static (PanelContainer Card, VBoxContainer Rows) Card()
     {
-        var spin = new SpinBox { MinValue = 0, MaxValue = 100, Step = 0.1, Suffix = "%", SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        spin.SetValueNoSignal(value);
-        spin.ValueChanged += changed.Invoke;
-        return spin;
+        var card = new PanelContainer { ThemeTypeVariation = "Section" };
+        var rows = new VBoxContainer();
+        rows.AddThemeConstantOverride("separation", 12);
+        card.AddChild(rows);
+        return (card, rows);
+    }
+
+    private static HBoxContainer Pair(string label, Control control)
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 14);
+        row.AddChild(new Label { Text = label.TrimEnd().TrimEnd(':'), CustomMinimumSize = new Vector2(170, 0) });
+        control.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        row.AddChild(control);
+        return row;
     }
 
     private static Button Button(string text, Action pressed)
     {
-        var button = new Button { Text = text, FocusMode = FocusModeEnum.None };
+        var button = new Button { Text = text, ThemeTypeVariation = "Ghost", FocusMode = FocusModeEnum.None };
         button.Pressed += pressed;
         return button;
     }
@@ -115,9 +168,20 @@ public partial class DeviceTab : VBoxContainer
         if (_server.Text != _device.Server) _server.Text = _device.Server;
         _error.Text = _device.Error;
         _error.Visible = _error.Text.Length > 0;
-        _status.Text = _device.Status;
-        _deviceLine.Text = _device.DeviceLine;
-        _syncLine.Text = _device.SyncLine;
+        // Green for what is up, amber for a sync stopped and waiting to be resumed, grey for off.
+        var green = new Color(0.23f, 1f, 0.63f);
+        var grey = UiTheme.Of(Palette.DisabledText);
+        (string Text, Color Dot)[] states =
+        [
+            (_device.Status, _device.Enabled ? green : grey),
+            (_device.DeviceLine, _device.CanTest ? green : grey),
+            (_device.SyncLine, _device.CanResume ? UiTheme.Of(Palette.Ruined) : _device.Enabled && _device.CanTest ? green : grey),
+        ];
+        for (var i = 0; i < states.Length; i++)
+        {
+            _states[i].Text.Text = states[i].Text;
+            _states[i].Dot.Color = states[i].Dot;
+        }
         _testUp.Disabled = _testDown.Disabled = !_device.CanTest;
         _scan.Disabled = !_device.CanScan;
         _resume.Disabled = !_device.CanResume;

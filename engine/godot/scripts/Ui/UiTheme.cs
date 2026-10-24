@@ -192,6 +192,7 @@ public static class UiTheme
         theme.SetFont("mono_font", "RichTextLabel", Mono);
 
         Look(theme);
+        Kit(theme);
 
         var tooltip = Box(Of(Palette.Surface), 4, 6);
         tooltip.SetBorderWidthAll(1);
@@ -290,6 +291,117 @@ public static class UiTheme
             theme.SetStylebox(state, "Link", plain);
         }
         Fonts("Link", Of(Palette.Text, 0.55f), Of(Palette.Accent));
+    }
+
+    // The pieces of the panels' redesign (the user's pick of the mock, 2026-10-24): a section as a
+    // card of glass, the settings' side navigation, segmented choices, chips, tiles, quiet buttons.
+    private static void Kit(Theme theme)
+    {
+        void Fonts(string type, Color normal, Color hover, Color? pressed = null)
+        {
+            foreach (var state in new[] { "font_color", "font_focus_color" })
+                theme.SetColor(state, type, normal);
+            theme.SetColor("font_hover_color", type, hover);
+            theme.SetColor("font_pressed_color", type, pressed ?? hover);
+            theme.SetColor("font_hover_pressed_color", type, pressed ?? hover);
+            theme.SetColor("font_disabled_color", type, Of(Palette.DisabledText));
+        }
+        StyleBoxFlat Rounded(Color background, int radius, Color? rim = null, float glow = 0, int x = 14, int y = 7)
+        {
+            var box = Box(background, radius);
+            box.ContentMarginLeft = box.ContentMarginRight = x;
+            box.ContentMarginTop = box.ContentMarginBottom = y;
+            if (rim is { } colour)
+            {
+                box.SetBorderWidthAll(1);
+                box.BorderColor = colour;
+            }
+            if (glow > 0)
+            {
+                box.ShadowColor = Of(Palette.Accent, glow);
+                box.ShadowSize = 12;
+            }
+            box.AntiAliasing = true;
+            return box;
+        }
+        void Button(string type, StyleBoxFlat normal, StyleBoxFlat hover, StyleBoxFlat pressed, StyleBoxFlat? disabled = null)
+        {
+            theme.SetTypeVariation(type, "Button");
+            theme.SetStylebox("normal", type, normal);
+            theme.SetStylebox("hover", type, hover);
+            theme.SetStylebox("pressed", type, pressed);
+            theme.SetStylebox("hover_pressed", type, pressed);
+            theme.SetStylebox("disabled", type, disabled ?? normal);
+            theme.SetStylebox("focus", type, new StyleBoxEmpty());
+        }
+
+        // A section: a card of the panel's glass, a shade lighter, with a faint rim.
+        theme.SetTypeVariation("Section", "PanelContainer");
+        var section = Rounded(Of(Palette.Surface, 0.5f), 16, new Color(1, 1, 1, 0.07f), x: 18, y: 16);
+        theme.SetStylebox("panel", "Section", section);
+        theme.SetTypeVariation("SectionTitle", "Label");
+        theme.SetFont("font", "SectionTitle", Bold);
+        theme.SetFontSize("font_size", "SectionTitle", 16);
+        theme.SetColor("font_color", "SectionTitle", Colors.White);
+        theme.SetTypeVariation("Hint", "Label");
+        theme.SetFontSize("font_size", "Hint", 12);
+        theme.SetColor("font_color", "Hint", Of(Palette.Text, 0.6f));
+        theme.SetTypeVariation("PageTitle", "Label");
+        theme.SetFontSize("font_size", "PageTitle", 22);
+        theme.SetColor("font_color", "PageTitle", Colors.White);
+
+        // The settings' side navigation: plain until the pointer is on an entry, the page shown lit.
+        Button("NavButton", Rounded(new Color(1, 1, 1, 0), 12, x: 14, y: 10), Rounded(new Color(1, 1, 1, 0.05f), 12, x: 14, y: 10),
+            Rounded(Of(Palette.Accent, 0.24f), 12, Of(Palette.Accent, 0.35f), x: 14, y: 10));
+        theme.SetFont("font", "NavButton", Bold);
+        Fonts("NavButton", Of(Palette.Text, 0.75f), Colors.White, Colors.White);
+        theme.SetConstant("h_separation", "NavButton", 12);
+
+        // A row of segments in a dark well, the one picked lit.
+        theme.SetTypeVariation("SegmentBar", "PanelContainer");
+        theme.SetStylebox("panel", "SegmentBar", Rounded(Of(Palette.SurfaceDarkest), 12, new Color(1, 1, 1, 0.06f), x: 3, y: 3));
+        Button("Segment", Rounded(new Color(1, 1, 1, 0), 9, x: 16, y: 6), Rounded(new Color(1, 1, 1, 0.06f), 9, x: 16, y: 6),
+            Rounded(Of(Palette.Accent), 9, glow: 0.45f, x: 16, y: 6));
+        theme.SetFont("font", "Segment", Bold);
+        Fonts("Segment", Of(Palette.Text, 0.75f), Colors.White, Colors.White);
+
+        // Chips: a rhythm, a tone - ticked ones lit in the accent.
+        Button("Chip", Rounded(new Color(1, 1, 1, 0.03f), 16, new Color(1, 1, 1, 0.11f), x: 14, y: 6),
+            Rounded(new Color(1, 1, 1, 0.07f), 16, Of(Palette.Accent, 0.5f), x: 14, y: 6),
+            Rounded(Of(Palette.Accent, 0.22f), 16, Of(Palette.Accent), 0.3f, x: 14, y: 6),
+            Rounded(new Color(1, 1, 1, 0.02f), 16, new Color(1, 1, 1, 0.05f), x: 14, y: 6));
+        theme.SetFont("font", "Chip", Bold);
+        theme.SetFontSize("font_size", "Chip", 13);
+        Fonts("Chip", Of(Palette.Text, 0.85f), Colors.White, Colors.White);
+        theme.SetConstant("h_separation", "Chip", 8);
+
+        // Tiles: an option shown as what it is, the picked one rimmed and glowing.
+        Button("Tile", Rounded(Of(Palette.SurfaceDarkest), 14, new Color(1, 1, 1, 0.09f), x: 8, y: 8),
+            Rounded(Of(Palette.SurfaceDarkest), 14, Of(Palette.Accent, 0.5f), x: 8, y: 8),
+            Rounded(Of(Palette.SurfaceDarkest), 14, Of(Palette.Accent), 0.4f, x: 8, y: 8));
+        theme.SetFont("font", "Tile", Bold);
+        theme.SetFontSize("font_size", "Tile", 13);
+        Fonts("Tile", Of(Palette.Text, 0.85f), Colors.White, Colors.White);
+
+        // Quiet buttons: Cancel, a folder to choose - a rim and a breath of white; and the one that deletes.
+        Button("Ghost", Rounded(new Color(1, 1, 1, 0.05f), 10, new Color(1, 1, 1, 0.13f), x: 16, y: 8),
+            Rounded(new Color(1, 1, 1, 0.1f), 10, new Color(1, 1, 1, 0.22f), x: 16, y: 8),
+            Rounded(new Color(1, 1, 1, 0.14f), 10, new Color(1, 1, 1, 0.3f), x: 16, y: 8),
+            Rounded(new Color(1, 1, 1, 0.02f), 10, new Color(1, 1, 1, 0.06f), x: 16, y: 8));
+        theme.SetFont("font", "Ghost", Bold);
+        Fonts("Ghost", Of(Palette.Text), Colors.White);
+        Button("Danger", Rounded(Of(Palette.Denied, 0.2f), 10, Of(Palette.Denied, 0.55f), x: 16, y: 8),
+            Rounded(Of(Palette.Denied, 0.32f), 10, Of(Palette.Denied, 0.8f), x: 16, y: 8),
+            Rounded(Of(Palette.Denied, 0.45f), 10, Of(Palette.Denied), x: 16, y: 8),
+            Rounded(new Color(1, 1, 1, 0.02f), 10, new Color(1, 1, 1, 0.06f), x: 16, y: 8));
+        theme.SetFont("font", "Danger", Bold);
+        Fonts("Danger", Colors.White, Colors.White);
+
+        // A slider's value: plain words until the pointer is on it, a field once it is clicked.
+        Button("Badge", Rounded(new Color(1, 1, 1, 0), 8, x: 10, y: 5), Rounded(new Color(1, 1, 1, 0.05f), 8, new Color(1, 1, 1, 0.14f), x: 10, y: 5),
+            Rounded(new Color(1, 1, 1, 0.05f), 8, Of(Palette.Accent), x: 10, y: 5));
+        theme.SetFont("font", "Badge", Bold);
+        Fonts("Badge", Colors.White, Colors.White);
     }
 
     // A 16 px rounded square, 1 px rim, drawn by hand: a CheckBox takes its box as an icon.

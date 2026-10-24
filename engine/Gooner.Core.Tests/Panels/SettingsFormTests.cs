@@ -696,9 +696,14 @@ public sealed class SettingsFormTests : IDisposable
     [Fact]
     public void every_field_is_laid_out_exactly_once()
     {
-        var numbers = Form.Tabs.SelectMany(t => t.Rows).OfType<NumberRow>().Select(r => r.Name).ToList();
-        var toggles = Form.Tabs.SelectMany(t => t.Rows).OfType<ToggleRow>().Select(r => r.Name).ToList();
-        var choices = Form.Tabs.SelectMany(t => t.Rows).OfType<ChoiceRow>().Select(r => r.Name).ToList();
+        var rows = Form.Tabs.SelectMany(t => t.Rows).ToList();
+        var numbers = rows.OfType<NumberRow>().Select(r => r.Name)
+            .Concat(rows.OfType<RangeRow>().SelectMany(r => new[] { r.Min, r.Max })).ToList();
+        // A toggle is a row of its own, the switch of its section, or the switch beside a number.
+        var toggles = rows.OfType<ToggleRow>().Select(r => r.Name)
+            .Concat(rows.OfType<SectionRow>().Select(r => r.Switch).OfType<string>())
+            .Concat(rows.OfType<NumberRow>().Select(r => r.Switch).OfType<string>()).ToList();
+        var choices = rows.OfType<ChoiceRow>().Select(r => r.Name).ToList();
 
         Assert.Equal(Form.Numbers.Keys.Order(), numbers.Order());
         Assert.Equal(Form.Toggles.Keys.Order(), toggles.Order());
@@ -727,12 +732,18 @@ public sealed class SettingsFormTests : IDisposable
         Assert.False(Form.Choices["note_track"].Dropdown);
     }
 
-    // Twelve colours are no row of buttons either.
+    // Twelve colours are no row of buttons: they are shown as what they are (the user's pick of the
+    // redesign mock, 2026-10-24), as are the tracks, the colour schemes and the frames.
     [Fact]
-    public void the_toy_colour_is_picked_from_a_list()
+    public void the_toy_colour_is_picked_from_swatches_and_the_look_from_tiles()
     {
-        Assert.True(Form.Choices["toy_color"].Dropdown);
+        Assert.Equal(ChoiceStyle.Swatches, Form.Choices["toy_color"].Style);
         Assert.Equal(ToyColours.Names, Form.Choices["toy_color"].Options.Select(o => o.Value));
+        foreach (var name in new[] { "note_track", "color_scheme", "telepathy_frame" })
+            Assert.Equal(ChoiceStyle.Tiles, Form.Choices[name].Style);
+        foreach (var name in new[] { "censor", "effects" })
+            Assert.Equal(ChoiceStyle.Segments, Form.Choices[name].Style);
+        Assert.Equal(ChoiceStyle.List, Form.Choices["character"].Style);
     }
 
     private string OwnModels()
@@ -858,7 +869,7 @@ public sealed class SettingsFormTests : IDisposable
     {
         var rows = Form.Tabs[0].Rows;
 
-        Assert.IsType<HeaderRow>(rows[0]);
+        Assert.IsType<SectionRow>(rows[0]);
         Assert.IsType<UiLanguageRow>(rows[1]);
         Assert.Equal(["en", "de", "fr"], Form.UiLanguages.Select(o => o.Value));
         Assert.Equal("en", Form.UiLanguage);
@@ -892,5 +903,102 @@ public sealed class SettingsFormTests : IDisposable
         Form.UiLanguage = "es";
 
         Assert.Equal("en", Form.UiLanguage);
+    }
+
+    // --- the layout of the redesign (the user's pick of the mock, 2026-10-24) ---
+
+    // A minimum and its maximum are one slider with two handles.
+    [Fact]
+    public void every_min_max_pair_is_one_range_row()
+    {
+        var rows = Form.Tabs.SelectMany(t => t.Rows).ToList();
+        foreach (var (min, max, _) in SettingsForm.MinMaxPairs)
+        {
+            Assert.Contains(rows.OfType<RangeRow>(), r => r.Min == min && r.Max == max);
+            Assert.DoesNotContain(rows.OfType<NumberRow>(), r => r.Name == min || r.Name == max);
+        }
+    }
+
+    // Every number is a slider whose badge says what it is: seconds, beats a second, a percentage,
+    // minutes for the long ones.
+    [Theory]
+    [InlineData("min_dur", ValueUnit.Seconds)]
+    [InlineData("min_beat_freq", ValueUnit.Hertz)]
+    [InlineData("beat_loudness", ValueUnit.Percent)]
+    [InlineData("pause_chance", ValueUnit.Percent)]
+    [InlineData("ramp_window_width", ValueUnit.Percent)]
+    [InlineData("talking_chance", ValueUnit.Percent)]
+    [InlineData("min_climax_after", ValueUnit.Duration)]
+    [InlineData("min_ramp_duration", ValueUnit.Duration)]
+    [InlineData("edge_cooldown_sec", ValueUnit.Duration)]
+    public void every_number_is_a_slider_in_its_unit(string name, ValueUnit unit)
+    {
+        var number = Number(name);
+
+        Assert.Equal(unit, number.Slider.Unit);
+        Assert.Equal((number.Min, number.Max, number.Step), (number.Slider.Min, number.Slider.Max, number.Slider.Step));
+    }
+
+    // What switches a whole feature on and off heads its section, and greys the rest of it out.
+    [Theory]
+    [InlineData("Beat & Rhythm", "edge_relief_active")]
+    [InlineData("Beat & Rhythm", "ramping_active")]
+    [InlineData("Climax", "climax_active")]
+    [InlineData("Climax", "fake_climax_active")]
+    [InlineData("Callouts", "active_callout")]
+    public void a_feature_switch_heads_its_section(string tab, string toggle) =>
+        Assert.Contains(Form.Tabs.Single(t => t.Title == tab).Rows.OfType<SectionRow>(), s => s.Switch == toggle);
+
+    // An outcome is switched on beside its own chance.
+    [Theory]
+    [InlineData("ruined_orgasm_chance", "ruined_orgasm_active")]
+    [InlineData("denied_orgasm_chance", "denied_orgasm_active")]
+    public void an_outcome_is_switched_beside_its_chance(string number, string toggle) =>
+        Assert.Contains(new NumberRow(number, toggle), Form.Tabs.Single(t => t.Title == "Climax").Rows);
+
+    // The headings of the Qt dialog named code ("Beat Timing (BeatHandler)") and were framed in dashes.
+    [Fact]
+    public void a_section_names_no_code()
+    {
+        foreach (var section in Form.Tabs.SelectMany(t => t.Rows).OfType<SectionRow>())
+        {
+            Assert.DoesNotContain("Handler", section.Title, StringComparison.Ordinal);
+            Assert.DoesNotContain("---", section.Title, StringComparison.Ordinal);
+        }
+    }
+
+    // A reset puts a switch and both ends of a range back too.
+    [Fact]
+    public void a_reset_puts_back_switches_and_ranges_as_well()
+    {
+        Number("min_beat_freq").Value = 3;
+        Number("max_beat_freq").Value = 9;
+        Form.Toggles["edge_relief_active"].Value = !Form.Toggles["edge_relief_active"].Default;
+
+        Form.Reset("Beat & Rhythm");
+
+        Assert.Equal(Number("min_beat_freq").Default, Number("min_beat_freq").Value);
+        Assert.Equal(Number("max_beat_freq").Default, Number("max_beat_freq").Value);
+        Assert.Equal(Form.Toggles["edge_relief_active"].Default, Form.Toggles["edge_relief_active"].Value);
+    }
+
+    // The foot says how many changes are not saved yet, and a value moved back is no change.
+    [Fact]
+    public void the_changes_not_yet_saved_are_counted()
+    {
+        Assert.Equal(0, Form.Changes);
+
+        var before = Number("min_dur").Value;
+        Number("min_dur").Value = before + 0.5;
+        Form.Toggles["climax_active"].Value = !Form.Toggles["climax_active"].Value;
+        Form.Choices["note_track"].Value = "tunnel";
+        Form.SetTone(Form.Tones.Keys.First(t => !Form.Tones[t]), true);
+        Assert.Equal(4, Form.Changes);
+
+        Number("min_dur").Value = before;
+        Assert.Equal(3, Form.Changes);
+
+        Assert.True(Form.Apply());
+        Assert.Equal(0, Form.Changes);
     }
 }

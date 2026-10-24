@@ -22,7 +22,9 @@ public partial class AppPanel : PanelContainer
     private Vector2 _velocity;
     private bool _drifting;
 
-    public AppPanel(string title, Vector2 size, bool scrolls = false)
+    // bodyScrolls false: the panel lays out scrolling of its own (the settings' pages, beside their
+    // navigation).
+    public AppPanel(string title, Vector2 size, bool scrolls = false, bool bodyScrolls = true)
     {
         _wanted = size;
         CustomMinimumSize = size;
@@ -47,7 +49,7 @@ public partial class AppPanel : PanelContainer
         Body.AddThemeConstantOverride("separation", 10);
         // A panel of a set height never outgrows a small window: its body scrolls instead. One that
         // sizes itself to its text does not need to.
-        if (scrolls || size.Y > 0)
+        if (bodyScrolls && (scrolls || size.Y > 0))
         {
             var scroll = new ScrollContainer
             {
