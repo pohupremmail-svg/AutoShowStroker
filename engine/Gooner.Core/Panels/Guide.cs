@@ -12,10 +12,9 @@ public sealed record GuideEdit(string Topic, string Old, string New);
 // Port of HELP_TOPICS in src/HelpDialog.py: the Guide, one tab per topic, each a page of Qt rich
 // text (RichText.ToBbcode draws it).
 //
-// PythonTopics is a copy of the Python text, word for word - the parity run compares the two -
-// and the few places where the engine works differently are edits on top of it rather than
-// changes inside it. Each edit names the sentence it replaces, so when that sentence changes on
-// the Python side the edit stops matching and a test says so.
+// PythonTopics is a copy of the Python text, word for word, and the few places where the engine
+// works differently are edits on top of it rather than changes inside it. Each edit names the
+// sentence it replaces, so when that sentence changes the edit stops matching and a test says so.
 public static class Guide
 {
     public static IReadOnlyList<GuideTopic> PythonTopics { get; } =

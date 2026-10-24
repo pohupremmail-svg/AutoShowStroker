@@ -11,7 +11,7 @@ namespace Gooner.Core.Sessions;
 //
 // One deliberate difference: in Python a bool is an int, so `true` passes as the number 1. Here
 // it does not - a session that says "duration_sec": true is wrong, and saying so is better than
-// quietly playing a one-second session. Recorded in parity/allowlist.json.
+// quietly playing a one-second session.
 internal static class PyJson
 {
     public static bool IsNumber(JsonNode? node) =>

@@ -428,7 +428,7 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
 
     // --- triggers ---
 
-    // A deliberate deviation from the Python app (parity/allowlist.json, callouts.draws):
+    // A deliberate deviation from the Python app:
     // there the greeting is rolled against the talking chance like any line, and the session's
     // first rhythm counts as a change of tempo - from 0, or from wherever the last session ended -
     // so a session could open with "faster" instead of a greeting. Here a session always opens with
@@ -501,7 +501,7 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
             AppLog.Warning(Log, "No {0} phrases available for language {1}", PyJson.Quote(category), PyJson.Quote(Lang));
             return null;
         }
-        // The same two draws as ever (the parity run replays them); the tone is only read off the pool.
+        // The same two draws as the Python app makes; the tone is only read off the pool.
         var pool = _random.Choice(pools);
         _lastCategory = category;
         _lastTone = poolTones[pools.IndexOf(pool)];

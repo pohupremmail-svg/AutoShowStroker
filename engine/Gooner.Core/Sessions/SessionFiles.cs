@@ -50,7 +50,7 @@ public static class SessionFiles
 
     // The fastest a segment may play: the ceiling the settings put on the beat frequency. Above it no
     // one can follow, and far above it a note gap rounds to 0 ms - a file at 5000 froze the app. Python
-    // has no such ceiling; recorded in parity/allowlist.json.
+    // has no such ceiling.
     public const double MaxFreq = 20.0;
     public static readonly IReadOnlyList<string> ClimaxOutcomes = ["real", "ruined", "denied"];
 
@@ -117,7 +117,7 @@ public static class SessionFiles
     //
     // And a segment that ran shorter than planned was cut short - by an edge, for its pause - so what
     // it ran is the truth there too: saved at its plan, the replay played on past the cut. The Python
-    // app saves the plan (parity/allowlist.json).
+    // app saves the plan.
     private static double LengthToReplay(RecordedSegment data, bool isLast)
     {
         var measured = data.End - data.Start;
@@ -312,8 +312,7 @@ public static class SessionFiles
             if (at > duration) return [L10n.F("A medium is shown at {0}s, past the end of the session.", PyJson.F0(at))];
             previous = at;
             // Only a file on this computer's drives is ever looked for (MediaPaths): a share elsewhere
-            // would be contacted with the account's credentials. Python checks no path; recorded in
-            // parity/allowlist.json.
+            // would be contacted with the account's credentials. Python checks no path.
             if (!obj.ContainsKey("path")) continue;
             if (obj["path"] is not JsonValue path || path.GetValueKind() != JsonValueKind.String)
                 return [L10n.F("Media entry {0} has a path that is not text.", number)];
@@ -342,7 +341,7 @@ public static class SessionFiles
         }
 
         // A format that is not a number is refused as "not a session" (Python raises a TypeError
-        // there instead; recorded in parity/allowlist.json).
+        // there instead).
         if (node is not JsonObject data || !data.ContainsKey("format") || !data.ContainsKey("segments") || !PyJson.IsNumber(data["format"]))
             throw new UnsupportedSessionFileException(L10n.T("That is not a saved session."));
         if (PyJson.Number(data["format"]) > FormatVersion)

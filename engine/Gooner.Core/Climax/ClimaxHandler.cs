@@ -293,8 +293,8 @@ public sealed class ClimaxHandler : ISettingsOwner
             // the planner drew *past* the end of the recording is rolled for.
             if (_script is not null && segment.Index < _script.SegmentCount) continue;
             // Never segment 0 either: it starts with the session, and a fake there opened it with
-            // "I'm coming". The Python app does (parity/allowlist.json); its die is still cast, so
-            // every draw after it stays the one Python makes.
+            // "I'm coming". The Python app does. Its die is still cast, so the draws after it are the
+            // ones they always were.
             if (_random.Uniform(0, 1) < FakeClimaxChance && segment.Index > 0)
                 _plannedFakes.Add(segment.Index);
         }

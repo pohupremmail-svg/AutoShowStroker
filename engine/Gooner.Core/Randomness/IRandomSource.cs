@@ -1,7 +1,7 @@
 namespace Gooner.Core.Randomness;
 
-// Where the app's dice come from. Injectable so a test - or the parity harness, replaying the
-// draws the Python side made - can say exactly what comes up. NextDouble is random.uniform(0, 1),
+// Where the app's dice come from. Injectable so a test - or the harness, from a seed - can say
+// exactly what comes up. NextDouble is random.uniform(0, 1),
 // NextIndex(n) the index random.choice picks out of n.
 public interface IRandomSource
 {

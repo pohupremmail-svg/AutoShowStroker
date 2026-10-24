@@ -228,7 +228,7 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
     // The session clock: the moment a timer was due while it fires, the clock itself otherwise.
     private double Now => _scheduler.Now;
 
-    // The same clock, for the parity run to stamp events with.
+    // The same clock, for a test to stamp events with.
     internal double ClockNow => Now;
 
     private static string Key(string name) => $"{SettingsGroup}/{name}";
@@ -255,7 +255,7 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
     // "the orgasm is here". Null withdraws it. Replans what is queued, so it works mid-session -
     // unless the moment is the one the plan already has: an edge moves the marker itself and the
     // climax then confirms the same moment, and replanning there drew the gentle rhythm behind the
-    // pause afresh at full speed. The Python app replans (parity/allowlist.json).
+    // pause afresh at full speed. The Python app replans there.
     public void SetFinaleAt(double? moment)
     {
         if (moment == FinaleAt) return;

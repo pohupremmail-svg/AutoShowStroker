@@ -8,8 +8,8 @@ namespace Gooner.Core.Migration;
 //
 // Python writes floats and bools as text ("0.25", "true"), an int as a DWORD and a list of strings
 // as a multi-string; the text stays text here, and SettingsReads turns it back the way the Python
-// read sides did (float(), type=bool). The parity run holds this against values a real PyQt6
-// QSettings wrote (parity/generate.py, registry).
+// read sides did (float(), type=bool). Checked against values a real PyQt6 QSettings wrote while
+// both apps were compared side by side.
 public static class QSettingsRegistry
 {
     // The value, or false when it cannot be carried over: a Qt type serialised with QDataStream

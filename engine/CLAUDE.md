@@ -1,10 +1,11 @@
 # engine/ — GoonerApp on Godot 4.7 + C# (.NET 10)
 
-The rebuild of GoonerApp on a real engine. It lives next to the Python app in the same tree for
-one reason: **both implementations sit in the same commit**, so the Python app can serve as the
-oracle the C# port is compared against (see `parity/` at the repo root). Nothing in here ships
-until the rebuild is complete; until then the Python app in `src/` is the product and keeps being
-released as before.
+The rebuild of GoonerApp on a real engine. It lives next to the Python app in the same tree.
+**The migration is done** (2026-10-24): the port is complete, and from here on the work is fixes
+and new features on this side only. The Python app in `src/` is still the released product until
+the switch, but it gets no more work (the user's call: fixes there are wasted effort), and it is no
+longer the oracle - the parity harness that held the port against it is gone with it. Where the
+engine now behaves differently from the Python app, that is a fix, said so where it is made.
 
 **It stays local until it is finished.** The rebuild is meant as a surprise for the users, so the
 branch it lives on (`engine-rebuild`) is never pushed, never turned into a PR, and never mentioned
@@ -22,9 +23,6 @@ here unchanged. This file only adds what is specific to this side.
   Python modules land here first.
 - `Gooner.Core.Tests/` — xUnit. Test names mirror the Python test they port (`snake_case`, the
   `test_` prefix dropped), so a behaviour can be traced across both suites by name.
-- `Gooner.Parity.Tests/` — compares the port against golden files the Python implementation
-  writes (`python -m parity.generate`). Not part of the solution's default test run, because it
-  needs the Python side; CI runs it in its own job.
 - `Gooner.Harness/` — a console app that plays a whole session without a screen
   (`dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240`). Developer tool,
   ships with nothing. The wiring it runs is `Gooner.Core.Simulation.HeadlessSession`, which is
@@ -44,9 +42,10 @@ here unchanged. This file only adds what is specific to this side.
   lived in the registry go into their files; the keys of removed features are dropped. A value
   leaves the registry only once its copy reads back from the file, and what cannot be read stays
   there - the `user_data.py` rule. The key goes once it is empty. `QSettingsRegistry` reads values
-  as QSettings does, and the parity run holds it against bytes a real PyQt6 QSettings wrote.
+  as QSettings does (checked against bytes a real PyQt6 QSettings wrote, while both apps were
+  compared).
   The import runs before there is a log, so `GoonerApp` logs its report.
-- **Until the parity release the engine does not take the profile over**:
+- **Until the release that replaces the Python app the engine does not take the profile over**:
   `AppPaths.TakesOverThePythonProfile` is false, so a run without `--data-dir` keeps its own folder,
   `%LOCALAPPDATA%\GoonerCock\GoonerApp.EnginePreview`, and imports nothing - the import deletes
   what it carries over, and the installed Python app is still in use. A test against a copy of a
@@ -94,9 +93,8 @@ here unchanged. This file only adds what is specific to this side.
   folder). Texts copied from the Python side that name a menu get a `Guide.EngineEdits` edit;
   `GuideTests` fails while any still sends the user to Help, Sessions or Statistics.
 - **Texts copied from the Python side stay word for word.** `Changelog.Entries` and
-  `Guide.PythonTopics` are generated from the Python source and compared by the parity run - an
-  entry added on `main` and merged in fails there until it is copied over (and `LocaleFilesTests`
-  until it is translated, see "The app's own language"). Where the engine works
+  `Guide.PythonTopics` were copied from the Python source; new changelog entries are written here
+  (and translated - `LocaleFilesTests`, see "The app's own language"). Where the engine works
   differently, the Guide gets an edit on top (`Guide.EngineEdits`, naming the exact sentence it
   replaces), never a change inside the copy.
 - **Device output (Intiface) is `Gooner.Core.Devices`.** The connection is an actor
@@ -165,8 +163,7 @@ here unchanged. This file only adds what is specific to this side.
   again when it changes (`Main.ApplyLanguage`) - a panel is worded when it opens.
 - **English is the code.** Every text is written in English where it is used and looked up in
   `res/locales/<language>/*.json` (English text -> translation, every file of the folder together);
-  what a catalogue lacks stays English. So the English app is exactly the code, and the parity run,
-  which runs in English, never sees any of this.
+  what a catalogue lacks stays English. So the English app is exactly the code.
 - **Only literals go in**: `L10n.T("...")`; `L10n.F("... {0}", value)` for a text with values in it,
   never a `$"..."` into L10n; `L10n.P(count, one, other)` for a count, where French takes the
   singular for none as well (a singular that shows the number says `{0}`, not `1`); `L10n.N("...")`
@@ -319,7 +316,7 @@ here unchanged. This file only adds what is specific to this side.
   clock. Not a `TimeProvider` for the rhythm: those count in 100 ns ticks. Wall-clock things
   (ScoreTracker, the recorder, callout teases) keep a `TimeProvider`.
 - **Dice come from an `IRandomSource`**, with Python's `random.uniform/randint/choice/choices`
-  reproduced on top of it, so the parity harness can replay the exact draws the Python side made.
+  reproduced on top of it, so a seed replays a whole session (the harness, the tests).
 - Note gaps stay the **whole milliseconds** Python schedules - exact at 48 kHz, and what keeps the
   two implementations comparable note for note.
 - **In the engine the clock is the audio** (`godot/scripts/Audio/SessionAudio.cs`): the frames
@@ -339,9 +336,9 @@ here unchanged. This file only adds what is specific to this side.
 - **Test-driven, same as the Python side**: when porting, the ported test comes first and must
   fail before the code exists. A behaviour the Python suite does not pin down is a question for
   the user, not a guess.
-- **A port is a port.** Where the Python code has a quirk, the C# version either reproduces it or
-  deviates *on purpose* - and a deliberate deviation is written down in the parity harness's
-  allowlist with the reason, so it can never be mistaken for drift.
+- **The port is done; the Python app is no longer the reference.** Behaviour is pinned by this
+  side's own tests. A fix that makes the engine differ from the Python app says so in its comment
+  and its test ("the Python app keeps it"), so it is never taken for an accident.
 - **No `Console.WriteLine` in `Gooner.Core`.** Logging goes through the same rules as
   `src/applog.py`: opt-in, `INFO` as the floor, values as arguments, and **never a media folder
   path** - a bare file name only in a warning about that one file. **An exception goes in as
@@ -401,11 +398,10 @@ look (phase 7). Until that day the Python app on `main` is the product. On the d
 
 1. **Open items closed**: the FFmpeg licence finding (TODO.md - its own build, or every statically
    linked library's notice), and the phase 7 effect layer.
-2. **Remove the Python app** in one commit: `src/`, `tests/`, `parity/`, `main.py`, `scripts/`
+2. **Remove the Python app** in one commit: `src/`, `tests/`, `main.py`, `scripts/`
    (`build.py`, `verify_frozen.py`), `requirements*.txt`, `ruff.toml`, `pytest.ini`, the Python jobs
-   in `ci.yml`, `engine.yml`'s parity job and `audit.yml`'s pip-audit. What only the parity run
-   guarded is already guarded here (Changelog and Guide copies become the source; the session
-   format by `SessionFormatDocTests`; callout files by `CalloutLanguageFilesTests`).
+   in `ci.yml` and `audit.yml`'s pip-audit. Everything is guarded on this side (the session format
+   by `SessionFormatDocTests`; callout files by `CalloutLanguageFilesTests`).
 3. **Rewrite the docs for the engine**: the root `CLAUDE.md` (merge this file into it),
    `CONTRIBUTING.md` (callout files are checked with `dotnet test`, not pytest),
    `.claude/skills/add-callout-language`.
@@ -424,8 +420,6 @@ look (phase 7). Until that day the Python app on `main` is the product. On the d
 ```
 dotnet build engine/GoonerEngine.sln
 dotnet test engine/GoonerEngine.sln
-.venv/Scripts/python.exe -m parity.generate      # from the repo root
-dotnet test engine/Gooner.Parity.Tests
 dotnet run --project engine/Gooner.Harness -- --seed 42 --climax 150:240   # options: top of Program.cs
 dotnet build engine/godot/Gooner.Engine.csproj
 "$GODOT" --headless --path engine/godot --import          # once, after a fresh checkout
@@ -438,9 +432,8 @@ dotnet run --project engine/Gooner.Build -- build --godot "$GODOT" [--zip]   # d
 dotnet run --project engine/Gooner.Build -- verify [--dir DIR]
 ```
 
-The registry tests (`WindowsLegacySettingsTests`, `RegistryParity`, the generator's `registry`
-module) write throwaway keys of their own under `HKCU\Software` and delete them again - never the
-app's key.
+The registry tests (`WindowsLegacySettingsTests`) write throwaway keys of their own under
+`HKCU\Software` and delete them again - never the app's key.
 
 `--smoke-panel` opens one panel by name (the list is `SmokePanels()` in `Main.Panels.cs`:
 `settings`, `settings-look`, `settings-device`, `statistics`, `explorer`, `picker`, `privacy`,

@@ -11,8 +11,8 @@ public sealed record ChangelogEntry(string Version, string Html);
 // list of the real features, then a one-line closing hook. The markup is Qt's rich text;
 // RichText.ToBbcode turns it into what the engine draws.
 //
-// Until the Python app is retired the entries are written there first and copied here word for
-// word; the parity run fails while the two differ.
+// The entries up to the engine were copied word for word from src/changelog.py; new ones are
+// written here.
 public static class Changelog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =

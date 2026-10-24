@@ -5,8 +5,7 @@ using Gooner.Core.Migration;
 namespace Gooner.Core.Tests.Migration;
 
 // What QSettings makes of a registry value when the Python app reads it back (qsettings_win.cpp,
-// readKey and stringToVariant) - which is what the import has to carry over. The parity run holds
-// the same conversion against values a real PyQt6 QSettings wrote (parity/generate.py, registry).
+// readKey and stringToVariant) - which is what the import has to carry over.
 public class QSettingsRegistryTests
 {
     private static JsonNode? Read(RegistryKind kind, object? data)

@@ -423,8 +423,8 @@ public sealed class ClimaxHandlerTests : IDisposable
     }
 
     // Segment 0 starts with the session: a fake planned there opened one session in twenty (at the
-    // default 5 %) with "I'm coming" and its reveal. Found by the parity run; the Python app keeps it
-    // (parity/allowlist.json). Its die is still cast, so every draw after it is the one Python makes.
+    // default 5 %) with "I'm coming" and its reveal. Found by comparing the two apps; the Python app
+    // keeps it. Its die is still cast, so the draws after it are the ones they always were.
     [Fact]
     public void the_first_segment_is_never_a_fake()
     {

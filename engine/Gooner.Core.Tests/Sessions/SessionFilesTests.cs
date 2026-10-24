@@ -361,8 +361,7 @@ public sealed class SessionFilesTests : IDisposable
 
     // ... unless it ran shorter than planned: an edge cuts the segment on the air short for its pause,
     // and saved at its planned length the replay played on past the cut - the pause came 2.7 s late
-    // (harness, seed 42, edge at 60 s). Found by the parity run; the Python app keeps it
-    // (parity/allowlist.json).
+    // (harness, seed 42, edge at 60 s). Found by comparing the two apps; the Python app keeps it.
     [Fact]
     public void a_segment_cut_short_keeps_the_length_it_ran()
     {

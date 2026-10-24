@@ -1,4 +1,0 @@
-# Golden files are generated fresh from the Python implementation on every run, never checked
-# in - a stale golden file would let the two implementations drift apart unnoticed.
-out/
-__pycache__/

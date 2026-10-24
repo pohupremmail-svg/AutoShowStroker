@@ -743,7 +743,7 @@ public sealed class GoonerAppTests : IDisposable
     // The relief behind the pause has to survive the climax being pushed back. It did not: postponing
     // set the planner's finale again, that replanned the queue, and the replan drew the gentle
     // rhythm afresh at full speed - with a climax planned, the edge never slowed anything down.
-    // Found by the parity run; the Python app keeps it (parity/allowlist.json).
+    // Found by comparing the two apps; the Python app keeps it.
     [Fact]
     public void the_rhythm_after_an_edge_is_gentle_with_a_climax_planned_too()
     {

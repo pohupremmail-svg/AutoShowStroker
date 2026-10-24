@@ -4,8 +4,7 @@ namespace Gooner.Core.Localization;
 
 // The words the app shows, in the language the user picked. English is the source: every text is
 // written in English where it is used and looked up in the catalogue of the language in use, and
-// whatever that catalogue lacks stays English - so the English app is exactly the code, and what
-// the parity run compares against the Python side is untouched by any of this.
+// whatever that catalogue lacks stays English - so the English app is exactly the code.
 //
 // Only literals go in: Gooner.Core.Tests reads every literal handed to T, N, F and P out of the
 // source and holds each shipped catalogue to them (LocaleFilesTests). A text built first and

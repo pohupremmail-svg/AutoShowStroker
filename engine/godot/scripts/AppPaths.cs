@@ -11,7 +11,7 @@ namespace Gooner.Engine;
 public static class AppPaths
 {
     // The engine takes the Python app's profile over - its data folder, its registry key, what is
-    // left in its old roaming folder - only once it ships (the parity release, phase 6). Until then a
+    // left in its old roaming folder - only once it ships (the release that replaces it). Until then a
     // run without --data-dir keeps a folder of its own and never reads the registry, so trying the
     // engine out can never change what the installed Python app remembers: the import deletes what
     // it has carried over.
