@@ -156,6 +156,8 @@ def validation_cases():
         # (parity/allowlist.json).
         _mutated("duration_bool", _set(["duration_sec"], True)),
         _mutated("freq_bool", _set(["segments", 0, "freq"], True)),
+        # Python plays any positive freq; the port stops at the settings' ceiling of 20.
+        _mutated("freq_ceiling", _set(["segments", 0, "freq"], 5000)),
     ]
     return [{"name": name, "input": saved, "expected": session_files.validate_session(saved)}
             for name, saved in cases]
