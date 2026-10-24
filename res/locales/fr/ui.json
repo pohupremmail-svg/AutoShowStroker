@@ -265,6 +265,8 @@
   "Segment {0} needs a positive duration_sec.": "Le segment {0} a besoin d'un duration_sec positif.",
   "Segment {0} is a pause, so it carries no pattern and no freq.": "Le segment {0} est une pause, il n'a donc ni pattern ni freq.",
   "Segment {0} needs a freq in beats per second.": "Le segment {0} a besoin d'une freq en beats par seconde.",
+  "Media entry {0} has a path that is not text.": "L'entrée média {0} a un chemin qui n'est pas du texte.",
+  "Media entry {0} points to {1}, which is not a picture or clip on a drive of this computer.": "L'entrée média {0} pointe vers {1}, qui n'est ni une image ni un clip sur un disque de cet ordinateur.",
   "Segment {0} plays {1} beats per second; the most a session can play is {2}.": "Le segment {0} joue {1} beats par seconde - une session n'en joue jamais plus de {2}.",
   "Segment {0} needs a pattern name.": "Le segment {0} a besoin d'un nom de pattern.",
   "Segment {0} plays '{1}', which is neither built in nor defined in custom_patterns.": "Le segment {0} joue « {1} », qui n'est ni intégré ni défini dans custom_patterns.",

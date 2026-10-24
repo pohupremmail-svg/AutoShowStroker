@@ -112,11 +112,17 @@ public sealed class SessionExplorer
         return new ExplorerMoment(Describe(offset, moment), SelectedPath, isVideo, request);
     }
 
-    public bool CanReveal => SelectedPath is not null;
+    // Both buttons hand what they act on to the shell, and what a replayed session recorded is
+    // whatever its file said - a URL or a scheme there would run whatever is registered for it. So
+    // they act on a file of the user's (MediaPaths.IsAFile) and nothing else.
+    public bool CanReveal => OpenablePath is not null;
+
+    // What Open in player opens.
+    public string? OpenablePath => SelectedPath is { } path && MediaPaths.IsAFile(path) ? path : null;
 
     // The containing folder rather than the file: opening the file would launch it in whatever is
     // registered for the type, which is what Open in player is for.
-    public string? RevealFolder => SelectedPath is { } path ? System.IO.Path.GetDirectoryName(path) : null;
+    public string? RevealFolder => OpenablePath is { } path ? System.IO.Path.GetDirectoryName(path) : null;
 
     private string Describe(double offset, double moment)
     {

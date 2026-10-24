@@ -158,6 +158,10 @@ def validation_cases():
         _mutated("freq_bool", _set(["segments", 0, "freq"], True)),
         # Python plays any positive freq; the port stops at the settings' ceiling of 20.
         _mutated("freq_ceiling", _set(["segments", 0, "freq"], 5000)),
+        # Python looks for any path; the port takes only files on this computer's drives.
+        _mutated("media_path_share", _set(["media"], [{"at_sec": 0.0, "path": r"\\host\share\a.png"}])),
+        _mutated("media_path_url", _set(["media"], [{"at_sec": 0.0, "path": "https://example.org/a.png"}])),
+        _mutated("media_path_not_text", _set(["media"], [{"at_sec": 0.0, "path": 5}])),
     ]
     return [{"name": name, "input": saved, "expected": session_files.validate_session(saved)}
             for name, saved in cases]

@@ -93,7 +93,7 @@ public partial class SessionExplorerPanel : AppPanel
         _play = new Button { Text = L10n.T("Open in player"), Visible = false, FocusMode = FocusModeEnum.None };
         _play.Pressed += () =>
         {
-            if (_explorer.SelectedPath is { } path) OS.ShellOpen(path);
+            if (_explorer.OpenablePath is { } path) OS.ShellOpen(path);
         };
         _reveal = new Button { Text = L10n.T("Show in folder"), Disabled = true, FocusMode = FocusModeEnum.None };
         _reveal.Pressed += () =>
@@ -119,7 +119,7 @@ public partial class SessionExplorerPanel : AppPanel
         _bar.QueueRedraw();
         _moment.Text = moment.Text;
         _reveal.Disabled = !_explorer.CanReveal;
-        _play.Visible = moment.IsVideo;
+        _play.Visible = moment.IsVideo && _explorer.OpenablePath is not null;
         if (moment.Path is not { } path)
         {
             _file.Text = "";

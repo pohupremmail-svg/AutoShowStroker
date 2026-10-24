@@ -171,7 +171,7 @@ public sealed class SessionExplorerTests
     [Fact]
     public void the_buttons_are_disabled_until_something_is_on_screen()
     {
-        var explorer = new SessionExplorer(Timeline([Segment(media: [Medium("a.png", 1000.0, 1010.0)])]));
+        var explorer = new SessionExplorer(Timeline([Segment(media: [Medium(@"C:\media\a.png", 1000.0, 1010.0)])]));
         Assert.False(explorer.CanReveal);
 
         explorer.ScrubTo(5.0);
@@ -184,12 +184,41 @@ public sealed class SessionExplorerTests
     [Fact]
     public void revealing_opens_the_containing_folder()
     {
-        var file = Path.Combine("C:", "media", "keep_this.png");
-        var explorer = new SessionExplorer(Timeline([Segment(media: [Medium(file)])]));
+        var explorer = new SessionExplorer(Timeline([Segment(media: [Medium(@"C:\media\keep_this.png")])]));
 
         explorer.ScrubTo(50.0);
 
-        Assert.Equal(Path.Combine("C:", "media"), explorer.RevealFolder);
+        Assert.Equal(@"C:\media", explorer.RevealFolder);
+    }
+
+    // What a replayed session recorded is whatever its file said. Handed to the shell, a URL or a
+    // scheme (search-ms:, a share's protocol handler) would run whatever is registered for it, so
+    // neither button acts on anything but a file.
+    [Theory]
+    [InlineData("https://example.org/a.mp4")]
+    [InlineData(@"search-ms:query=a&crumb=location:\\host\share\a.mp4")]
+    [InlineData(@"\\?\C:\media\a.mp4")]
+    [InlineData("a.mp4")]
+    public void nothing_but_a_file_is_opened_or_revealed(string path)
+    {
+        var explorer = new SessionExplorer(Timeline([Segment(media: [Medium(path)])]));
+
+        explorer.ScrubTo(50.0);
+
+        Assert.False(explorer.CanReveal);
+        Assert.Null(explorer.RevealFolder);
+        Assert.Null(explorer.OpenablePath);
+    }
+
+    [Fact]
+    public void a_clip_of_the_users_can_be_opened()
+    {
+        var explorer = new SessionExplorer(Timeline([Segment(media: [Medium(@"\\nas\media\b.mp4")])]));
+
+        explorer.ScrubTo(50.0);
+
+        Assert.Equal(@"\\nas\media\b.mp4", explorer.OpenablePath);
+        Assert.Equal(@"\\nas\media", explorer.RevealFolder);
     }
 
     [Fact]

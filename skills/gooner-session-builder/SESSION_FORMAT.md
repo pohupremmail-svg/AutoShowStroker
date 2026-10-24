@@ -126,7 +126,8 @@ This is the part worth reading twice.
   choreograph "slow, lingering images through the build, then rapid-fire into the finale".
 - The moments must run forwards and stay inside the session.
 - Sessions recorded by the app also carry a `"path"` on each entry. **Do not invent paths.**
-  A file with paths only works on the machine those files live on.
+  A file with paths only works on the machine those files live on, and a path has to be a
+  picture or clip on one of its drives (`C:\...`) - a network share or a URL is refused.
 
 ---
 

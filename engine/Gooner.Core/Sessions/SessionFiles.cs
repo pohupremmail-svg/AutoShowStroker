@@ -7,6 +7,7 @@ using Gooner.Core.Data;
 using Gooner.Core.Formatting;
 using Gooner.Core.Localization;
 using Gooner.Core.Logging;
+using Gooner.Core.Media;
 
 namespace Gooner.Core.Sessions;
 
@@ -296,14 +297,24 @@ public static class SessionFiles
     {
         if (media is not JsonArray list) return [L10n.T("media has to be a list.")];
         var previous = -1.0;
+        var number = 0;
         foreach (var entry in list)
         {
+            number++;
             if (entry is not JsonObject obj || !PyJson.IsNumber(obj["at_sec"]))
                 return [L10n.T("Every media entry needs an at_sec in seconds from the start.")];
             var at = PyJson.Number(obj["at_sec"]);
             if (at < previous) return [L10n.T("The media moments have to run forwards - one of them goes backwards.")];
             if (at > duration) return [L10n.F("A medium is shown at {0}s, past the end of the session.", PyJson.F0(at))];
             previous = at;
+            // Only a file on this computer's drives is ever looked for (MediaPaths): a share elsewhere
+            // would be contacted with the account's credentials. Python checks no path; recorded in
+            // parity/allowlist.json.
+            if (!obj.ContainsKey("path")) continue;
+            if (obj["path"] is not JsonValue path || path.GetValueKind() != JsonValueKind.String)
+                return [L10n.F("Media entry {0} has a path that is not text.", number)];
+            if (!MediaPaths.IsOnThisComputer((string)path!))
+                return [L10n.F("Media entry {0} points to {1}, which is not a picture or clip on a drive of this computer.", number, (string)path!)];
         }
         return [];
     }
@@ -426,7 +437,9 @@ public static class SessionFiles
             : [];
 
     // Recorded media that is no longer where it was, so the caller can offer to replay against
-    // another library instead of showing a session of empty frames.
+    // another library instead of showing a session of empty frames. A path that is no file of the
+    // user's (MediaPaths.IsAFile) counts as gone without being looked for: looking is what would
+    // contact a machine somewhere else.
     public static List<string> MissingPaths(JsonObject saved) =>
-        RecordedPaths(saved).Where(path => !File.Exists(path) && !Directory.Exists(path)).ToList();
+        RecordedPaths(saved).Where(path => !MediaPaths.IsAFile(path) || (!File.Exists(path) && !Directory.Exists(path))).ToList();
 }

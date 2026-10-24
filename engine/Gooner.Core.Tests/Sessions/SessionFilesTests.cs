@@ -466,6 +466,53 @@ public sealed class SessionFilesTests : IDisposable
         Assert.Empty(SessionFiles.ValidateSession(saved));
     }
 
+    // A session from somebody else names their files, and only files on this computer's drives are
+    // ever looked for. A share on another machine would be contacted the moment the replay looks for
+    // its files - with the Windows account's credentials; a URL would be handed to the shell.
+    [Theory]
+    [InlineData(@"\\host\share\a.png")]
+    [InlineData(@"\\host@80\a.png")]
+    [InlineData("https://example.org/a.png")]
+    [InlineData(@"C:\pics\a.exe")]
+    public void a_medium_that_is_not_on_this_computer_is_refused(string path)
+    {
+        var saved = Handwritten();
+        saved["media"]![1]!["path"] = path;
+
+        Assert.Contains(SessionFiles.ValidateSession(saved), p => p.Contains("Media entry 2", StringComparison.Ordinal) && p.Contains(path, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void a_medium_whose_path_is_no_text_is_refused()
+    {
+        var saved = Handwritten();
+        saved["media"]![0]!["path"] = 5;
+
+        Assert.Contains(SessionFiles.ValidateSession(saved), p => p.Contains("Media entry 1", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void a_medium_on_a_drive_of_this_computer_plays()
+    {
+        var saved = Handwritten();
+        saved["media"]![0]!["path"] = @"C:\pics\a.png";
+        saved["media"]![1]!["path"] = @"D:\clips\b.mp4";
+
+        Assert.Empty(SessionFiles.ValidateSession(saved));
+    }
+
+    // Defence behind the import: a session already on the shelf - carried over from the Python app,
+    // say - is not looked for anywhere but on this computer either.
+    [Fact]
+    public void a_recorded_path_that_is_no_file_counts_as_gone()
+    {
+        var saved = Handwritten();
+        saved["media"]![0]!["path"] = "https://example.org/a.png";
+        saved["media"]![1]!["path"] = @"\\?\GLOBALROOT\a.png";
+
+        Assert.Equal(2, SessionFiles.MissingPaths(saved).Count);
+    }
+
     [Fact]
     public void a_segment_without_a_length_is_refused()
     {
