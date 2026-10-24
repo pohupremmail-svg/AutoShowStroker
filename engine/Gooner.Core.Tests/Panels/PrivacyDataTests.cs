@@ -199,6 +199,17 @@ public sealed class PrivacyDataTests : IDisposable
         Assert.False(File.Exists(Path.Combine(cache, "vulkan", "pipelines.cache")));
     }
 
+    // Godot names its folder with forward slashes; shown beside the app's own paths it is written as
+    // they are.
+    [Fact]
+    public void the_graphics_cache_is_shown_with_the_systems_separators()
+    {
+        var cache = Path.Combine(_tmp.FullName, "godot", "app_userdata");
+        var privacy = new PrivacyData(_app, cache.Replace(Path.DirectorySeparatorChar, '/'));
+
+        Assert.Contains(cache, privacy.LocationsText);
+    }
+
     [Fact]
     public void without_a_graphics_cache_there_is_none_to_count_or_delete()
     {

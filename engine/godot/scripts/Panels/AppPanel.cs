@@ -57,7 +57,8 @@ public partial class AppPanel : PanelContainer
                 HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             };
             // Clear of the scroll bar, so a section's rim never runs under it.
-            var inset = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            // It fills the height as the body did, or a list meant to fill the panel gets none.
+            var inset = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
             inset.AddThemeConstantOverride("margin_right", 14);
             inset.AddChild(Body);
             scroll.AddChild(inset);

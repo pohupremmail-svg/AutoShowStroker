@@ -61,7 +61,8 @@ public sealed class PrivacyData
     {
         ArgumentNullException.ThrowIfNull(app);
         _app = app;
-        _graphicsCache = graphicsCache;
+        // Godot names it with forward slashes; the app's own paths are written the system's way.
+        _graphicsCache = graphicsCache?.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
     }
 
     // --- disclosure ---
