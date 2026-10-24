@@ -121,7 +121,7 @@ public partial class MediaStage : Control, IMediaStage
         _coming = null;
         var ready = coming.Ready.IsCompletedSuccessfully ? coming.Ready.Result : null;
         if (coming.Ready.Exception is { } failed)
-            AppLog.Warning(Log, "Could not read {0}: {1}", Path.GetFileName(coming.Path), failed.InnerException?.Message);
+            AppLog.Warning(Log, "Could not read {0}: {1}", Path.GetFileName(coming.Path), failed.InnerException is { } inner ? AppLog.Describe(inner) : "unknown");
         Clear();
         if (coming.Kind == MediaKind.Image) Picture(coming.Path, ready as Image);
         else Gif(coming.Path, ready as GifView.Start);

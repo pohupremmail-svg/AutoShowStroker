@@ -964,7 +964,7 @@ public sealed class BeatHandler : IFinalePlanner, ISettingsOwner
             }
             catch (ArgumentException error)
             {
-                AppLog.Warning(Log, "Skipping custom pattern {0}: {1}", PyJson.Quote(name), error.Message);
+                AppLog.Warning(Log, "Skipping custom pattern {0}: {1}", PyJson.Quote(name), AppLog.Describe(error));
                 continue;
             }
             clean[name] = [.. steps];

@@ -63,7 +63,7 @@ public sealed class UpdateChecker
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {
-            AppLog.Warning(Log, "Update check failed: {0}", e.Message);
+            AppLog.Warning(Log, "Update check failed: {0}", AppLog.Describe(e));
             return new CheckFailed(e.Message);
         }
     }

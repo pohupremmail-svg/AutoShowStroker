@@ -75,7 +75,7 @@ public sealed class UserDataStore
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            AppLog.Error(Log, "Could not save {0}: {1}", name, e.Message);
+            AppLog.Error(Log, "Could not save {0}: {1}", name, AppLog.Describe(e));
             return false;
         }
     }
@@ -97,7 +97,7 @@ public sealed class UserDataStore
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                AppLog.Warning(Log, "Could not delete {0}: {1}", Path.GetFileName(candidate), e.Message);
+                AppLog.Warning(Log, "Could not delete {0}: {1}", Path.GetFileName(candidate), AppLog.Describe(e));
             }
         }
         return removed;

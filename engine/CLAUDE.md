@@ -332,7 +332,10 @@ here unchanged. This file only adds what is specific to this side.
   allowlist with the reason, so it can never be mistaken for drift.
 - **No `Console.WriteLine` in `Gooner.Core`.** Logging goes through the same rules as
   `src/applog.py`: opt-in, `INFO` as the floor, values as arguments, and **never a media folder
-  path** - a bare file name only in a warning about that one file.
+  path** - a bare file name only in a warning about that one file. **An exception goes in as
+  `AppLog.Describe(e)`, never `e.Message`**: .NET writes the whole path into it ("Could not find file
+  'D:\...'"), and `Describe` cuts every path to its file name (`LogPrivacyTests` fails on a `.Message`
+  in a log call). The crash panel and its log line are cut the same way (`AppLog.Scrub`).
 - **The data directory is `%LOCALAPPDATA%\GoonerCock\GoonerApp`**, the folder the Python app
   already uses, resolved through `Environment.SpecialFolder.LocalApplicationData`. Never Godot's
   `user://`, which is the roaming profile `src/user_data.py` deliberately moved away from.

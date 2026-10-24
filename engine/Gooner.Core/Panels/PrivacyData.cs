@@ -81,7 +81,7 @@ public sealed class PrivacyData
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            AppLog.Error(Log, "Could not create the data folder: {0}", e.Message);
+            AppLog.Error(Log, "Could not create the data folder: {0}", AppLog.Describe(e));
             return null;
         }
         return dir;
@@ -225,7 +225,7 @@ public sealed class PrivacyData
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            AppLog.Warning(Log, "Could not delete the graphics cache: {0}", e.Message);
+            AppLog.Warning(Log, "Could not delete the graphics cache: {0}", AppLog.Describe(e));
         }
     }
 }

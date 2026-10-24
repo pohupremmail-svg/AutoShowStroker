@@ -44,6 +44,10 @@ public sealed partial class CrashReporter
 
     public void Report(string details)
     {
+        ArgumentNullException.ThrowIfNull(details);
+        // An exception's text names whole paths - a media folder, a user folder - and what the panel
+        // shows is meant to be copied into the Discord: both get the file names only (AppLog.Scrub).
+        details = AppLog.Scrub(details);
         // Unconditional, and before anything else - including a failure that happens while an
         // earlier one is being reported. Whether it reaches a file is the user's choice.
         AppLog.Error(Log, "Unhandled exception: {0}", details);
@@ -59,7 +63,7 @@ public sealed partial class CrashReporter
 #pragma warning restore CA1031
         {
             _showing = false;
-            AppLog.Warning(Log, "Could not show the crash panel: {0}", e.Message);
+            AppLog.Warning(Log, "Could not show the crash panel: {0}", AppLog.Describe(e));
         }
     }
 

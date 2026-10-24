@@ -91,7 +91,7 @@ public partial class GifView : TextureRect
         }
         catch (Exception e) when (e is System.IO.IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            AppLog.Warning(Log, "Could not play {0}: {1}", System.IO.Path.GetFileName(path), e.Message);
+            AppLog.Warning(Log, "Could not play {0}: {1}", System.IO.Path.GetFileName(path), AppLog.Describe(e));
         }
         decoder?.Dispose();
         return null;
@@ -174,7 +174,7 @@ public partial class GifView : TextureRect
                 }
                 catch (InvalidDataException e)
                 {
-                    AppLog.Warning(Log, "Stopped playing {0}: {1}", System.IO.Path.GetFileName(_path), e.Message);
+                    AppLog.Warning(Log, "Stopped playing {0}: {1}", System.IO.Path.GetFileName(_path), AppLog.Describe(e));
                     return;
                 }
                 if (frame is null)

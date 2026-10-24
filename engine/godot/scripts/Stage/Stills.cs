@@ -24,7 +24,7 @@ public static class Stills
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            AppLog.Warning(Log, "Could not load {0}: {1}", Path.GetFileName(path), e.Message);
+            AppLog.Warning(Log, "Could not load {0}: {1}", Path.GetFileName(path), AppLog.Describe(e));
         }
         if (image is null || image.IsEmpty()) return null;
         FitInto(image, fit);

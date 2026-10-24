@@ -208,7 +208,7 @@ public sealed class CalloutHandler : ICalloutVoice, ISettingsOwner
                 catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException or DecoderFallbackException)
                 {
                     // One broken tone must not cost the user the whole language.
-                    AppLog.Warning(Log, "Could not load the callout file {0}/{1}: {2}", langCode, Path.GetFileName(jsonFile), e.Message);
+                    AppLog.Warning(Log, "Could not load the callout file {0}/{1}: {2}", langCode, Path.GetFileName(jsonFile), AppLog.Describe(e));
                 }
             }
 

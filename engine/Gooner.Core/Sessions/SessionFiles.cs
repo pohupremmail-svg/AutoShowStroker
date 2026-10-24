@@ -333,7 +333,7 @@ public static class SessionFiles
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
-            AppLog.Warning(Log, "Could not read the session file: {0}", e.Message);
+            AppLog.Warning(Log, "Could not read the session file: {0}", AppLog.Describe(e));
             throw new UnsupportedSessionFileException(L10n.T("The file could not be read."), e);
         }
 
@@ -365,7 +365,7 @@ public static class SessionFiles
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            AppLog.Error(Log, "Could not write the session file: {0}", e.Message);
+            AppLog.Error(Log, "Could not write the session file: {0}", AppLog.Describe(e));
             return false;
         }
     }

@@ -103,7 +103,7 @@ public sealed class Toy
             }
             catch (Exception e)
             {
-                AppLog.Warning(Log, "Could not load the toy {0}: {1}", Path.GetFileName(path), e.Message);
+                AppLog.Warning(Log, "Could not load the toy {0}: {1}", Path.GetFileName(path), AppLog.Describe(e));
                 return null;
             }
         }

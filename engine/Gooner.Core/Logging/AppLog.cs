@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Gooner.Core.Logging;
 
@@ -25,7 +26,7 @@ public interface ILogSink
 // a human and does not trace execution. Values go in as arguments rather than being formatted into
 // the text. Never a media folder path; a bare file name only in a warning about that one file.
 // Paths the app owns (the data directory, res/) are fine.
-public static class AppLog
+public static partial class AppLog
 {
     public const string LoggerName = "gooner";
     public const string LogFileName = "gooner.log";
@@ -117,6 +118,28 @@ public static class AppLog
             return removed;
         }
     }
+
+    // What went wrong, in words the log may hold: the exception's kind and its text with every path
+    // cut down to its file name. An exception names the whole path of a file it could not read -
+    // "Could not find file 'D:\Collection\x.gif'" - and a media folder, the user's own character
+    // folder or a user folder with the account's name in it must never reach the log; a bare file
+    // name may, in a warning about that one file. Never hand the log an exception's own Message.
+    public static string Describe(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return $"{exception.GetType().Name}: {Scrub(exception.Message)}";
+    }
+
+    // `text` with every absolute path in it - a drive's or a share's - cut down to its file name. A
+    // path ends at a quote or the end of the line, which is how .NET writes one into a message.
+    public static string Scrub(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        return AbsolutePath().Replace(text, m => Path.GetFileName(m.Value.TrimEnd('\\', '/')));
+    }
+
+    [GeneratedRegex(@"(?:[A-Za-z]:[\\/]|\\\\|//)[^'""\r\n]*")]
+    private static partial Regex AbsolutePath();
 
     // A message with its arguments filled in - or as it is, when they do not fit: logging must
     // never be the thing that throws.

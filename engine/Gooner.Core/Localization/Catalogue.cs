@@ -101,7 +101,7 @@ public sealed class Catalogue
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
             {
-                AppLog.Warning(Log, "Could not read the translation file {0}/{1}: {2}", code, Path.GetFileName(file), e.Message);
+                AppLog.Warning(Log, "Could not read the translation file {0}/{1}: {2}", code, Path.GetFileName(file), AppLog.Describe(e));
                 continue;
             }
             foreach (var (english, value) in parsed)

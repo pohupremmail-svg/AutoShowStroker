@@ -454,7 +454,7 @@ public static class Figures
                 }
                 catch (Exception e)
                 {
-                    AppLog.Warning(Log, "Could not load the character {0}: {1}", System.IO.Path.GetFileName(path), e.Message);
+                    AppLog.Warning(Log, "Could not load the character {0}: {1}", System.IO.Path.GetFileName(path), AppLog.Describe(e));
                     return null;
                 }
                 finally
