@@ -152,9 +152,14 @@ at the repo root.
   Hypno Ring and splits the colours at the climax; it is not drawn at all while there is nothing to
   do, so the screen is not copied for nothing.
 
-- **The start screen speaks in the app's voice**: the line under the name is a `main_menu` line of
-  the phrase files, in the language and tones picked (`CalloutHandler.TitleLine`), new each time the
-  screen comes up - shown whether callouts are on or not.
+- **The start screen speaks in the app's voice**: a `main_menu` line of the phrase files, in the
+  language and tones picked (`CalloutHandler.TitleLine`), shown whether callouts are on or not.
+  **With her on the pedestal she says it** (the user's design, `Gooner.Core.Characters.Greeting`): in
+  a bubble hung beside her head (`CharacterView.BesideHead`, its tail at her head's height), typed
+  in with her mouth moving, faded in and out slowly as in a game, then a few minutes of quiet
+  (`MinPause`..`MaxPause`, drawn each time) and the next line; a new one shortly after the screen
+  comes back or the voice changes. **Under the name** it stands only without her - no figure picked,
+  or hers would not load (`Figures.Failed`); while she loads, neither.
 - **The window opens full screen the first time** and after that as it was last left
   (`Gooner.Core.App.WindowState`, remembered the moment the user switches).
 

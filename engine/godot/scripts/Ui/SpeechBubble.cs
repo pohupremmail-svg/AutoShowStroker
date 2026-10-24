@@ -10,7 +10,8 @@ namespace Gooner.Engine.Ui;
 // with the frame's neon rim, its tail at the height of her mouth. The words type themselves in with
 // her mouth, on the very timeline the mouth moves on (Visemes.Shown), and the bubble fades once the
 // line is over. With no figure on screen the line is the big one over the picture instead
-// (CalloutView), as it always was.
+// (CalloutView), as it always was. The start screen has one beside her on the pedestal too, fading
+// slower (Pedestal).
 public partial class SpeechBubble : Control
 {
     private const float TailReach = 16, TailHalf = 10, Corner = 16, PadX = 16, PadY = 12;
@@ -21,6 +22,11 @@ public partial class SpeechBubble : Control
     private double _since;
     private Tween? _fade;
     private float _tailY;
+
+    // Seconds to fade in when a line comes, and out once it is over.
+    public float FadeIn { get; init; } = 0.2f;
+
+    public float FadeOut { get; init; } = 0.4f;
 
     public SpeechBubble()
     {
@@ -50,7 +56,7 @@ public partial class SpeechBubble : Control
         _fade = CreateTween();
         if (text is null)
         {
-            _fade.TweenProperty(this, "modulate:a", 0f, 0.4f);
+            _fade.TweenProperty(this, "modulate:a", 0f, FadeOut);
             _fade.TweenCallback(Callable.From(() => Visible = false));
             return;
         }
@@ -58,11 +64,10 @@ public partial class SpeechBubble : Control
         _label.VisibleCharacters = 0;
         _since = 0;
         Visible = true;
-        _fade.TweenProperty(this, "modulate:a", 1f, 0.2f);
+        _fade.TweenProperty(this, "modulate:a", 1f, FadeIn);
     }
 
-    // Beside the frame it belongs to (its parent): the tail's tip at `tip`, in the frame's own
-    // coordinates, the bubble reaching left from it; sized to the window it is in.
+    // Beside the figure it belongs to: the tail's tip at `tip`, in its parent's coordinates, the bubble reaching left from it; sized to the window it is in.
     public void Place(Vector2 tip, Vector2 window)
     {
         if (_text is null) return;

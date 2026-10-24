@@ -1,17 +1,22 @@
 using System;
 using Gooner.Core.App;
+using Gooner.Core.Characters;
 using Gooner.Engine.Fx;
 using Godot;
 
 namespace Gooner.Engine.Ui;
 
 // The start screen's stage: a spotlight falling on a floor of slowly turning rings, the logo
-// floating above it - or, when there is one, a character standing on it.
+// floating above it - or, when there is one, a character standing on it, now and then saying a line in
+// a bubble that floats beside her head (the user's design: its tail starts at the height of her head,
+// it fades in slowly and out again, as in a game).
 public partial class Pedestal : Control
 {
     private readonly PaintLayer _light = new(additive: true);
     private readonly Texture2D? _logo;
     private readonly CharacterView? _character;
+    private readonly SpeechBubble _bubble = new() { FadeIn = 0.9f, FadeOut = 1.4f };
+    private string? _saying;
     private double _time;
 
     public Pedestal(Texture2D? logo, string? character)
@@ -23,12 +28,32 @@ public partial class Pedestal : Control
         _light.Paint = Paint;
         AddChild(_light);
         if (character is not null) AddChild(_character = new CharacterView(character));
+        AddChild(_bubble);
+    }
+
+    public FigureState State => _character?.State ?? FigureState.None;
+
+    // The line she says now, or null: typed into her bubble with her mouth moving to it, faded out
+    // when it is over.
+    public void Say(string? line)
+    {
+        if (line == _saying) return;
+        _saying = line;
+        _bubble.Say(line);
+        if (line is not null) _character?.Speak(line);
     }
 
     public override void _Process(double delta)
     {
         _time += delta;
         _light.QueueRedraw();
+        // Hung beside her head, so it goes where she sways; bobbing on its own a little, and rising
+        // the last few pixels into place as it fades in.
+        if (_character?.BesideHead() is { } tip)
+        {
+            var drift = new Vector2(0, MathF.Sin((float)_time * 1.1f) * 4 + (1 - _bubble.Modulate.A) * 10);
+            _bubble.Place(tip + drift, GetViewportRect().Size);
+        }
     }
 
     private void Paint(PaintLayer c)

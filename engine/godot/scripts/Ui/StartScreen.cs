@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Gooner.Core.App;
+using Gooner.Core.Characters;
 using Gooner.Core.Localization;
+using Gooner.Core.Randomness;
 using Gooner.Engine.Fx;
 using Godot;
 
@@ -25,6 +27,8 @@ public partial class StartScreen : Control
     private readonly Random _random = new();
     private readonly Label _logoLeft, _logoRight, _tagline;
     private readonly Func<string?> _line;
+    private readonly Pedestal _pedestal;
+    private readonly Greeting _greeting;
     private Tween? _tween;
     private double _time;
 
@@ -37,6 +41,7 @@ public partial class StartScreen : Control
         string version, Func<string?> line)
     {
         _line = line;
+        _greeting = new Greeting(() => _line() ?? DefaultLine, new SystemRandomSource());
         SetAnchorsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
         for (var i = 0; i < _motes.Length; i++)
@@ -69,13 +74,14 @@ public partial class StartScreen : Control
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             CustomMinimumSize = new Vector2(560, 0),
             SizeFlagsHorizontal = SizeFlags.ShrinkBegin,
-            Modulate = new Color(1, 1, 1, 0.8f),
+            Modulate = new Color(1, 1, 1, 0),
         };
         column.AddChild(_tagline);
         column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 18) });
         foreach (var card in cards) column.AddChild(Card(card));
 
-        row.AddChild(new Pedestal(LoadLogo(resources), character) { CustomMinimumSize = new Vector2(380, 0) });
+        _pedestal = new Pedestal(LoadLogo(resources), character) { CustomMinimumSize = new Vector2(380, 0) };
+        row.AddChild(_pedestal);
 
         var foot = new HBoxContainer();
         foot.AddThemeConstantOverride("separation", 14);
@@ -113,12 +119,13 @@ public partial class StartScreen : Control
 
     private static Label LogoPart(string text) => new() { Text = text };
 
-    // A new line under the name, faded in - when the voice it speaks in has changed.
+    // A new line, faded in - when the voice it speaks in has changed: under the name, or soon in her
+    // bubble.
     public void RefreshLine()
     {
         _tagline.Text = _line() ?? DefaultLine;
         _tagline.Modulate = new Color(1, 1, 1, 0);
-        _tagline.CreateTween().TweenProperty(_tagline, "modulate:a", 0.8f, 0.5f);
+        _greeting.Restart(_time);
     }
 
     // After a change of colour scheme, and each time it comes up - with a new line each time.
@@ -148,7 +155,11 @@ public partial class StartScreen : Control
     {
         if (shown == Shown) return;
         Shown = shown;
-        if (shown) Restyle();
+        if (shown)
+        {
+            Restyle();
+            _greeting.Restart(_time);
+        }
         MouseFilter = shown ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
         _tween?.Kill();
         Visible = true;
@@ -214,6 +225,13 @@ public partial class StartScreen : Control
     {
         if (!Visible) return;
         _time += delta;
+        // The line under the name only while there is nobody to say it (Greeting); in her bubble, now
+        // and then, once she is here.
+        var state = _pedestal.State;
+        _greeting.Advance(_time, state);
+        _pedestal.Say(_greeting.Line);
+        var under = Greeting.UnderTitle(state) ? 0.8f : 0f;
+        _tagline.Modulate = new Color(1, 1, 1, Mathf.MoveToward(_tagline.Modulate.A, under, (float)delta * 1.6f));
         for (var i = 0; i < _motes.Length; i++)
         {
             var m = _motes[i];

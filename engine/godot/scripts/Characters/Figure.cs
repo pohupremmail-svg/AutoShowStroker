@@ -432,6 +432,11 @@ public static class Figures
         return figure;
     }
 
+    // Whether the load of that path has ended without a figure - a file that is not a model, or one
+    // godot-vrm could not read. False while it runs, and for a path not asked for.
+    public static bool Failed(string path) =>
+        _current is { } current && current.Path == path && current.Figure is null && current.Loading.IsCompleted && current.Loading.Result is null;
+
     // Lets the figure go: on a change of model, and before the app quits.
     public static void Release()
     {

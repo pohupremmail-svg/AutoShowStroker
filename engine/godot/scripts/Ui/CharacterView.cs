@@ -109,6 +109,22 @@ public partial class CharacterView : SubViewportContainer
         return _camera.IsPositionBehind(mouth) ? null : _camera.UnprojectPosition(mouth);
     }
 
+    // On the start screen: here, still on its way, or it would not load.
+    public FigureState State => Loaded ? FigureState.Here : Figures.Failed(_path) ? FigureState.Failed : FigureState.Loading;
+
+    // Beside her head at the height of her mouth, on the side away from her right hand - where a
+    // speech bubble's tail starts. Half a head's width out from the middle of her face, along the
+    // camera's left. Null until she is here.
+    public Vector2? BesideHead()
+    {
+        if (!Loaded || _figure!.Skeleton is not { } sk || _figure.Measure() is not { } measured) return null;
+        Vector3? At(string human) => _figure.Bone(human) is { } bone ? sk.GlobalTransform * _figure.Pose(bone) : null;
+        if ((At("LeftEye") is { } left && At("RightEye") is { } right ? (left + right) / 2 : At("Head")) is not { } eyes) return null;
+        var height = measured.Head.Y - measured.Feet;
+        var beside = eyes - Vector3.Up * 0.05f * height - _camera.GlobalBasis.X * 0.075f * height;
+        return _camera.IsPositionBehind(beside) ? null : _camera.UnprojectPosition(beside);
+    }
+
     // The mouth moves to the line, letter by letter (Visemes), from now.
     public void Speak(string text)
     {
