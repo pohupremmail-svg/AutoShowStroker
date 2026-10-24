@@ -10,9 +10,10 @@ using Godot;
 namespace Gooner.Engine.Characters;
 
 // The toy in her hand: the first .glb in res/props, read once off the main thread and measured where
-// it is read (ToyShape) - so another model only needs dropping in. None there, or one that will not
-// read, and her hand holds the stand-in CharacterView builds from primitives. Like the bundled
-// characters, the props stay on this machine (gitignored) until there is one the app may pass on.
+// it is read (ToyShape) - so another model only needs dropping in. Like the bundled characters, the
+// props stay on this machine (gitignored, never packaged). None there, or one that will not read, and
+// her hand holds the app's own (Gooner.Core.Characters.ToyModel), built from code and measured the same
+// way - the one every package has. Only if even that fails does CharacterView build its stand-in.
 public sealed class Toy
 {
     private const string Log = "Toy";
@@ -58,7 +59,68 @@ public sealed class Toy
         return turn * new Vector3(at.X, at.Y, at.Z) * scale;
     }
 
-    private static Toy? Read(string? props)
+    private static Toy? Read(string? props) => FromProps(props) ?? Built();
+
+    // The app's own, from ToyModel: one mesh, coloured per vertex, in a silicone that glows a little
+    // where light comes through it.
+    private static Toy? Built()
+    {
+        try
+        {
+            var built = ToyModel.Build();
+            var arrays = new Godot.Collections.Array();
+            arrays.Resize((int)Mesh.ArrayType.Max);
+            arrays[(int)Mesh.ArrayType.Vertex] = built.Positions.Select(p => new Vector3(p.X, p.Y, p.Z)).ToArray();
+            arrays[(int)Mesh.ArrayType.Normal] = built.Normals.Select(n => new Vector3(n.X, n.Y, n.Z)).ToArray();
+            arrays[(int)Mesh.ArrayType.Color] = built.Colors.Select(c => new Color(c.X, c.Y, c.Z, c.W)).ToArray();
+            // Godot's front faces wind clockwise; ToyModel's counter-clockwise, seen from outside.
+            var indices = new int[built.Indices.Count];
+            for (var t = 0; t < indices.Length; t += 3)
+                (indices[t], indices[t + 1], indices[t + 2]) = (built.Indices[t], built.Indices[t + 2], built.Indices[t + 1]);
+            arrays[(int)Mesh.ArrayType.Index] = indices;
+            var mesh = new ArrayMesh();
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            mesh.SurfaceSetMaterial(0, new StandardMaterial3D
+            {
+                VertexColorUseAsAlbedo = true,
+                VertexColorIsSrgb = true,
+                Roughness = 0.34f,
+                MetallicSpecular = 0.55f,
+                ClearcoatEnabled = true,
+                Clearcoat = 0.35f,
+                ClearcoatRoughness = 0.25f,
+                SubsurfScatterEnabled = true,
+                SubsurfScatterStrength = 0.35f,
+                RimEnabled = true,
+                Rim = 0.25f,
+                RimTint = 0.6f,
+            });
+            var model = new Node3D { Name = "Toy" };
+            var instance = new MeshInstance3D { Name = "Mesh", Mesh = mesh };
+            model.AddChild(instance);
+            instance.Owner = model;
+            if (ToyShape.Measure(built.Positions) is not { } shape)
+            {
+                model.Free();
+                return null;
+            }
+            var packed = new PackedScene();
+            var packing = packed.Pack(model);
+            model.Free();
+            if (packing != Error.Ok) return null;
+            AppLog.Info(Log, "Toy built");
+            return new Toy(packed, shape);
+        }
+#pragma warning disable CA1031 // Without it her hand holds the stand-in; nothing here may cost her the frame.
+        catch (Exception e)
+#pragma warning restore CA1031
+        {
+            AppLog.Warning(Log, "Could not build the toy: {0}", AppLog.Describe(e));
+            return null;
+        }
+    }
+
+    private static Toy? FromProps(string? props)
     {
         if (props is null || !Directory.Exists(props)) return null;
         var path = Directory.GetFiles(props, "*.glb").Order(StringComparer.Ordinal).FirstOrDefault();

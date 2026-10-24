@@ -274,10 +274,16 @@ here unchanged. This file only adds what is specific to this side.
   (`Gooner.Core.Characters.ToyShape`): length, shaft thickness slice by slice, the middle of the shaft
   at each height - a real one curves, and a straight line through its foot left her fingers standing off
   it - and how far balls and foot stand out behind it, which side goes towards her and sets the gap
-  from her belly. Real size, times her size. Her hand waits the moment it takes to read; without one
-  she holds a stand-in built from primitives. `res/props` is gitignored and never packaged (the user's
-  model, licensed to them, not ours to pass on) - the `.glb` is made from it by
-  `GoonerSpikes/blender/scripts/prop_export.py` (decimated, colour baked, 2K textures).
+  from her belly. Real size, times her size. Her hand waits the moment it takes to read. `res/props` is
+  gitignored and never packaged (the user's model, licensed to them, not ours to pass on) - the `.glb`
+  is made from it by `GoonerSpikes/blender/scripts/prop_export.py` (decimated, colour baked, 2K
+  textures). **Without one she holds the app's own** (`Gooner.Core.Characters.ToyModel`, the user's
+  pick of a procedural one over a model file, 2026-10-24): built from code - suction foot, a shaft
+  curving up away from its balls with veins on top and a seam below, a head whose ridge falls towards
+  the seam, a slit, two balls in one folded sac - so it needs no licence, puts nothing explicit on
+  GitHub and is in every package. `ToyModelTests` hold it to what `ToyShape` reads off it; judge its
+  looks from a render, not the frame (`--built-toy` leaves `res/props` aside for a smoke run). Only
+  if building it fails is there the stand-in of primitives in `CharacterView`.
 - Loading is godot-vrm's runtime path as phase 0 proved it (GoonerSpikes/RESULTS.md, "(c)
   Nachtrag"): the VRM extensions registered with **first priority**, fresh instances per load,
   `vrm/retarget` off (a patch of ours in `addons/vrm`, named in the notices), import flags 8|16,

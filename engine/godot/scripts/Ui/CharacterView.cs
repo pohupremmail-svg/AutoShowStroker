@@ -59,8 +59,9 @@ public partial class CharacterView : SubViewportContainer
     {
         _path = path;
         _framing = framing;
-        // Read ahead, while she is still on the pedestal, for the moment she holds it.
-        Toy.Load(AppPaths.Resources is { } res ? System.IO.Path.Combine(res, "props") : null);
+        // Read ahead, while she is still on the pedestal, for the moment she holds it. --built-toy leaves
+        // res/props aside, to see the app's own toy where a model of the developer's lies there.
+        Toy.Load(AppPaths.Resources is { } res && !AppPaths.UserFlag("built-toy") ? System.IO.Path.Combine(res, "props") : null);
         Stretch = true;
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsPreset(LayoutPreset.FullRect);
