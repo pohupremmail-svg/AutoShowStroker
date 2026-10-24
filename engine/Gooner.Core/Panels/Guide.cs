@@ -5,23 +5,16 @@ namespace Gooner.Core.Panels;
 
 public sealed record GuideTopic(string Title, string Html);
 
-// Where the engine's Guide says something other than the Python app's: the exact sentence it
-// replaces in one topic, and what it says instead.
-public sealed record GuideEdit(string Topic, string Old, string New);
-
-// Port of HELP_TOPICS in src/HelpDialog.py: the Guide, one tab per topic, each a page of Qt rich
-// text (RichText.ToBbcode draws it).
-//
-// PythonTopics is a copy of the Python text, word for word, and the few places where the engine
-// works differently are edits on top of it rather than changes inside it. Each edit names the
-// sentence it replaces, so when that sentence changes the edit stops matching and a test says so.
+// The Guide, one tab per topic, each a page of Qt-style rich text (RichText.ToBbcode draws it).
+// Ported from the Python app's HELP_TOPICS (src/HelpDialog.py) and since rewritten where this app
+// works differently.
 public static class Guide
 {
-    public static IReadOnlyList<GuideTopic> PythonTopics { get; } =
+    public static IReadOnlyList<GuideTopic> Topics { get; } =
     [
-        new("Beats && Rhythm",
+        new("Beats & Rhythm",
             "<h3>How the Strokemeter works</h3>" +
-            "<p>The footer track scrolls notes toward its hit line on a randomized beat, driven " +
+            "<p>The note track carries notes to its hit zone on a randomized beat, driven " +
             "by a <b>frequency</b> (beats per second, picked between your Min./Max. beat " +
             "frequency settings) and a <b>rhythm pattern</b> that decides which beats land and " +
             "which get skipped.</p>" +
@@ -70,7 +63,7 @@ public static class Guide
             "<h3>Saving and replaying a session</h3>" +
             "<p><b>Save this session</b> in the Session Explorer keeps the whole run: every " +
             "rhythm and how fast it was, the pauses, the fake-outs, the climax and its outcome, " +
-            "and how long each medium stayed up. <b>Sessions &gt; Saved Sessions</b> plays it " +
+            "and how long each medium stayed up. <b>Saved Sessions</b> on the start screen plays it " +
             "back exactly as it went.</p>" +
             "<p>The callouts are deliberately <i>not</i> saved. They stay random, so a session " +
             "still feels different the second time while the part you are measuring yourself " +
@@ -102,34 +95,39 @@ public static class Guide
             "reading - pauses count too. Toggle it off in Settings &gt; Playback &gt; Show " +
             "session timer.</p>" +
             "<h3>Achievements</h3>" +
-            "<p><b>Statistics &gt; Achievements</b> lists every one there is, not only the " +
+            "<p><b>Achievements</b> on the start screen lists every one there is, not only the " +
             "ones you already hold. Earned ones show their mark lit and the date you got " +
             "them; locked ones show what they want and how close your last session came. A " +
             "few are marked <b>???</b> - those are found rather than aimed at.</p>" +
             "<p>Obedience only counts when it costs something: being denied, or told to ruin " +
             "it, and doing as you were told. Being told to come and coming is not obedience, " +
             "it is what you were going to do anyway. They are judged at the end of a session " +
-            "and deletable under Help &gt; Privacy &amp; Data.</p>" +
+            "and deletable under Privacy &amp; Data.</p>" +
             "<h3>Record-Chase Badge</h3>" +
-            "<p>Top-right of the media area. It stays hidden most of the session and only " +
+            "<p>Top-center of the media area. It stays hidden most of the session and only " +
             "appears once you're within reach of a personal record (currently within 20%), then " +
             "flips to \"New Record!\" the moment you actually break it - a deliberate " +
             "anticipation moment, not a permanent stats display. Toggle it off in " +
             "Settings &gt; Playback &gt; Show live personal-record chase.</p>" +
             "<h3>Callouts</h3>" +
-            "<p>Bottom-center of the media area - the teasing phrases that fire on beat changes " +
-            "and session events. See the Languages &amp; Tones tab for how these are sourced.</p>" +
-            "<h3>The Strokemeter</h3>" +
-            "<p>The track along the bottom. Notes travel right-to-left and land on the glowing " +
-            "hit line near the left edge exactly when the beat sounds, so you can see each beat " +
-            "coming before you hear it. A rhythm's silent steps show up as the wider gaps between " +
-            "notes. When the rhythm changes, a sweep of light crosses the track to mark it - the " +
-            "notes themselves keep flowing straight through, because the app already knows what " +
-            "is coming next. They even fly in during a break, so you can see the beat returning. " +
-            "The caption on the right shows the current pattern, or the countdown while the " +
-            "Strokemeter is taking one.</p>" +
+            "<p>The teasing phrases that fire on beat changes and session events, in big glowing " +
+            "letters over the picture - or, while your character is in her frame, in a speech " +
+            "bubble beside her. See the Languages &amp; Tones tab for how these are sourced.</p>" +
+            "<h3>The note track</h3>" +
+            "<p>Notes fly at you and land in the glowing hit zone exactly when the beat sounds, so " +
+            "you can see each beat coming before you hear it. A rhythm's silent steps show up as " +
+            "the wider gaps between notes. Changes of rhythm and pauses come flying in with the " +
+            "notes, named as they arrive, because the app already knows what is coming next - and " +
+            "the notes behind a pause fly in during it, so you can see the beat returning.</p>" +
+            "<p>It comes in four styles, picked in Settings &gt; Look: <b>Highway</b>, a lane " +
+            "running into the picture with the notes coming towards you; <b>Hypno Ring</b>, notes " +
+            "spiralling into a ring that can wander across the picture and take your eyes with " +
+            "it, blurring, pixelating or darkening everything outside it if you like; " +
+            "<b>Stream</b>, the classic strip, notes streaming in from the right; and " +
+            "<b>Tunnel</b>, a tunnel you fly through, the notes corkscrewing out of its depth. " +
+            "The colours and how wild the effects get are picked there too.</p>" +
             "<h3>Reaching your edge</h3>" +
-            "<p>Press <b>E</b> (or the button next to Skip) the moment you are about to lose it. " +
+            "<p>Press <b>E</b> (or its button in the dock) the moment you are about to lose it. " +
             "The Strokemeter stops for a breather and comes back at the bottom of its current " +
             "speed range - a gap on its own is not relief.</p>" +
             "<p>The climax waits out the break rather than being paid for with it: it sits on its " +
@@ -139,8 +137,8 @@ public static class Guide
             "pause length and the cooldown live in Settings &gt; Beat &amp; Rhythm, and the whole " +
             "thing can be switched off there.</p>" +
             "<h3>Climax Banner</h3>" +
-            "<p>Sits just above the Strokemeter and lights up with the session's outcome " +
-            "(Cum / Ruined / Denied) once it's decided.</p>" +
+            "<p>Slams in over the picture with the session's outcome (Cum / Ruined / Denied) " +
+            "once it's decided.</p>" +
             "<h3>What actually happened</h3>" +
             "<p>Underneath it, three buttons: <b>I Came</b>, <b>I Ruined It</b>, <b>I Stopped</b>. " +
             "The app knows what it <i>told</i> you to do; only you know what you did. Being denied " +
@@ -156,11 +154,51 @@ public static class Guide
             "too, because a session with no answer counts as one that never finished and drags " +
             "every average you are tracking. You can always decline to say, and you can switch the " +
             "whole question off in Settings &gt; Climax.</p>"),
-        new("Languages && Tones",
+        new("Characters",
+            "<h3>Who is talking to you</h3>" +
+            "<p>A character of your choice stands on the start screen, and during a session she " +
+            "watches you from a frame at the top right: every callout draws her closer, her face " +
+            "follows what she says, the line appears in a speech bubble beside her, and she " +
+            "strokes in time with the beat. The toy in her hand is the app's own - its colour is " +
+            "yours to pick under Settings &gt; Look &gt; Toy colour.</p>" +
+            "<h3>Bringing your own</h3>" +
+            "<p>A character is a <b>.vrm</b> model - VRM 0.x or 1.0, the format VRoid Studio " +
+            "exports and most avatar sites offer. GoonerApp ships without one, so here is where " +
+            "yours go:</p>" +
+            "<ol>" +
+            "<li>Put your <code>.vrm</code> files together in a folder of their own, anywhere on " +
+            "your machine - outside the app's folder, so they stay where they are when you unpack " +
+            "a new version.</li>" +
+            "<li>Open <b>Settings &gt; Look</b>, and next to <b>Your own models</b> press " +
+            "<b>Choose Folder...</b> and pick that folder.</li>" +
+            "<li>Every <code>.vrm</code> directly in it (not in folders inside it) now appears " +
+            "under <b>On the start screen</b>, by its file name. Pick one and press <b>Save &amp; Close Settings</b>.</li>" +
+            "</ol>" +
+            "<p>A <code>.vrm</code> dropped into <code>res\\characters</code> inside the app's own " +
+            "folder is offered as well - create that folder if it is not there - but it does not " +
+            "come along when you unpack a new version.</p>" +
+            "<p>Make your own in VRoid Studio, or use one whose author lets you download it. The " +
+            "app does not read a model's terms of use for you: many authors rule out sexual use, " +
+            "so check them before a model of someone else's goes in here.</p>" +
+            "<h3>What to expect</h3>" +
+            "<ul>" +
+            "<li>Large models take a while to load - a very large one, minutes. The logo holds " +
+            "her place until she fades in, and everything else works meanwhile.</li>" +
+            "<li>Hair, tails and the like swing if the model was made with spring bones.</li>" +
+            "<li>A model that takes the app down while it loads is switched off at the next " +
+            "start, and the app tells you which one it was, so one broken file can never lock " +
+            "you out. Pick it again to give it another try.</li>" +
+            "<li><b>None</b> leaves the logo on the start screen; untick <b>Shown during a " +
+            "session</b> to keep her out of your sessions. <b>Frame</b> picks a neon oval or an " +
+            "old tube screen.</li>" +
+            "<li>The folder you chose stays on this machine: it is never logged, and Privacy " +
+            "&amp; Data shows it and forgets it on request.</li>" +
+            "</ul>"),
+        new("Languages & Tones",
             "<h3>Callouts are just JSON files</h3>" +
             "<p>Every teasing phrase you see comes from a JSON file under <code>res/callouts/</code>, " +
             "one folder per language and one file per tone inside it - " +
-            "<code>en/flirty.json</code>, <code>de/dominant.json</code>, and so on. No Python " +
+            "<code>en/flirty.json</code>, <code>de/dominant.json</code>, and so on. No programming " +
             "knowledge is needed to add or translate phrases.</p>" +
             "<h3>Language and tone are two separate choices</h3>" +
             "<p>You pick one language and as many tones as you like in " +
@@ -210,8 +248,8 @@ public static class Guide
             "<h3>Playback</h3>" +
             "<ul>" +
             "<li><b>Ctrl+O</b> - Set/Change Gooning Folder</li>" +
-            "<li><b>Right Arrow</b> - Next media (same as Skip &gt;&gt;)</li>" +
-            "<li><b>Left Arrow</b> - Previous media (same as &lt;&lt; Previous)</li>" +
+            "<li><b>Right Arrow</b> - Next media (same as Skip in the dock)</li>" +
+            "<li><b>Left Arrow</b> - Previous media (same as Previous in the dock)</li>" +
             "<li><b>Ctrl+Space</b> - Stop the session</li>" +
             "<li><b>E</b> - I reached my Edge: a pause right now, and a gentler rhythm behind " +
             "it. Hidden once the climax has been announced.</li>" +
@@ -221,7 +259,7 @@ public static class Guide
             "<li><b>M</b> - Toggle mute (beat sound and video audio together)</li>" +
             "<li><b>Space</b> - Panic: instantly minimizes the window, mutes audio and stops " +
             "any connected device. The device stays stopped until you press <b>Resume " +
-            "Device</b> next to Mute - the window comes back by accident often enough " +
+            "Device</b> in the dock - the window comes back by accident often enough " +
             "that it must never restart on its own. Does not " +
             "stop the session, and doesn't auto-unmute when you come back - press <b>M</b> once " +
             "you're ready for sound. (Space always mutes and minimizes, it never restores.)</li>" +
@@ -246,7 +284,7 @@ public static class Guide
             "<p>Nothing in the app makes an outbound network request on its own. Loading your " +
             "folder, playing your files, tracking your stats - all of it happens entirely " +
             "offline, on-device.</p>" +
-            "<p>The first exception is Help &gt; Check for Updates: only when you click it and " +
+            "<p>The first exception is Check for Updates, at the foot of the start screen: only when you click it and " +
             "confirm the warning, GoonerApp sends a single request to GitHub.com to check the " +
             "latest release version. Nothing else is sent, and it never runs automatically.</p>" +
             "<p>The second is device output in <b>Settings &gt; Device</b>, for driving a " +
@@ -261,12 +299,15 @@ public static class Guide
             "Your session history, custom rhythm patterns, custom phrase files, saved sessions " +
             "and the media folders the picker remembers are plain JSON files in " +
             "<b>%LOCALAPPDATA%\\GoonerCock\\GoonerApp</b>. Your settings - sliders, toggles, " +
-            "language - live in the registry under " +
-            "<b>HKEY_CURRENT_USER\\Software\\GoonerCock\\GoonerApp</b>.</p>" +
-            "<p>GoonerApp is portable, so deleting the .exe does <i>not</i> remove either of " +
-            "those. Open <b>Help &gt; Privacy &amp; Data</b> to see the exact paths on this " +
+            "language - sit right next to them, in <b>settings.json</b>.</p>" +
+            "<p>GoonerApp is portable, so deleting its folder does <i>not</i> remove any of " +
+            "that. Open <b>Privacy &amp; Data</b> - on the start screen, or in the dock's menu - to see the exact paths on this " +
             "machine, open the data folder, or delete any of it - per category, so you can " +
             "wipe the remembered folder paths without losing your stats.</p>" +
+            "<p>One thing more is written, by the graphics engine rather than the app: a " +
+            "graphics cache of compiled shaders in <b>%APPDATA%\\Godot\\app_userdata\\GoonerApp</b>, " +
+            "so the start and the first moments of a session do not stall. It holds nothing about " +
+            "you or your media, and Privacy &amp; Data shows and deletes it too.</p>" +
             "<h3>The one thing that stores media paths</h3>" +
             "<p>Nothing the app writes contains the paths of your media - with one exception it " +
             "only makes when you ask for it. A session you <b>save</b> for replaying records " +
@@ -286,67 +327,9 @@ public static class Guide
             "strictly opt-in and clearly disclosed here - never on by default, never silent.</p>"),
     ];
 
-    public static IReadOnlyList<GuideEdit> EngineEdits { get; } =
-    [
-        // The engine keeps its settings beside the rest of the data, in a file of its own; the
-        // registry key is the Python app's, and only read once, to bring the settings over.
-        new("Privacy",
-            "Your settings - sliders, toggles, " +
-            "language - live in the registry under " +
-            "<b>HKEY_CURRENT_USER\\Software\\GoonerCock\\GoonerApp</b>.</p>",
-            "Your settings - sliders, toggles, " +
-            "language - sit right next to them, in <b>settings.json</b>.</p>"),
-        // The engine ships as a folder rather than one .exe, and after the edit above its data is
-        // one place, not two.
-        new("Privacy",
-            "<p>GoonerApp is portable, so deleting the .exe does <i>not</i> remove either of " +
-            "those.",
-            "<p>GoonerApp is portable, so deleting its folder does <i>not</i> remove any of " +
-            "that."),
-        // The engine has no menu bar: Help, Sessions and Statistics are on the start screen and in
-        // the dock's menu, and the buttons the shortcuts name are the dock's icons.
-        new("Privacy",
-            " Open <b>Help &gt; Privacy &amp; Data</b> to see the exact paths on this ",
-            " Open <b>Privacy &amp; Data</b> - on the start screen, or in the dock's menu - to see the exact paths on this "),
-        new("Privacy",
-            "<p>The first exception is Help &gt; Check for Updates: only when you click it and ",
-            "<p>The first exception is Check for Updates, at the foot of the start screen: only when you click it and "),
-        new("On-Screen Display",
-            "<b>Sessions &gt; Saved Sessions</b> plays it ",
-            "<b>Saved Sessions</b> on the start screen plays it "),
-        new("On-Screen Display",
-            "<p><b>Statistics &gt; Achievements</b> lists every one there is, not only the ",
-            "<p><b>Achievements</b> on the start screen lists every one there is, not only the "),
-        new("On-Screen Display",
-            "and deletable under Help &gt; Privacy &amp; Data.</p>",
-            "and deletable under Privacy &amp; Data.</p>"),
-        new("Keyboard Shortcuts",
-            "(same as Skip &gt;&gt;)",
-            "(same as Skip in the dock)"),
-        new("Keyboard Shortcuts",
-            "(same as &lt;&lt; Previous)",
-            "(same as Previous in the dock)"),
-    ];
-
-    // The topics as the engine shows them: the edits applied, a tab title with one ampersand where
-    // Qt needed two.
-    public static IReadOnlyList<GuideTopic> Topics { get; } =
-    [
-        .. PythonTopics.Select(topic => new GuideTopic(
-            DisplayTitle(topic.Title),
-            EngineEdits.Where(edit => edit.Topic == DisplayTitle(topic.Title))
-                .Aggregate(topic.Html, (html, edit) => html.Replace(edit.Old, edit.New, StringComparison.Ordinal)))),
-    ];
-
     // The topics in the language in use: the title, and every block of the page - a heading, a
-    // paragraph, a list - looked up on its own, so a sentence reworded on the Python side costs the
-    // translation of its paragraph rather than of the whole topic.
+    // paragraph, a list - looked up on its own, so a sentence reworded costs the translation of its
+    // paragraph rather than of the whole topic.
     public static IReadOnlyList<GuideTopic> Translated() =>
         [.. Topics.Select(topic => new GuideTopic(L10n.T(topic.Title), string.Concat(RichText.Blocks(topic.Html).Select(L10n.T))))];
-
-    public static string DisplayTitle(string qtTitle)
-    {
-        ArgumentNullException.ThrowIfNull(qtTitle);
-        return qtTitle.Replace("&&", "&", StringComparison.Ordinal);
-    }
 }

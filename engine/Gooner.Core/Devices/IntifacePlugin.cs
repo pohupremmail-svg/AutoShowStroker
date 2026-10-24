@@ -177,8 +177,8 @@ public sealed class DeviceSettings
     public static string SyncNote => L10n.T(
         "Panic, Emergency Stop, losing the device and losing the connection all leave device sync stopped, and " +
         "it stays stopped until you say otherwise - the window often comes back by accident, and a device that " +
-        "starts moving on its own at that moment is the worst thing this app could do. The Resume Device button " +
-        "next to Mute in the main window is the way back; so is starting a new session, or the button below. " +
+        "starts moving on its own at that moment is the worst thing this app could do. The Device button " +
+        "in the dock is the way back; so is starting a new session, or the button below. " +
         "Rhythm pauses resume on their own.");
 
     private readonly IntifacePlugin _plugin;

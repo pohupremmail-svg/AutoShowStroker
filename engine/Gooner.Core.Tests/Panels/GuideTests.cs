@@ -3,8 +3,8 @@ using Gooner.Core.Panels;
 
 namespace Gooner.Core.Tests.Panels;
 
-// Port of tests/test_help_dialog.py: the Guide's topics, as the engine shows them. The Python test
-// read the labels' rich text; these read the same text off the topics.
+// The Guide's topics (ported from the Python app's tests/test_help_dialog.py, which read the same
+// text off the dialog's labels).
 public sealed class GuideTests
 {
     private static List<string> Titles => [.. Guide.Topics.Select(t => t.Title)];
@@ -18,13 +18,12 @@ public sealed class GuideTests
         Assert.Contains(Titles, t => t.Contains("Language", StringComparison.Ordinal));
     }
 
-    // Qt took a lone & for a mnemonic marker and needed && for one; a tab here needs no escaping.
     [Fact]
-    public void a_tab_title_shows_a_single_ampersand() =>
-        Assert.Equal(["Beats & Rhythm", "On-Screen Display", "Languages & Tones", "Keyboard Shortcuts", "Privacy"], Titles);
+    public void the_tabs_in_their_order() =>
+        Assert.Equal(["Beats & Rhythm", "On-Screen Display", "Characters", "Languages & Tones", "Keyboard Shortcuts", "Privacy"], Titles);
 
-    // Translated a block at a time - a heading, a paragraph, a list - so a sentence reworded on the
-    // Python side costs the translation of its paragraph rather than of the whole topic.
+    // Translated a block at a time - a heading, a paragraph, a list - so a sentence reworded costs
+    // the translation of its paragraph rather than of the whole topic.
     [Fact]
     public void every_topic_is_cut_into_its_blocks_without_a_character_lost()
     {
@@ -76,7 +75,7 @@ public sealed class GuideTests
     {
         Assert.Equal(1, Titles.IndexOf("On-Screen Display"));
         var text = Text("On-Screen Display");
-        foreach (var expected in new[] { "Session Timer", "Top-left", "Record-Chase", "Top-right", "personal record", "Playback" })
+        foreach (var expected in new[] { "Session Timer", "Top-left", "Record-Chase", "Top-center", "personal record", "Playback" })
             Assert.Contains(expected, text);
     }
 
@@ -96,23 +95,38 @@ public sealed class GuideTests
             Assert.Contains(expected, text);
     }
 
-    // --- where the engine differs ---
-
-    // Every edit names the exact sentence it replaces in the Python text. When that sentence
-    // changes there, the edit stops matching and this fails, so the difference is looked at again
-    // rather than silently left behind.
+    // Every track the Look tab offers, under the name it offers it by.
     [Fact]
-    public void every_engine_edit_finds_its_sentence_exactly_once()
+    public void the_note_track_is_explained_in_every_style()
     {
-        foreach (var edit in Guide.EngineEdits)
-        {
-            var source = Guide.PythonTopics.Single(t => Guide.DisplayTitle(t.Title) == edit.Topic).Html;
-            var count = (source.Length - source.Replace(edit.Old, "", StringComparison.Ordinal).Length) / edit.Old.Length;
-            Assert.True(count == 1, $"{edit.Topic}: \"{edit.Old}\" found {count} times");
-        }
+        var text = Text("On-Screen Display");
+        Assert.Contains("Settings &gt; Look", text);
+        foreach (var track in Look.Choices["note_track"])
+            Assert.Contains(track.Label, text);
     }
 
-    // The engine keeps its settings in a file next to everything else, not in the registry.
+    // Where a model goes is the one thing someone with a .vrm needs to know, and the app has no
+    // other place that says it.
+    [Fact]
+    public void characters_tab_says_where_models_go()
+    {
+        var text = Text("Characters");
+        foreach (var expected in new[] { ".vrm", "Settings &gt; Look", "Your own models", "Choose Folder...", "res\\characters", "VRoid Studio" })
+            Assert.Contains(expected, text);
+    }
+
+    // A model is somebody's work, and the app does not read its terms for the user.
+    [Fact]
+    public void characters_tab_says_the_model_licence_is_the_users_to_check() =>
+        Assert.Contains("terms of use", Text("Characters"));
+
+    [Fact]
+    public void characters_tab_explains_what_happens_to_a_model_that_crashes() =>
+        Assert.Contains("switched off", Text("Characters"));
+
+    // --- this app, not the Python one ---
+
+    // Settings are in a file next to everything else, not in the registry.
     [Fact]
     public void the_engine_says_where_its_settings_are()
     {
@@ -121,7 +135,7 @@ public sealed class GuideTests
         Assert.Contains("settings.json", text);
     }
 
-    // The engine ships as a folder, not one .exe - and its data is one place now, not two.
+    // It ships as a folder, not one .exe - and its data is one place, not two.
     [Fact]
     public void the_engine_speaks_of_the_folder_it_ships_as()
     {
@@ -130,27 +144,21 @@ public sealed class GuideTests
         Assert.Contains("deleting its folder", text);
     }
 
-    // The engine has no menu bar: what was under Help, Sessions and Statistics is on the start screen
-    // (and the dock's menu), and the buttons the shortcuts name are the dock's.
+    // The graphics cache is the one thing written that is not the app's own data.
+    [Fact]
+    public void the_privacy_tab_names_the_graphics_cache() =>
+        Assert.Contains("graphics cache", Text("Privacy"));
+
+    // There is no menu bar, no footer and no button row: what was under Help, Sessions and
+    // Statistics is on the start screen (and the dock's menu), and the buttons are the dock's.
     [Fact]
     public void the_engine_sends_you_nowhere_its_window_does_not_have()
     {
         foreach (var topic in Guide.Topics)
         {
-            foreach (var gone in new[] { "Help &gt;", "Sessions &gt;", "Statistics &gt;", "Skip &gt;&gt;", "&lt;&lt; Previous" })
+            foreach (var gone in new[] { "Help &gt;", "Sessions &gt;", "Statistics &gt;", "Skip &gt;&gt;", "&lt;&lt; Previous", "next to Mute", "next to Skip", "footer", "along the bottom", "Python" })
                 Assert.DoesNotContain(gone, topic.Html);
         }
         Assert.Contains("start screen", Text("Privacy"));
-    }
-
-    [Fact]
-    public void only_the_edits_differ_from_the_python_text()
-    {
-        foreach (var (python, engine) in Guide.PythonTopics.Zip(Guide.Topics))
-        {
-            var expected = Guide.EngineEdits.Where(e => e.Topic == Guide.DisplayTitle(python.Title))
-                .Aggregate(python.Html, (html, edit) => html.Replace(edit.Old, edit.New, StringComparison.Ordinal));
-            Assert.Equal(expected, engine.Html);
-        }
     }
 }

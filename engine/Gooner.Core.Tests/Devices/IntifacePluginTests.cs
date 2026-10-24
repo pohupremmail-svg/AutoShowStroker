@@ -549,4 +549,12 @@ public sealed class IntifacePluginTests : IDisposable
         Assert.Null(privacy.DeviceOutputNote);
         privacy.ClearCategories(["settings"]);
     }
+
+    // There is no main window with a row of buttons: the way back is the dock's Device button.
+    [Fact]
+    public void the_way_back_is_named_where_it_is()
+    {
+        Assert.DoesNotContain("next to Mute", DeviceSettings.SyncNote, StringComparison.Ordinal);
+        Assert.Contains("in the dock", DeviceSettings.SyncNote, StringComparison.Ordinal);
+    }
 }
