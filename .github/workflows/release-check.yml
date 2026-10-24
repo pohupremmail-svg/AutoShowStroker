@@ -63,7 +63,7 @@ jobs:
 
       - name: Cached Godot
         id: godot-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/godot-downloads
           key: godot-${{ env.GODOT_VERSION }}-mono-win64-${{ env.GODOT_TEMPLATES_SHA512 }}
