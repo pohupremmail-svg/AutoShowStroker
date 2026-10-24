@@ -962,6 +962,19 @@ class _Voice:
         self._note("said", category)
 
 
+def _no_fake_at_the_start(climax):
+    """ClimaxHandler.on_plan_extended as the engine has it: segment 0 is never a fake. The Python
+    app plans one there, which opens the session with "I'm coming"; the engine fixed that and the
+    Python app is not changed any more (the user's call, 2026-10-24). The die for segment 0 is still
+    cast on both sides, so every draw after it is the same - only what it decides differs, and that is
+    taken out of the oracle here rather than whole sessions out of the comparison
+    (allowlist: _oracle_adjusted)."""
+    def on_plan_extended(segments):
+        climax.on_plan_extended(segments)
+        climax._planned_fakes.discard(0)
+    return on_plan_extended
+
+
 def _play(config, steps, seed, climax_config=None):
     """One session through BeatHandler - and, given a climax_config, through ClimaxHandler as
     well, wired the way GoonerApp wires them. Returns the draws and the event log."""
@@ -1007,7 +1020,7 @@ def _play(config, steps, seed, climax_config=None):
                 setattr(climax, key, value)
             # GoonerApp's wiring: the climax hears about the plan from the beat.
             handler.session_planned_event.connect(climax.on_session_planned)
-            handler.plan_extended_event.connect(climax.on_plan_extended)
+            handler.plan_extended_event.connect(_no_fake_at_the_start(climax))
             handler.segment_started_event.connect(climax.on_segment_started)
             climax.outcome_decided_event.connect(lambda outcome: note("outcome", outcome))
             climax.status_changed_event.connect(lambda status: note("status", status))

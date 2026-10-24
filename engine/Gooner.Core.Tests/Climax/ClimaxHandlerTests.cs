@@ -422,6 +422,27 @@ public sealed class ClimaxHandlerTests : IDisposable
         Assert.Equal(new HashSet<int> { 3, 5 }, _handler.PlannedFakeBoundaries);
     }
 
+    // Segment 0 starts with the session: a fake planned there opened one session in twenty (at the
+    // default 5 %) with "I'm coming" and its reveal. Found by the parity run; the Python app keeps it
+    // (parity/allowlist.json). Its die is still cast, so every draw after it is the one Python makes.
+    [Fact]
+    public void the_first_segment_is_never_a_fake()
+    {
+        _handler.FakeClimaxActive = true;
+        _handler.FakeClimaxChance = 1.0;
+        var draws = 0;
+        _random.Uniform = () =>
+        {
+            draws++;
+            return 0.0;
+        };
+
+        _handler.OnPlanExtended(Beats(0, 1, 2));
+
+        Assert.Equal(new HashSet<int> { 1, 2 }, _handler.PlannedFakeBoundaries);
+        Assert.Equal(3, draws);
+    }
+
     [Fact]
     public void a_planned_fake_fires_when_its_segment_starts()
     {

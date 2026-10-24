@@ -292,7 +292,10 @@ public sealed class ClimaxHandler : ISettingsOwner
             // A recorded segment's fake-outs are recorded too and have their own timers. Only what
             // the planner drew *past* the end of the recording is rolled for.
             if (_script is not null && segment.Index < _script.SegmentCount) continue;
-            if (_random.Uniform(0, 1) < FakeClimaxChance)
+            // Never segment 0 either: it starts with the session, and a fake there opened it with
+            // "I'm coming". The Python app does (parity/allowlist.json); its die is still cast, so
+            // every draw after it stays the one Python makes.
+            if (_random.Uniform(0, 1) < FakeClimaxChance && segment.Index > 0)
                 _plannedFakes.Add(segment.Index);
         }
     }
