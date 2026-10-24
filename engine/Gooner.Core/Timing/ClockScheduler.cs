@@ -6,13 +6,23 @@ namespace Gooner.Core.Timing;
 // One scheduler is shared by everything on the session clock, so the climax can never be overtaken
 // by notes that were due after it just because their handler was advanced first. The host calls
 // Advance() every frame.
+//
+// Each Advance() is one pass of the event loop Qt had. A timer armed while one fires that is due at
+// or before that very moment - a 0 ms interval, or a time already past - waits for the next pass, as
+// a 0 ms QTimer goes off once per pass of the loop: fired again in the same one, time never moved on
+// and the app froze (a saved session with a freq of 5000 has a note gap of 0 ms).
 public sealed class ClockScheduler(ISessionClock clock)
 {
     private readonly List<ClockTimer> _timers = [];
     private double? _dispatchAt;
+    private long _pass;
 
     // The moment the firing timer was due while it fires; the clock itself otherwise.
     public double Now => _dispatchAt ?? clock.Now;
+
+    // The pass a timer armed now may still fire in: this one, unless it was armed for a moment the
+    // pass has already reached.
+    internal long PassFor(double due) => _dispatchAt is { } at && due <= at ? _pass + 1 : _pass;
 
     public ClockTimer CreateTimer(Action timeout, bool singleShot = false)
     {
@@ -26,11 +36,12 @@ public sealed class ClockScheduler(ISessionClock clock)
     public void Advance()
     {
         var until = clock.Now;
+        _pass++;
         while (true)
         {
             ClockTimer? next = null;
             foreach (var timer in _timers)
-                if (timer.Active && timer.Due <= until && (next is null || timer.Due < next.Due))
+                if (timer.Active && timer.Due <= until && timer.Pass <= _pass && (next is null || timer.Due < next.Due))
                     next = timer;
             if (next is null) return;
 
@@ -77,10 +88,14 @@ public sealed class ClockTimer
     // Bumped by every Start/Stop, so the scheduler can tell whether a slot re-armed the timer.
     internal int Generation { get; private set; }
 
+    // The scheduler's pass this timer may fire in at the earliest.
+    internal long Pass { get; private set; }
+
     public void Start(double intervalMs)
     {
         IntervalMs = intervalMs;
         Due = _scheduler.Now + intervalMs / 1000.0;
+        Pass = _scheduler.PassFor(Due);
         Active = true;
         Generation++;
     }
@@ -104,5 +119,9 @@ public sealed class ClockTimer
 
     internal void Fire() => _timeout();
 
-    internal void Repeat() => Due += IntervalMs / 1000.0;
+    internal void Repeat()
+    {
+        Due += IntervalMs / 1000.0;
+        Pass = _scheduler.PassFor(Due);
+    }
 }
