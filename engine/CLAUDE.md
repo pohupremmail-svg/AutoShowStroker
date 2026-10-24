@@ -191,6 +191,12 @@ here unchanged. This file only adds what is specific to this side.
   ones the app may pass on (rights in writing, nothing explicit on GitHub, unmistakably adult), and
   the package takes none of `res/characters` (`Package.BesideExecutable`). The chosen one stands on the
   start screen's pedestal; none, or one that will not load, leaves the logo there.
+- **A figure that takes the app down is switched off** (`CharacterChoice.LoadStarting/LoadSettled`,
+  `Main.WatchCharacterLoad`): the pick is loaded at every start, so a model that crashes the app
+  while it loads, or as it is first drawn, would crash every start after it, with no way into the
+  settings. Which one is loading goes into `settings.json` (`Character/loading`) and comes out once it
+  has been on screen 3 s, or when the app is closed; a start that still finds it switches that figure
+  to none and says so (`CharacterChoice.Abandoned`). Picking it again tries it again.
 - **One figure, shared** (`Characters/Figure.cs`): `Figures` loads the chosen model once, and
   whichever `CharacterView` is on screen takes it into its own 3D world - the pedestal between
   sessions, the telepathy frame during one. A view leaving the tree takes the figure out of its

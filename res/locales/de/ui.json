@@ -452,6 +452,8 @@
   "compiled shaders, so that the app starts without stutters - made again at the next start": "kompilierte Shader, damit die App ohne Ruckler startet - beim nächsten Start neu erstellt",
   "Data files:\n{0}\n\nSettings:\n{1}\n\nGraphics cache:\n{2}": "Datendateien:\n{0}\n\nEinstellungen:\n{1}\n\nGrafik-Cache:\n{2}",
   "Frame:": "Rahmen:",
+  "A character was switched off": "Eine Figur wurde abgeschaltet",
+  "{0} took the app down the last time it was loaded, so it has been switched off and the start screen shows the logo instead. Pick it again under Settings > Look to try once more.": "{0} hat die App beim letzten Laden abstürzen lassen. Sie ist deshalb abgeschaltet, und auf dem Startbildschirm steht stattdessen das Logo. Unter Einstellungen > Aussehen kannst du sie wieder auswählen und es noch einmal versuchen.",
   "Toy colour:": "Farbe des Toys:",
   "Ebony": "Ebenholz",
   "Dark brown": "Dunkelbraun",

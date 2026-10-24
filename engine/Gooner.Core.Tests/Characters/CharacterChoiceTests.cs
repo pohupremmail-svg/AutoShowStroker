@@ -162,4 +162,83 @@ public sealed class CharacterChoiceTests : IDisposable
         Assert.Equal([CharacterChoice.None], choice.Options.Select(o => o.Value));
         Assert.Null(choice.Path);
     }
+
+    // --- a figure that takes the app down with it ---
+
+    // The pick is loaded at every start, so a model that crashes the app while it loads would crash
+    // every start after it too, with no way into the settings to pick another. Which one is loading is
+    // written down first and only crossed out once it is safely on screen.
+    [Fact]
+    public void a_figure_on_its_way_in_is_written_down_until_it_is_settled()
+    {
+        Write("a.vrm");
+        var choice = new CharacterChoice(_settings, Dir);
+
+        choice.LoadStarting();
+        Assert.Equal("a.vrm", _settings.GetString("Character/loading", ""));
+
+        choice.LoadSettled();
+        Assert.False(_settings.Contains("Character/loading"));
+    }
+
+    // Still written down at the next start: the app went down with it. It is switched off, and the
+    // start says which one it was.
+    [Fact]
+    public void the_figure_the_app_went_down_with_is_not_loaded_again()
+    {
+        Write("a.vrm");
+        Write("b.vrm");
+        var before = new CharacterChoice(_settings, Dir);
+        before.Choose("b.vrm");
+        before.LoadStarting();
+
+        var after = new CharacterChoice(_settings, Dir);
+
+        Assert.Equal(CharacterChoice.None, after.File);
+        Assert.Null(after.Path);
+        Assert.Equal("b", after.Abandoned);
+        Assert.Equal(CharacterChoice.None, new CharacterChoice(_settings, Dir).File);
+        Assert.False(_settings.Contains("Character/loading"));
+    }
+
+    // Picked again under Settings > Look, it is tried again: the user asked for it.
+    [Fact]
+    public void it_can_be_picked_again()
+    {
+        Write("a.vrm");
+        var before = new CharacterChoice(_settings, Dir);
+        before.LoadStarting();
+        var after = new CharacterChoice(_settings, Dir);
+
+        after.Choose("a.vrm");
+
+        Assert.Equal("a.vrm", new CharacterChoice(_settings, Dir).File);
+        Assert.Null(new CharacterChoice(_settings, Dir).Abandoned);
+    }
+
+    // Written down for a figure that is no longer the pick - changed while it loaded - it says nothing
+    // about the one picked now.
+    [Fact]
+    public void a_note_about_another_figure_is_only_crossed_out()
+    {
+        Write("a.vrm");
+        Write("b.vrm");
+        var before = new CharacterChoice(_settings, Dir);
+        before.LoadStarting();
+        before.Choose("b.vrm");
+
+        var after = new CharacterChoice(_settings, Dir);
+
+        Assert.Equal("b.vrm", after.File);
+        Assert.Null(after.Abandoned);
+        Assert.False(_settings.Contains("Character/loading"));
+    }
+
+    [Fact]
+    public void a_clean_start_abandons_nothing()
+    {
+        Write("a.vrm");
+
+        Assert.Null(new CharacterChoice(_settings, Dir).Abandoned);
+    }
 }

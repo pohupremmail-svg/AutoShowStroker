@@ -226,6 +226,7 @@ public partial class Main : Control
         if (_language != L10n.Language || _character != _app.Character.Path) ApplyLanguage();
         Toy.Wanted = _app.Look.ToyColor;
         Toy.Loaded?.Tint(Toy.Wanted);
+        WatchCharacterLoad();
 
         var notes = _app.Beat.UpcomingNotes(NoteTrackView.LeadTimeSec);
         // The notes either side of now and one beyond each, for the character to move to.
@@ -376,6 +377,33 @@ public partial class Main : Control
         return fresh;
     }
 
+    // A character on its way in is written down (CharacterChoice.LoadStarting) and crossed out only
+    // once it has been on screen a few seconds: a model that takes the app down while it loads or as
+    // it is first drawn would otherwise do it again at every start, the pick being loaded at each.
+    private const ulong CharacterSettleMs = 3000;
+    private bool _characterLoading;
+    private ulong? _characterSettlesAt;
+
+    private void WatchCharacterLoad()
+    {
+        if (Figures.Loading && !_characterLoading)
+        {
+            _characterLoading = true;
+            _characterSettlesAt = null;
+            _app!.Character.LoadStarting();
+        }
+        else if (!Figures.Loading && _characterLoading)
+        {
+            _characterLoading = false;
+            _characterSettlesAt = Time.GetTicksMsec() + CharacterSettleMs;
+        }
+        if (_characterSettlesAt is { } at && Time.GetTicksMsec() >= at)
+        {
+            _characterSettlesAt = null;
+            _app!.Character.LoadSettled();
+        }
+    }
+
     // --- input ---
 
     // Panic comes first, before any control could take Space for itself: a focused button in a
@@ -490,6 +518,8 @@ public partial class Main : Control
     // connection to close is bounded - a server that never answers must not keep the app alive.
     private async void Quit(int exitCode)
     {
+        // Closing while a character loads is not the character taking the app down.
+        _app?.Character.LoadSettled();
         _app?.Close();
         _audio?.Shutdown();
         if (_app?.Intiface?.Controller is { HasWorker: true } controller)

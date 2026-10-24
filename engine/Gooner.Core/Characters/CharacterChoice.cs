@@ -41,7 +41,37 @@ public sealed class CharacterChoice : ISettingsOwner
         InSession = settings?.GetBool($"{SettingsGroup}/in_session", (bool)Defaults["in_session"]) ?? (bool)Defaults["in_session"];
         var stored = settings?.GetString($"{SettingsGroup}/file", (string)Defaults["file"]) ?? "";
         File = stored == None || Values.Contains(stored) ? stored : First;
+        // Still written down from the last start: the app went down while this one was on its way
+        // in. It is loaded at every start, so it would take every start down with it - switched off.
+        var loading = settings?.GetString(LoadingKey, "") ?? "";
+        if (loading.Length == 0) return;
+        settings!.Remove(LoadingKey);
+        if (loading != File || File == None) return;
+        Abandoned = Label(File);
+        Choose(None);
     }
+
+    private static string LoadingKey => $"{SettingsGroup}/loading";
+
+    // The figure the last start went down with, by its name; switched off on this start, and said
+    // so. Null on a start after a clean one.
+    public string? Abandoned { get; }
+
+    public static string AbandonedTitle => L10n.T("A character was switched off");
+
+    public static string AbandonedText(string name) => L10n.F(
+        "{0} took the app down the last time it was loaded, so it has been switched off and the start " +
+        "screen shows the logo instead. Pick it again under Settings > Look to try once more.", name);
+
+    // The picked figure is about to load: written down until it is safely on screen (LoadSettled).
+    public void LoadStarting()
+    {
+        if (File != None) _settings?.SetValue(LoadingKey, File);
+    }
+
+    // On screen without taking the app down, or the app is closing while it loaded - which is not it
+    // taking the app down either.
+    public void LoadSettled() => _settings?.Remove(LoadingKey);
 
     // Whether the character comes through with each callout during a session (the telepathy frame).
     public bool InSession { get; set; }

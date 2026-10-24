@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Gooner.Core.App;
+using Gooner.Core.Characters;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Gooner.Core.Localization;
@@ -125,6 +126,9 @@ public partial class Main
     {
         var entries = _app!.WhatsNewOnStartup();
         if (entries.Count > 0) ShowWhatsNew(entries);
+        // On top: the character the last start went down with, switched off on this one.
+        if (_app.Character.Abandoned is { } name)
+            Confirm.Tell(_panels, CharacterChoice.AbandonedTitle, CharacterChoice.AbandonedText(name));
     }
 
     private void ShowWhatsNew(IEnumerable<ChangelogEntry> entries) => _panels.Show(new WhatsNewPanel(entries));
