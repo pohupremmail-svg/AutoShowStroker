@@ -21,7 +21,7 @@ public partial class DeviceTab : VBoxContainer
     private readonly ToggleSwitch _enabled;
     private readonly LineEdit _server;
     private readonly Label _error;
-    private readonly (ColorRect Dot, Label Text)[] _states;
+    private readonly (Dot Dot, Label Text)[] _states;
     private readonly Button _testUp;
     private readonly Button _testDown;
     private readonly Button _resume;
@@ -42,7 +42,7 @@ public partial class DeviceTab : VBoxContainer
         banner.AddChild(Widgets.Text(DeviceSettings.BetaNotice, 13, Palette.Text, wrap: true));
         AddChild(banner);
 
-        var (output, outputRows) = Card();
+        var (output, outputRows) = Widgets.Section(separation: 12);
         var head = new HBoxContainer();
         head.AddChild(new Label { Text = L10n.T("Enable device output"), ThemeTypeVariation = "SectionTitle", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         _enabled = new ToggleSwitch(device.Enabled);
@@ -51,14 +51,14 @@ public partial class DeviceTab : VBoxContainer
         outputRows.AddChild(head);
         var states = new HBoxContainer();
         states.AddThemeConstantOverride("separation", 10);
-        _states = new (ColorRect, Label)[3];
+        _states = new (Dot, Label)[3];
         for (var i = 0; i < 3; i++)
         {
             var tile = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
             tile.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDarkest), 12, 10));
             var line = new HBoxContainer();
             line.AddThemeConstantOverride("separation", 8);
-            var dot = new ColorRect { CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            var dot = new Dot(9);
             var text = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             text.AddThemeFontSizeOverride("font_size", 13);
             line.AddChild(dot);
@@ -72,7 +72,7 @@ public partial class DeviceTab : VBoxContainer
         outputRows.AddChild(_error);
         AddChild(output);
 
-        var (connection, rows) = Card();
+        var (connection, rows) = Widgets.Section(separation: 12);
         rows.AddChild(new Label { Text = DeviceSettings.AddressHint, ThemeTypeVariation = "Hint", AutowrapMode = TextServer.AutowrapMode.WordSmart });
         _server = new LineEdit { Text = device.Server, PlaceholderText = L10n.T("the address Intiface Central shows") };
         _server.TextChanged += text => _device.Server = text;
@@ -117,15 +117,6 @@ public partial class DeviceTab : VBoxContainer
         _device.Changed += Refresh;
         TreeExiting += () => _device.Changed -= Refresh;
         Refresh();
-    }
-
-    private static (PanelContainer Card, VBoxContainer Rows) Card()
-    {
-        var card = new PanelContainer { ThemeTypeVariation = "Section" };
-        var rows = new VBoxContainer();
-        rows.AddThemeConstantOverride("separation", 12);
-        card.AddChild(rows);
-        return (card, rows);
     }
 
     private static HBoxContainer Pair(string label, Control control)
@@ -180,7 +171,7 @@ public partial class DeviceTab : VBoxContainer
         for (var i = 0; i < states.Length; i++)
         {
             _states[i].Text.Text = states[i].Text;
-            _states[i].Dot.Color = states[i].Dot;
+            _states[i].Dot.Colour = states[i].Dot;
         }
         _testUp.Disabled = _testDown.Disabled = !_device.CanTest;
         _scan.Disabled = !_device.CanScan;

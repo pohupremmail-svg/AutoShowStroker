@@ -70,6 +70,7 @@ public partial class Main
     private void ShowMenu()
     {
         var panel = new AppPanel(L10n.T("Menu"), new Vector2(360, 0));
+        panel.Body.AddThemeConstantOverride("separation", 2);
         var entries = new List<(string Label, Action Pressed)>
         {
             (L10n.T("Settings"), ShowSettings),
@@ -79,9 +80,18 @@ public partial class Main
         };
         entries.AddRange(MenuEntries());
         entries.Add((L10n.T("Quit"), () => Quit(0)));
-        foreach (var (label, pressed) in entries)
+        // Entries as the settings' navigation draws its pages, each with its icon, in this order.
+        string[] icons = ["settings", "saved", "stats", "trophy", "spark", "book", "lock", "scroll", "update", "voice", "power"];
+        foreach (var ((label, pressed), i) in entries.Select((e, i) => (e, i)))
         {
-            var button = new Button { Text = label, FocusMode = Control.FocusModeEnum.None, Alignment = HorizontalAlignment.Left };
+            var button = new Button
+            {
+                Text = label,
+                Icon = Icons.Get(i < icons.Length ? icons[i] : "menu", 20),
+                ThemeTypeVariation = "NavButton",
+                FocusMode = Control.FocusModeEnum.None,
+                Alignment = HorizontalAlignment.Left,
+            };
             button.Pressed += () =>
             {
                 panel.Close();

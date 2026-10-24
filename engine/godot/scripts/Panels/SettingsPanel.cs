@@ -224,36 +224,21 @@ public partial class SettingsPanel : AppPanel
     // greyed out while that switch is off.
     private VBoxContainer Section(VBoxContainer sections, SectionRow? section)
     {
-        var card = new PanelContainer { ThemeTypeVariation = "Section" };
-        var column = new VBoxContainer();
-        column.AddThemeConstantOverride("separation", 12);
-        card.AddChild(column);
         var rows = new VBoxContainer();
         rows.AddThemeConstantOverride("separation", 10);
-        if (section is not null)
+        ToggleSwitch? on = null;
+        if (section?.Switch is { } name)
         {
-            var head = new HBoxContainer();
-            head.AddThemeConstantOverride("separation", 12);
-            var words = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            words.AddThemeConstantOverride("separation", 2);
-            words.AddChild(new Label { Text = section.Title, ThemeTypeVariation = "SectionTitle" });
-            if (section.Description.Length > 0)
-                words.AddChild(new Label { Text = section.Description, ThemeTypeVariation = "Hint", AutowrapMode = TextServer.AutowrapMode.WordSmart });
-            head.AddChild(words);
-            if (section.Switch is { } name)
+            var toggle = _form.Toggles[name];
+            on = new ToggleSwitch(toggle.Value) { TooltipText = toggle.Label };
+            on.Toggled += value =>
             {
-                var toggle = _form.Toggles[name];
-                var on = new ToggleSwitch(toggle.Value) { TooltipText = toggle.Label };
-                on.Toggled += value =>
-                {
-                    toggle.Value = value;
-                    Live(rows, value);
-                };
-                head.AddChild(on);
-                Callable.From(() => Live(rows, toggle.Value)).CallDeferred();
-            }
-            column.AddChild(head);
+                toggle.Value = value;
+                Live(rows, value);
+            };
+            Callable.From(() => Live(rows, toggle.Value)).CallDeferred();
         }
+        var (card, column) = Widgets.Section(section?.Title, section?.Description, on, separation: 12);
         column.AddChild(rows);
         sections.AddChild(card);
         return rows;

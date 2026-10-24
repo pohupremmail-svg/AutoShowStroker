@@ -10,8 +10,9 @@ using Godot;
 namespace Gooner.Engine.Ui;
 
 // The line pyqtgraph drew in the long-term statistics: one point per session, joined, over a
-// "Session #" axis and the metric's own, in the accent on the dark surface. Drawn by hand - a
-// chart library for one line was half of the Python app's cold start.
+// "Session #" axis and the metric's own, in the accent straight on the panel's glass (the redesign):
+// faint grid lines, glowing points. Drawn by hand - a chart library for one line was half of the
+// Python app's cold start.
 public partial class LineChart : Control
 {
     private const float Left = 72, Right = 20, Top = 16, Bottom = 52;
@@ -38,9 +39,8 @@ public partial class LineChart : Control
     public override void _Draw()
     {
         var font = GetThemeDefaultFont();
-        var text = UiTheme.Of(Palette.Text);
-        var grid = UiTheme.Of(Palette.Secondary);
-        DrawRect(new Rect2(Vector2.Zero, Size), UiTheme.Of(Palette.SurfaceDark));
+        var text = UiTheme.Of(Palette.Text, 0.6f);
+        var axis = new Color(1, 1, 1, 0.18f);
         var plot = new Rect2(Left, Top, Size.X - Left - Right, Size.Y - Top - Bottom);
         if (plot.Size.X <= 0 || plot.Size.Y <= 0) return;
 
@@ -56,17 +56,17 @@ public partial class LineChart : Control
         foreach (var tick in yTicks)
         {
             var at = At(x0, tick);
-            DrawLine(at, new Vector2(plot.End.X, at.Y), new Color(grid, 0.35f));
+            DrawLine(at, new Vector2(plot.End.X, at.Y), new Color(1, 1, 1, 0.06f));
             DrawString(font, new Vector2(4, at.Y + FontSize / 3f), Number(tick), HorizontalAlignment.Right, Left - 12, FontSize, text);
         }
         foreach (var tick in xTicks)
         {
             var at = At(tick, y0);
-            DrawLine(at, at + new Vector2(0, 5), text);
+            DrawLine(at, at + new Vector2(0, 5), axis);
             DrawString(font, at + new Vector2(-30, 20), Number(tick), HorizontalAlignment.Center, 60, FontSize, text);
         }
-        DrawLine(new Vector2(plot.Position.X, plot.End.Y), plot.End, text);
-        DrawLine(plot.Position, new Vector2(plot.Position.X, plot.End.Y), text);
+        DrawLine(new Vector2(plot.Position.X, plot.End.Y), plot.End, axis);
+        DrawLine(plot.Position, new Vector2(plot.Position.X, plot.End.Y), axis);
         DrawString(font, new Vector2(plot.Position.X, Size.Y - 8), L10n.T("Session #"), HorizontalAlignment.Center, plot.Size.X, FontSize, text);
         // The y label, turned on its side as pyqtgraph had it.
         DrawSetTransform(new Vector2(14, plot.Position.Y + plot.Size.Y), -Mathf.Pi / 2, Vector2.One);
@@ -75,8 +75,17 @@ public partial class LineChart : Control
 
         var accent = UiTheme.Of(Palette.Accent);
         var line = _points.Select(p => At(p.Session, p.Value)).ToArray();
-        if (line.Length > 1) DrawPolyline(line, accent, 2, antialiased: true);
-        foreach (var point in line) DrawCircle(point, 4.5f, accent, antialiased: true);
+        if (line.Length > 1)
+        {
+            DrawPolyline(line, new Color(accent, 0.25f), 7, antialiased: true);
+            DrawPolyline(line, accent, 2.5f, antialiased: true);
+        }
+        foreach (var point in line)
+        {
+            Fx.Glow.Draw(this, point, 18, new Color(accent, 0.45f));
+            DrawCircle(point, 4.5f, Colors.White, antialiased: true);
+            DrawCircle(point, 3, accent, antialiased: true);
+        }
     }
 
     // The data's own span, padded a little, as an auto-ranged plot shows it.

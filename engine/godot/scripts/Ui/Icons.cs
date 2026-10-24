@@ -28,6 +28,15 @@ public static class Icons
         ["voice"] = "<path d='M4 5h16v10H9l-5 4V5Z'/>",
         ["look"] = "<circle cx='12' cy='12' r='9'/><circle cx='8.5' cy='10' r='1.3'/><circle cx='13.5' cy='8' r='1.3'/><circle cx='15.5' cy='13' r='1.3'/>",
         ["device"] = "<rect x='7' y='2' width='10' height='20' rx='5'/><path d='M12 7v3'/>",
+        ["person"] = "<circle cx='12' cy='7' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/>",
+        ["globe"] = "<circle cx='12' cy='12' r='9'/><path d='M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18'/>",
+        ["keyboard"] = "<rect x='2' y='6' width='20' height='12' rx='2'/><path d='M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10'/>",
+        ["lock"] = "<rect x='4' y='11' width='16' height='10' rx='2'/><path d='M8 11V7a4 4 0 0 1 8 0v4'/>",
+        ["spark"] = "<path d='M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5 19 19M5 19l2.5-2.5M16.5 7.5 19 5'/>",
+        ["book"] = "<path d='M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4V4Z'/><path d='M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6V4Z'/>",
+        ["scroll"] = "<path d='M7 3h11v14a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-1h11v1a3 3 0 0 0 3 3'/><path d='M7 3a2 2 0 0 0-2 2v11M10 8h5M10 12h5'/>",
+        ["update"] = "<path d='M12 3v12M7 10l5 5 5-5M4 21h16'/>",
+        ["history"] = "<path d='M3 12a9 9 0 1 0 3-6.7L3 8'/><path d='M3 3v5h5M12 7v5l3 3'/>",
         ["grip"] = "<circle cx='9' cy='6' r='1'/><circle cx='15' cy='6' r='1'/><circle cx='9' cy='12' r='1'/><circle cx='15' cy='12' r='1'/><circle cx='9' cy='18' r='1'/><circle cx='15' cy='18' r='1'/>",
     };
 

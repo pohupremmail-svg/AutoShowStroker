@@ -56,7 +56,11 @@ public partial class AppPanel : PanelContainer
                 SizeFlagsVertical = SizeFlags.ExpandFill,
                 HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
             };
-            scroll.AddChild(Body);
+            // Clear of the scroll bar, so a section's rim never runs under it.
+            var inset = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            inset.AddThemeConstantOverride("margin_right", 14);
+            inset.AddChild(Body);
+            scroll.AddChild(inset);
             column.AddChild(scroll);
         }
         else
@@ -90,13 +94,22 @@ public partial class AppPanel : PanelContainer
         else Close();
     }
 
-    public Button AddButton(string text, Action pressed, bool primary = false)
+    // A quiet button, unless it is the panel's main answer (primary) or one that deletes (danger).
+    public Button AddButton(string text, Action pressed, bool primary = false, bool danger = false)
     {
-        var button = new Button { Text = text };
+        var button = new Button { Text = text, FocusMode = FocusModeEnum.None };
         if (primary) button.ThemeTypeVariation = "PrimaryButton";
+        else if (danger) button.ThemeTypeVariation = "Danger";
         button.Pressed += pressed;
         Buttons.AddChild(button);
         return button;
+    }
+
+    public Label AddHint(string text)
+    {
+        var label = Widgets.Hint(text);
+        Body.AddChild(label);
+        return label;
     }
 
     public Label AddText(string text, int size = 15, bool wrap = false)

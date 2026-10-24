@@ -91,6 +91,13 @@ at the repo root.
   `StatisticsReport`, `PrivacyData`, `SavedSessionsShelf`, `SessionExplorer`, `MediaFolderPicker`,
   ...) carrying the ported tests of the dialog's Python test file; the panel only draws it and
   writes into it.
+- **Every panel has the settings' look** (the user's call, 2026-10-24: "alle Fenster im gleichen Style"):
+  built from `Widgets` (`Section` - a card with title, hint and a switch or button on its right -,
+  `Tile`, `Pill`, `Hint`) and the kit's styles in `UiTheme` (`Section`, `LitSection`, `Well`, `NavButton`,
+  `Segment`, `Chip`, `Danger`); a plain button is the quiet one, `PrimaryButton` the panel's answer,
+  `Danger` what deletes. Numbers are tiles, not tables; a panel of pages has a side navigation (Settings,
+  Guide). **What is to be deleted is ticked, never switched** - a switch beside "Session history" reads
+  as turning the history off (the user, on the Privacy mock).
 - **Panic is read in `_Input`, before any control**, so a focused button in a panel cannot take
   Space for itself; only a text field keeps its spaces.
 - **There is no menu bar and no button row** (phase 7). Between sessions the **start screen**

@@ -10,13 +10,15 @@ using Gooner.Core.Randomness;
 using Gooner.Core.Timing;
 using Gooner.Engine.Stage;
 using Gooner.Engine.Ui;
+using Gooner.Engine.Ui.Controls;
 using Godot;
 
 namespace Gooner.Engine.Panels;
 
 // MediaFolderPickerDialog: the folders a session plays from, and a grid of what is in them - as
 // many cells as fit, refilled as the panel is resized. Images load in the background, GIFs play,
-// a video shows a grabbed still, or a five-second loop of itself with the box ticked.
+// a video shows a grabbed still, or a five-second loop of itself with the switch on. Two sections of
+// the redesign: the folders, and what is in them.
 public partial class FolderPickerPanel : AppPanel
 {
     private const int Cell = 140;
@@ -32,7 +34,7 @@ public partial class FolderPickerPanel : AppPanel
     private readonly ItemList _folders;
     private readonly Button _remove;
     private readonly Button _startButton;
-    private readonly CheckBox _animate;
+    private readonly ToggleSwitch _animate;
     private readonly ScrollContainer _scroll;
     private readonly GridContainer _grid;
     private readonly List<Control> _cells = [];
@@ -52,12 +54,9 @@ public partial class FolderPickerPanel : AppPanel
             return grabber;
         }, scheduler);
 
-        Body.AddChild(new Label { Text = L10n.T("Folders") });
-        _folders = new ItemList { CustomMinimumSize = new Vector2(0, 110) };
-        _folders.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6, 6));
+        Body.AddThemeConstantOverride("separation", 12);
+        _folders = new ItemList { CustomMinimumSize = new Vector2(0, 96) };
         _folders.ItemSelected += _ => _remove!.Disabled = false;
-        Body.AddChild(_folders);
-        var folderButtons = new HBoxContainer();
         var chooser = new FileDialog
         {
             FileMode = FileDialog.FileModeEnum.OpenDir,
@@ -70,25 +69,26 @@ public partial class FolderPickerPanel : AppPanel
             if (_picker.Add(folder)) Refresh();
         };
         AddChild(chooser);
-        var add = new Button { Text = L10n.T("Add Folder..."), FocusMode = FocusModeEnum.None };
-        add.Pressed += () => chooser.PopupCentered(new Vector2I(900, 600));
-        _remove = new Button { Text = L10n.T("Remove Selected"), Disabled = true, FocusMode = FocusModeEnum.None };
-        _remove.Pressed += () =>
+        var add = Widgets.Button(L10n.T("Add Folder..."), () => chooser.PopupCentered(new Vector2I(900, 600)));
+        _remove = Widgets.Button(L10n.T("Remove Selected"), () =>
         {
             var selected = _folders.GetSelectedItems();
             if (selected.Length == 0) return;
             _picker.Remove(selected[0]);
             Refresh();
-        };
-        folderButtons.AddChild(add);
-        folderButtons.AddChild(_remove);
-        Body.AddChild(folderButtons);
+        }, "Danger");
+        _remove.Disabled = true;
+        var (folders, folderRows) = Widgets.Section(L10n.T("Folders"), trailing: Widgets.Row(add, _remove));
+        folderRows.AddChild(_folders);
+        Body.AddChild(folders);
 
-        Body.AddChild(new Label { Text = L10n.T("Preview") });
         // Never remembered: a still, not a live decode, is what every opening starts with.
-        _animate = new CheckBox { Text = L10n.T("Animate video clips (5s loop)"), FocusMode = FocusModeEnum.None };
+        _animate = new ToggleSwitch(false);
         _animate.Toggled += _ => BuildCells(force: true);
-        Body.AddChild(_animate);
+        var animate = Widgets.Row(new Label { Text = L10n.T("Animate video clips (5s loop)"), ThemeTypeVariation = "Hint" }, _animate);
+        var (preview, previewRows) = Widgets.Section(L10n.T("Preview"), trailing: animate);
+        preview.SizeFlagsVertical = SizeFlags.ExpandFill;
+        previewRows.SizeFlagsVertical = SizeFlags.ExpandFill;
         _scroll = new ScrollContainer
         {
             SizeFlagsVertical = SizeFlags.ExpandFill,
@@ -102,7 +102,8 @@ public partial class FolderPickerPanel : AppPanel
         _grid.AddThemeConstantOverride("v_separation", Spacing);
         margin.AddChild(_grid);
         _scroll.AddChild(margin);
-        Body.AddChild(_scroll);
+        previewRows.AddChild(_scroll);
+        Body.AddChild(preview);
 
         _resize = new Godot.Timer { OneShot = true, WaitTime = ResizeDebounceSec };
         _resize.Timeout += ApplyResize;
@@ -182,7 +183,10 @@ public partial class FolderPickerPanel : AppPanel
     private PanelContainer MakeCell(string path)
     {
         var cell = new PanelContainer { CustomMinimumSize = new Vector2(Cell, Cell), ClipContents = true };
-        cell.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 8, 4));
+        var frame = UiTheme.Box(UiTheme.Of(Palette.SurfaceDarkest, 0.8f), 12, 4);
+        frame.SetBorderWidthAll(1);
+        frame.BorderColor = new Color(1, 1, 1, 0.08f);
+        cell.AddThemeStyleboxOverride("panel", frame);
         var inner = new Vector2I(Cell - 8, Cell - 8);
         switch (MediaKinds.Of(path))
         {

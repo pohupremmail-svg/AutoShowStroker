@@ -11,11 +11,12 @@ namespace Gooner.Engine.Panels;
 
 // ThirdPartyLicensesDialog: what the program carries of other people's software. The notices
 // first, every text of engine/licenses after them, and then Godot's own - its license and the
-// notices of every library built into it, which the engine reports about itself.
+// notices of every library built into it, which the engine reports about itself. Picked from a list
+// beside the text, as the redesign's panels pick a page.
 public partial class LicensesPanel : AppPanel
 {
     public LicensesPanel(string? shelf, string? show = null)
-        : base(L10n.T("Third-Party Licenses"), new Vector2(760, 620))
+        : base(L10n.T("Third-Party Licenses"), new Vector2(960, 660), bodyScrolls: false)
     {
         var entries = new List<(string Name, Func<string> Text)>();
         if (shelf is not null)
@@ -34,15 +35,19 @@ public partial class LicensesPanel : AppPanel
         text.AddThemeFontOverride("font", UiTheme.Mono);
         text.AddThemeFontSizeOverride("font_size", 12);
         text.AddThemeColorOverride("font_readonly_color", UiTheme.Of(Gooner.Core.App.Palette.Text));
-        var chooser = new OptionButton { FocusMode = FocusModeEnum.None };
+        text.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var chooser = new ItemList { CustomMinimumSize = new Vector2(260, 0), FocusMode = FocusModeEnum.None };
         foreach (var (name, _) in entries) chooser.AddItem(name);
         chooser.ItemSelected += index => text.Text = entries[(int)index].Text();
-        Body.AddChild(chooser);
-        Body.AddChild(text);
+        var row = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        row.AddThemeConstantOverride("separation", 14);
+        row.AddChild(chooser);
+        row.AddChild(text);
+        Body.AddChild(row);
         var first = Math.Max(0, entries.FindIndex(entry => entry.Name == show));
         chooser.Select(first);
         text.Text = entries[first].Text();
-        AddButton(L10n.T("Close"), Close);
+        AddButton(L10n.T("Close"), Close, primary: true);
     }
 
     // Engine.get_copyright_info and get_license_info, as one page: who wrote each piece built into

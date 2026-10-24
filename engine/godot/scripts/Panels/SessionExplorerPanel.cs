@@ -44,8 +44,7 @@ public partial class SessionExplorerPanel : AppPanel
         }, scheduler);
 
         var heading = new HBoxContainer();
-        var title = Widgets.Text(explorer.Heading, 14, Palette.Text, bold: true);
-        title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var title = new Label { Text = explorer.Heading, ThemeTypeVariation = "SectionTitle", SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center };
         heading.AddChild(title);
         if (explorer.CanSave)
         {
@@ -61,8 +60,7 @@ public partial class SessionExplorerPanel : AppPanel
         }
         Body.AddChild(heading);
 
-        var preview = new PanelContainer { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, PreviewMinHeight) };
-        preview.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDarkest), 10, 4));
+        var preview = new PanelContainer { ThemeTypeVariation = "Well", SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, PreviewMinHeight) };
         _picture = new TextureRect
         {
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
@@ -87,7 +85,7 @@ public partial class SessionExplorerPanel : AppPanel
         Body.AddChild(_bar);
 
         var actions = new HBoxContainer();
-        _file = Widgets.Text("", 12, Palette.Text);
+        _file = new Label { ThemeTypeVariation = "Hint" };
         _file.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _file.ClipText = true;
         _play = new Button { Text = L10n.T("Open in player"), Visible = false, FocusMode = FocusModeEnum.None };
@@ -186,7 +184,7 @@ public partial class SessionExplorerPanel : AppPanel
     // on hover, no click needed, as a video's seek bar is.
     private sealed partial class TimelineBar : Control
     {
-        private const float Radius = 6;
+        private const float Radius = 10;
         private readonly SessionExplorer _explorer;
 
         public TimelineBar(SessionExplorer explorer)

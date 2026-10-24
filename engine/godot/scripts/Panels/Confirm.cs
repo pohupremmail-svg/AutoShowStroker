@@ -18,7 +18,8 @@ public static class Confirm
         host.Show(panel);
     }
 
-    public static void Ask(PanelHost host, string title, string text, Action yes, string? yesLabel = null, string? noLabel = null)
+    // danger: Yes deletes something, and says so in its colour.
+    public static void Ask(PanelHost host, string title, string text, Action yes, string? yesLabel = null, string? noLabel = null, bool danger = false)
     {
         ArgumentNullException.ThrowIfNull(host);
         var panel = new AppPanel(title, new Vector2(460, 0));
@@ -27,7 +28,7 @@ public static class Confirm
         {
             panel.Close();
             yes();
-        });
+        }, danger: danger);
         panel.AddButton(noLabel ?? L10n.T("No"), panel.Close, primary: true);
         host.Show(panel);
     }

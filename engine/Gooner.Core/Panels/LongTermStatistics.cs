@@ -9,6 +9,9 @@ public sealed record ChartMetric(string Metric, string Label, string Unit);
 
 public sealed record ChartPoint(int Session, double Value);
 
+// A number shown as a tile: what it is, and its value.
+public sealed record StatTile(string Label, string Value);
+
 // Port of src/LongTermStatisticsDialog.py without pyqtgraph: the read-only view of the session
 // history across the app's lifetime, shown only from the Statistics menu, never by itself. How
 // many sessions, the best of every record metric, and one metric at a time as a line over the
@@ -23,11 +26,9 @@ public sealed class LongTermStatistics
         ArgumentNullException.ThrowIfNull(allTimeBests);
         _history = history;
         SessionsPlayed = L10n.F("Sessions played: {0}", history.Count);
-        BestLines = ScoreTracker.PrMetrics.ToDictionary(metric => metric, metric =>
-        {
-            var formatted = allTimeBests.TryGetValue(metric, out var value) ? ScoreTracker.FormatMetricValue(metric, value) : StatisticsReport.NotAvailable;
-            return L10n.F("Best {0}: {1}", L10n.T(ScoreTracker.PrMetricLabels[metric]), formatted);
-        });
+        Bests = ScoreTracker.PrMetrics.ToDictionary(metric => metric, metric => new StatTile(
+            L10n.T(ScoreTracker.PrMetricLabels[metric]),
+            allTimeBests.TryGetValue(metric, out var value) ? ScoreTracker.FormatMetricValue(metric, value) : StatisticsReport.NotAvailable));
     }
 
     // The choices of the chart's metric selector, the first one shown first, in the language in use.
@@ -36,8 +37,8 @@ public sealed class LongTermStatistics
 
     public string SessionsPlayed { get; }
 
-    // In the record metrics' order.
-    public IReadOnlyDictionary<string, string> BestLines { get; }
+    // The all-time best of every record metric, in the record metrics' order.
+    public IReadOnlyDictionary<string, StatTile> Bests { get; }
 
     // Session #1, #2, ... and the metric's value in each. An entry from before the metric existed
     // counts as zero, as entry.get(metric, 0) had it; one holding something that is not a number

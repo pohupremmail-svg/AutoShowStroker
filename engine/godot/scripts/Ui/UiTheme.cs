@@ -29,26 +29,34 @@ public static class UiTheme
     {
         var theme = new Theme { DefaultFontSize = 15, DefaultFont = Regular };
 
-        StyleBoxFlat Button(string background)
+        // A plain button is the redesign's quiet one (2026-10-24): a rim and a breath of white on the glass.
+        StyleBoxFlat Button(Color background, Color rim)
         {
-            var box = Box(Of(background), 8);
-            box.ContentMarginLeft = box.ContentMarginRight = 14;
-            box.ContentMarginTop = box.ContentMarginBottom = 6;
+            var box = Box(background, 10);
+            box.ContentMarginLeft = box.ContentMarginRight = 16;
+            box.ContentMarginTop = box.ContentMarginBottom = 8;
+            box.SetBorderWidthAll(1);
+            box.BorderColor = rim;
+            box.AntiAliasing = true;
             return box;
         }
-        theme.SetStylebox("normal", "Button", Button(Palette.Secondary));
-        theme.SetStylebox("hover", "Button", Button(Palette.SecondaryHover));
-        theme.SetStylebox("pressed", "Button", Button(Palette.Background));
-        theme.SetStylebox("disabled", "Button", Button(Palette.DisabledBg));
+        theme.SetStylebox("normal", "Button", Button(new Color(1, 1, 1, 0.05f), new Color(1, 1, 1, 0.13f)));
+        theme.SetStylebox("hover", "Button", Button(new Color(1, 1, 1, 0.1f), new Color(1, 1, 1, 0.22f)));
+        theme.SetStylebox("pressed", "Button", Button(new Color(1, 1, 1, 0.14f), new Color(1, 1, 1, 0.3f)));
+        theme.SetStylebox("hover_pressed", "Button", Button(new Color(1, 1, 1, 0.14f), new Color(1, 1, 1, 0.3f)));
+        theme.SetStylebox("disabled", "Button", Button(new Color(1, 1, 1, 0.02f), new Color(1, 1, 1, 0.06f)));
         theme.SetStylebox("focus", "Button", new StyleBoxEmpty());
-        foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
+        foreach (var state in new[] { "font_color", "font_pressed_color", "font_focus_color" })
             theme.SetColor(state, "Button", Of(Palette.Text));
+        theme.SetColor("font_hover_color", "Button", Colors.White);
+        theme.SetColor("font_hover_pressed_color", "Button", Colors.White);
         theme.SetColor("font_disabled_color", "Button", Of(Palette.DisabledText));
+        theme.SetFont("font", "Button", Bold);
 
         // The primary button: pink, with the glow the Qt side drew as a drop shadow.
         StyleBoxFlat Primary(string background)
         {
-            var box = Button(background);
+            var box = Button(Of(background), Of(Palette.Text));
             box.SetBorderWidthAll(1);
             box.BorderColor = Of(Palette.Text);
             box.ShadowColor = Of(Palette.Accent, 0.6f);
@@ -77,34 +85,39 @@ public static class UiTheme
         theme.SetColor("font_color", "PanelTitle", Of(Palette.Accent));
 
         // The lists drop-downs open, in the palette's Highlight and HighlightedText.
-        var popup = Box(Of(Palette.Surface), 6, 4);
+        var popup = Box(Of(Palette.Surface), 10, 6);
         popup.SetBorderWidthAll(1);
-        popup.BorderColor = Of(Palette.Secondary);
+        popup.BorderColor = new Color(1, 1, 1, 0.12f);
         theme.SetStylebox("panel", "PopupMenu", popup);
-        theme.SetStylebox("hover", "PopupMenu", Box(Of(Palette.Accent), 4));
+        theme.SetStylebox("hover", "PopupMenu", Box(Of(Palette.Accent, 0.3f), 6));
         theme.SetColor("font_color", "PopupMenu", Of(Palette.Text));
-        theme.SetColor("font_hover_color", "PopupMenu", Of(Palette.Background));
+        theme.SetColor("font_hover_color", "PopupMenu", Colors.White);
+        theme.SetConstant("v_separation", "PopupMenu", 8);
         theme.SetColor("font_accelerator_color", "PopupMenu", Of(Palette.DisabledText));
         theme.SetColor("font_separator_color", "PopupMenu", Of(Palette.Secondary));
         var separator = new StyleBoxLine { Color = Of(Palette.Secondary), Thickness = 1 };
         theme.SetStylebox("separator", "PopupMenu", separator);
 
-        // Drop-downs, as QComboBox: a surface field with a secondary rim that lights up on hover.
-        StyleBoxFlat Field(string border)
+        // Drop-downs and text fields: a dark well with a faint rim that lights up in the accent on hover
+        // and while typing (the redesign).
+        StyleBoxFlat Field(Color rim)
         {
-            var box = Box(Of(Palette.Surface), 6);
+            var box = Box(Of(Palette.SurfaceDarkest, 0.85f), 10);
             box.SetBorderWidthAll(1);
-            box.BorderColor = Of(border);
-            box.ContentMarginLeft = 8;
-            box.ContentMarginRight = 8;
-            box.ContentMarginTop = box.ContentMarginBottom = 4;
+            box.BorderColor = rim;
+            box.ContentMarginLeft = 12;
+            box.ContentMarginRight = 12;
+            box.ContentMarginTop = box.ContentMarginBottom = 7;
+            box.AntiAliasing = true;
             return box;
         }
-        theme.SetStylebox("normal", "OptionButton", Field(Palette.Secondary));
-        theme.SetStylebox("hover", "OptionButton", Field(Palette.Accent));
-        theme.SetStylebox("pressed", "OptionButton", Field(Palette.Accent));
+        var faint = new Color(1, 1, 1, 0.1f);
+        theme.SetStylebox("normal", "OptionButton", Field(faint));
+        theme.SetStylebox("hover", "OptionButton", Field(Of(Palette.Accent, 0.6f)));
+        theme.SetStylebox("pressed", "OptionButton", Field(Of(Palette.Accent)));
+        theme.SetStylebox("hover_pressed", "OptionButton", Field(Of(Palette.Accent)));
         theme.SetStylebox("focus", "OptionButton", new StyleBoxEmpty());
-        theme.SetStylebox("disabled", "OptionButton", Field(Palette.DisabledBg));
+        theme.SetStylebox("disabled", "OptionButton", Field(new Color(1, 1, 1, 0.04f)));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color" })
             theme.SetColor(state, "OptionButton", Of(Palette.Text));
         theme.SetColor("font_disabled_color", "OptionButton", Of(Palette.DisabledText));
@@ -158,9 +171,9 @@ public static class UiTheme
         // secondary rim, the accent once it has the focus.
         foreach (var field in new[] { "LineEdit", "TextEdit" })
         {
-            theme.SetStylebox("normal", field, Field(Palette.Secondary));
-            theme.SetStylebox("focus", field, Field(Palette.Accent));
-            theme.SetStylebox("read_only", field, Field(Palette.Secondary));
+            theme.SetStylebox("normal", field, Field(faint));
+            theme.SetStylebox("focus", field, Field(Of(Palette.Accent)));
+            theme.SetStylebox("read_only", field, Field(faint));
             theme.SetColor("font_color", field, Of(Palette.Text));
             theme.SetColor("font_readonly_color", field, Of(Palette.Text));
             theme.SetColor("font_placeholder_color", field, Of(Palette.DisabledText));
@@ -190,6 +203,42 @@ public static class UiTheme
         theme.SetFont("bold_font", "RichTextLabel", Bold);
         theme.SetFont("italics_font", "RichTextLabel", Italic);
         theme.SetFont("mono_font", "RichTextLabel", Mono);
+
+        // Lists - saved sessions, folders, patterns: rows in a dark well, the picked one lit as the
+        // settings' navigation lights its page.
+        var list = Box(Of(Palette.SurfaceDarkest, 0.7f), 12, 6);
+        list.SetBorderWidthAll(1);
+        list.BorderColor = new Color(1, 1, 1, 0.07f);
+        theme.SetStylebox("panel", "ItemList", list);
+        theme.SetStylebox("focus", "ItemList", new StyleBoxEmpty());
+        StyleBoxFlat Row(Color background, Color? rim = null)
+        {
+            var box = Box(background, 8);
+            if (rim is { } colour)
+            {
+                box.SetBorderWidthAll(1);
+                box.BorderColor = colour;
+            }
+            box.AntiAliasing = true;
+            return box;
+        }
+        theme.SetStylebox("hovered", "ItemList", Row(new Color(1, 1, 1, 0.05f)));
+        foreach (var state in new[] { "selected", "selected_focus" })
+            theme.SetStylebox(state, "ItemList", Row(Of(Palette.Accent, 0.24f), Of(Palette.Accent, 0.45f)));
+        foreach (var state in new[] { "hovered_selected", "hovered_selected_focus" })
+            theme.SetStylebox(state, "ItemList", Row(Of(Palette.Accent, 0.3f), Of(Palette.Accent, 0.6f)));
+        theme.SetStylebox("cursor", "ItemList", new StyleBoxEmpty());
+        theme.SetStylebox("cursor_unfocused", "ItemList", new StyleBoxEmpty());
+        theme.SetColor("font_color", "ItemList", Of(Palette.Text, 0.85f));
+        foreach (var state in new[] { "font_hovered_color", "font_selected_color", "font_hovered_selected_color" })
+            theme.SetColor(state, "ItemList", Colors.White);
+        theme.SetColor("guide_color", "ItemList", new Color(0, 0, 0, 0));
+        theme.SetConstant("v_separation", "ItemList", 12);
+        theme.SetConstant("h_separation", "ItemList", 12);
+        theme.SetConstant("line_separation", "ItemList", 4);
+
+        theme.SetStylebox("background", "ProgressBar", Box(Of(Palette.SurfaceDarkest), 4));
+        theme.SetStylebox("fill", "ProgressBar", Box(Of(Palette.Accent), 4));
 
         Look(theme);
         Kit(theme);
@@ -339,6 +388,25 @@ public static class UiTheme
         theme.SetTypeVariation("Section", "PanelContainer");
         var section = Rounded(Of(Palette.Surface, 0.5f), 16, new Color(1, 1, 1, 0.07f), x: 18, y: 16);
         theme.SetStylebox("panel", "Section", section);
+        // A section that stands out - a record broken, an achievement earned: the accent's rim and glow.
+        theme.SetTypeVariation("LitSection", "PanelContainer");
+        theme.SetStylebox("panel", "LitSection", Rounded(Of(Palette.Accent, 0.16f), 16, Of(Palette.Accent, 0.75f), 0.3f, x: 18, y: 14));
+        // A dark well: a picture, a text to read or copy, a tile of a number.
+        theme.SetTypeVariation("Well", "PanelContainer");
+        theme.SetStylebox("panel", "Well", Rounded(Of(Palette.SurfaceDarkest, 0.75f), 12, new Color(1, 1, 1, 0.07f), x: 12, y: 10));
+        // A small lit label: a version, a count.
+        theme.SetTypeVariation("Pill", "PanelContainer");
+        theme.SetStylebox("panel", "Pill", Rounded(Of(Palette.Accent), 10, glow: 0.35f, x: 10, y: 2));
+        theme.SetTypeVariation("PillText", "Label");
+        theme.SetFont("font", "PillText", Bold);
+        theme.SetFontSize("font_size", "PillText", 12);
+        theme.SetColor("font_color", "PillText", Colors.White);
+        theme.SetColor("font_shadow_color", "PillText", new Color(0, 0, 0, 0));
+        // A number in a tile, under what it is.
+        theme.SetTypeVariation("TileValue", "Label");
+        theme.SetFont("font", "TileValue", Bold);
+        theme.SetFontSize("font_size", "TileValue", 19);
+        theme.SetColor("font_color", "TileValue", Colors.White);
         theme.SetTypeVariation("SectionTitle", "Label");
         theme.SetFont("font", "SectionTitle", Bold);
         theme.SetFontSize("font_size", "SectionTitle", 16);

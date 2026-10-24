@@ -9,7 +9,8 @@ using Godot;
 namespace Gooner.Engine.Panels;
 
 // PatternEditorDialog: the user's own patterns on the left, the step sequencer on the right - a
-// bar to drag per step for its length, a button for Beat or Pause, and a preview that plays it.
+// bar to drag per step for its length, a button for Beat or Pause, and a preview that plays it - two
+// sections of the redesign side by side.
 public partial class PatternEditorPanel : AppPanel
 {
     private readonly PatternEditor _editor;
@@ -23,7 +24,7 @@ public partial class PatternEditorPanel : AppPanel
     private readonly List<StepBar> _bars = [];
 
     public PatternEditorPanel(PatternEditor editor, Action click)
-        : base(L10n.T("Manage Custom Patterns"), new Vector2(640, 480))
+        : base(L10n.T("Manage Custom Patterns"), new Vector2(820, 540))
     {
         _editor = editor;
         _click = click;
@@ -31,33 +32,31 @@ public partial class PatternEditorPanel : AppPanel
         columns.AddThemeConstantOverride("separation", 12);
         Body.AddChild(columns);
 
-        var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1 };
-        left.AddChild(new Label { Text = L10n.T("Your Patterns") });
+        var (leftCard, left) = Widgets.Section(L10n.T("Your Patterns"));
+        leftCard.SizeFlagsStretchRatio = 1;
         _list = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill };
-        _list.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6, 6));
         _list.ItemSelected += index =>
         {
             _editor.Select(_list.GetItemText((int)index));
             Pull();
         };
         left.AddChild(_list);
-        var listButtons = new HBoxContainer();
-        listButtons.AddChild(Button(L10n.T("New"), () =>
+        left.AddChild(Widgets.Row(Widgets.Button(L10n.T("New"), () =>
         {
             _editor.StartNew();
             Pull();
-        }));
-        listButtons.AddChild(Button(L10n.T("Delete"), () =>
+        }), Widgets.Button(L10n.T("Delete"), () =>
         {
             _editor.DeleteSelected();
             Pull();
-        }));
-        left.AddChild(listButtons);
-        columns.AddChild(left);
+        }, "Danger")));
+        columns.AddChild(leftCard);
 
-        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
+        var (rightCard, right) = Widgets.Section(separation: 12);
+        rightCard.SizeFlagsStretchRatio = 2;
         var nameRow = new HBoxContainer();
-        nameRow.AddChild(new Label { Text = L10n.T("Name:") });
+        nameRow.AddThemeConstantOverride("separation", 12);
+        nameRow.AddChild(new Label { Text = L10n.T("Name:").TrimEnd(':', ' ') });
         _name = new LineEdit { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _name.TextChanged += text => _editor.Name = text;
         nameRow.AddChild(_name);
@@ -67,32 +66,26 @@ public partial class PatternEditorPanel : AppPanel
         var stepsScroll = new ScrollContainer { VerticalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(0, 150) };
         stepsScroll.AddChild(_stepsRow);
         right.AddChild(stepsScroll);
-        var stepButtons = new HBoxContainer();
-        stepButtons.AddChild(Button(L10n.T("+ Step"), () =>
+        right.AddChild(Widgets.Row(Widgets.Button(L10n.T("+ Step"), () =>
         {
             _editor.AddStep();
             PullSteps();
-        }));
-        stepButtons.AddChild(Button(L10n.T("- Step"), () =>
+        }), Widgets.Button(L10n.T("- Step"), () =>
         {
             _editor.RemoveStep();
             PullSteps();
-        }));
-        right.AddChild(stepButtons);
+        })));
         _error = Widgets.Text("", 13, Palette.Denied, wrap: true);
         right.AddChild(_error);
-        var actions = new HBoxContainer();
-        _preview = Button(L10n.T("Preview"), TogglePreview);
-        actions.AddChild(_preview);
-        var save = Button(L10n.T("Save"), () =>
+        right.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
+        _preview = Widgets.Button(L10n.T("Preview"), TogglePreview);
+        var save = Widgets.Button(L10n.T("Save"), () =>
         {
             _editor.Save();
             Pull();
-        });
-        save.ThemeTypeVariation = "PrimaryButton";
-        actions.AddChild(save);
-        right.AddChild(actions);
-        columns.AddChild(right);
+        }, "PrimaryButton");
+        right.AddChild(Widgets.Row(Widgets.Spacer(), _preview, save));
+        columns.AddChild(rightCard);
 
         _timer = new Godot.Timer { OneShot = true };
         _timer.Timeout += Tick;
@@ -101,13 +94,6 @@ public partial class PatternEditorPanel : AppPanel
         Closed += StopPreview;
         AddButton(L10n.T("Close"), Close);
         Pull();
-    }
-
-    private static Button Button(string text, Action pressed)
-    {
-        var button = new Button { Text = text, FocusMode = FocusModeEnum.None };
-        button.Pressed += pressed;
-        return button;
     }
 
     // The editor's state onto the widgets: the list, the name, the steps, the error.
@@ -137,8 +123,15 @@ public partial class PatternEditorPanel : AppPanel
             var bar = new StepBar(step);
             _bars.Add(bar);
             column.AddChild(bar);
-            var toggle = new Button { Text = step.ButtonText, ToggleMode = true, ButtonPressed = step.Muted, FocusMode = FocusModeEnum.None };
-            toggle.AddThemeStyleboxOverride("pressed", UiTheme.Box(UiTheme.Of(Palette.Pause), 8, 6));
+            var toggle = new Button { Text = step.ButtonText, ToggleMode = true, ButtonPressed = step.Muted, FocusMode = FocusModeEnum.None, ThemeTypeVariation = "Chip" };
+            // A pause in its own colour, as the bar above it is.
+            var pause = UiTheme.Box(UiTheme.Of(Palette.Pause, 0.25f), 16);
+            pause.SetBorderWidthAll(1);
+            pause.BorderColor = UiTheme.Of(Palette.Pause);
+            pause.ContentMarginLeft = pause.ContentMarginRight = 14;
+            pause.ContentMarginTop = pause.ContentMarginBottom = 6;
+            toggle.AddThemeStyleboxOverride("pressed", pause);
+            toggle.AddThemeStyleboxOverride("hover_pressed", pause);
             toggle.Toggled += on =>
             {
                 step.Muted = on;
@@ -226,16 +219,18 @@ public partial class PatternEditorPanel : AppPanel
         public override void _Draw()
         {
             var track = new Rect2(2, 2, Size.X - 4, Size.Y - 4);
-            DrawStyleBox(UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6), track);
+            DrawStyleBox(UiTheme.Box(UiTheme.Of(Palette.SurfaceDarkest, 0.85f), 10), track);
             var minimum = track.Size.Y * 0.15f;
             var height = minimum + (float)_step.BarRatio * (track.Size.Y - minimum);
             var bar = new Rect2(track.Position.X, track.End.Y - height, track.Size.X, height);
-            DrawStyleBox(UiTheme.Box(UiTheme.Of(_step.Muted ? Palette.Pause : Palette.Accent), 6), bar);
+            var colour = UiTheme.Of(_step.Muted ? Palette.Pause : Palette.Accent);
+            if (_lit) Fx.Glow.Draw(this, bar.GetCenter(), bar.Size.Length() * 0.7f, new Color(colour, 0.45f));
+            DrawStyleBox(UiTheme.Box(colour, 10), bar);
             if (_lit)
             {
                 var outline = new StyleBoxFlat { DrawCenter = false, BorderColor = UiTheme.Of(Palette.Text) };
                 outline.SetBorderWidthAll(2);
-                outline.SetCornerRadiusAll(6);
+                outline.SetCornerRadiusAll(10);
                 DrawStyleBox(outline, track);
             }
         }

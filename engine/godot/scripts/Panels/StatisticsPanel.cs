@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Gooner.Core.App;
 using Gooner.Core.Localization;
 using Gooner.Core.Panels;
@@ -8,37 +7,48 @@ using Godot;
 
 namespace Gooner.Engine.Panels;
 
-// StatisticsDialog: the recap after a session - what Gooner.Core.Panels.StatisticsReport says, laid
-// out as the dialog laid it out. The Session Explorer is reached from here, and is where the
-// session can be saved, as on the Python side.
+// StatisticsDialog: the recap after a session - what Gooner.Core.Panels.StatisticsReport says, in the
+// redesign's look: the outcome in the display face, a record broken lit up, every number a tile. The
+// Session Explorer is reached from here, and is where the session can be saved, as on the Python side.
 public partial class StatisticsPanel : AppPanel
 {
     public StatisticsPanel(StatisticsReport report, Action? openExplorer)
-        : base(L10n.T("Session Statistics"), new Vector2(560, 760), scrolls: true)
+        : base(L10n.T("Session Statistics"), new Vector2(760, 760), scrolls: true)
     {
-        Body.AddChild(Widgets.Text(report.Title, 24, Palette.Accent, bold: true));
+        Body.AddThemeConstantOverride("separation", 12);
+        Body.AddChild(Widgets.Display(report.Title, 28, Palette.Accent));
         Body.AddChild(Widgets.Text(report.Conclusion, 14, italic: true, wrap: true));
 
-        foreach (var record in report.RecordCards)
+        // A record is you beating yourself: lit. An achievement is a thing the app was holding out on
+        // you: the same card, one shade quieter.
+        if (report.RecordCards.Count > 0)
         {
-            var (card, column) = Widgets.Card(UiTheme.Of(Palette.Accent), margin: 12);
-            column.AddChild(Widgets.Text(record.Title, 14, Palette.Background, bold: true));
-            column.AddChild(Widgets.Text(record.Value, 18, Palette.Background, bold: true));
-            column.AddChild(Widgets.Text(record.Previous, 11, Palette.Background));
-            Body.AddChild(card);
+            var records = Widgets.Tiles(Math.Min(2, report.RecordCards.Count));
+            foreach (var record in report.RecordCards)
+            {
+                var (card, column) = Widgets.Section(variation: "LitSection", separation: 2);
+                column.AddChild(new Label { Text = record.Title, ThemeTypeVariation = "SectionTitle", AutowrapMode = TextServer.AutowrapMode.WordSmart });
+                var value = new Label { Text = record.Value, ThemeTypeVariation = "TileValue" };
+                value.AddThemeFontSizeOverride("font_size", 24);
+                column.AddChild(value);
+                column.AddChild(Widgets.Hint(record.Previous));
+                records.AddChild(card);
+            }
+            Body.AddChild(records);
         }
-        // Same shape as a personal-record card, one shade quieter: a record is you beating
-        // yourself, an achievement a thing the app was holding out on you.
         foreach (var achievement in report.AchievementCards)
         {
-            var (card, column) = Widgets.Card(UiTheme.Of(Palette.SurfaceDark), margin: 12, border: UiTheme.Of(Palette.Accent), borderWidth: 2);
-            column.AddChild(Widgets.Text(achievement.Title, 14, Palette.Accent, bold: true));
-            column.AddChild(Widgets.Text(achievement.Description, 11, Palette.Text, wrap: true));
+            var (card, column) = Widgets.Section(separation: 2);
+            column.AddChild(Widgets.Text(achievement.Title, 15, Palette.Accent, bold: true, wrap: true));
+            column.AddChild(Widgets.Hint(achievement.Description));
             Body.AddChild(card);
         }
 
-        Body.AddChild(Widgets.Table([L10n.T("metric"), L10n.T("value")], report.Rows.Select(row => new[] { row.Metric, row.Value }),
-            [HorizontalAlignment.Left, HorizontalAlignment.Center]));
+        var (numbers, rows) = Widgets.Section(L10n.T("This session"));
+        var tiles = Widgets.Tiles(3);
+        foreach (var row in report.Rows) tiles.AddChild(Widgets.Tile(row.Metric, row.Value));
+        rows.AddChild(tiles);
+        Body.AddChild(numbers);
 
         if (report.HasExplorer && openExplorer is not null)
         {

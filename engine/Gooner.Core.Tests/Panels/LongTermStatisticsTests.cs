@@ -33,21 +33,21 @@ public sealed class LongTermStatisticsTests
     public void sessions_played_count() => Assert.Equal("Sessions played: 2", _view.SessionsPlayed);
 
     [Fact]
-    public void best_labels_show_formatted_all_time_bests()
+    public void the_bests_name_their_metric_and_show_its_formatted_all_time_best()
     {
-        Assert.Equal("Best Total Duration: 2 Min", _view.BestLines["total_dur_sec"]);
-        Assert.Equal("Best Total Beats: 30", _view.BestLines["total_num_beat"]);
-        Assert.Equal("Best Active Beat Speed: 0.80 beats/sec", _view.BestLines["average_beat_speed_active"]);
-        Assert.Equal("Best Fakeouts Survived: 1", _view.BestLines["fakeout_count"]);
+        Assert.Equal(new StatTile("Total Duration", "2 Min"), _view.Bests["total_dur_sec"]);
+        Assert.Equal(new StatTile("Total Beats", "30"), _view.Bests["total_num_beat"]);
+        Assert.Equal(new StatTile("Active Beat Speed", "0.80 beats/sec"), _view.Bests["average_beat_speed_active"]);
+        Assert.Equal(new StatTile("Fakeouts Survived", "1"), _view.Bests["fakeout_count"]);
     }
 
     [Fact]
-    public void best_label_shows_na_when_metric_missing() =>
-        Assert.Equal("Best Total Duration: N/A", new LongTermStatistics([], new Dictionary<string, double>()).BestLines["total_dur_sec"]);
+    public void a_best_never_reached_shows_na() =>
+        Assert.Equal("N/A", new LongTermStatistics([], new Dictionary<string, double>()).Bests["total_dur_sec"].Value);
 
     [Fact]
-    public void the_best_lines_come_in_the_record_metrics_order() =>
-        Assert.Equal(ScoreTracker.PrMetrics, _view.BestLines.Keys);
+    public void the_bests_come_in_the_record_metrics_order() =>
+        Assert.Equal(ScoreTracker.PrMetrics, _view.Bests.Keys);
 
     [Fact]
     public void metric_selector_lists_all_pr_metrics() =>

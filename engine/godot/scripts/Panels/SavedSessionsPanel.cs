@@ -8,7 +8,8 @@ using Godot;
 namespace Gooner.Engine.Panels;
 
 // SavedSessionsDialog: the shelf of Gooner.Core.Panels.SavedSessionsShelf - replay, export, import,
-// delete - with the questions it asked in message boxes asked as panels.
+// delete - with the questions it asked in message boxes asked as panels. The redesign's list; what
+// passes a session on sits left, Replay right.
 public partial class SavedSessionsPanel : AppPanel
 {
     private static string Filter => "*.json ; " + L10n.T("GoonerApp session");
@@ -16,7 +17,7 @@ public partial class SavedSessionsPanel : AppPanel
     private readonly SavedSessionsShelf _shelf;
     private readonly PanelHost _host;
     private readonly ItemList _list;
-    private readonly Label _empty;
+    private readonly Control _empty;
     private readonly Button _replay;
     private readonly Button _export;
     private readonly Button _delete;
@@ -25,13 +26,13 @@ public partial class SavedSessionsPanel : AppPanel
     private bool _withPaths;
 
     public SavedSessionsPanel(SavedSessionsShelf shelf, PanelHost host)
-        : base(L10n.T("Saved Sessions"), new Vector2(640, 460))
+        : base(L10n.T("Saved Sessions"), new Vector2(700, 520))
     {
         _shelf = shelf;
         _host = host;
-        Body.AddChild(Widgets.Text(SavedSessionsShelf.Intro, 14, Palette.Text, wrap: true));
+        Body.AddThemeConstantOverride("separation", 12);
+        AddHint(SavedSessionsShelf.Intro);
         _list = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill };
-        _list.AddThemeStyleboxOverride("panel", UiTheme.Box(UiTheme.Of(Palette.SurfaceDark), 6, 6));
         _list.ItemSelected += index =>
         {
             _shelf.Select((int)index);
@@ -39,19 +40,23 @@ public partial class SavedSessionsPanel : AppPanel
         };
         _list.ItemActivated += _ => Replay();
         Body.AddChild(_list);
-        _empty = Widgets.Text(SavedSessionsShelf.EmptyText, 14, Palette.Text, wrap: true);
+        // Where the list would be, so the panel keeps its shape.
+        _empty = new PanelContainer { ThemeTypeVariation = "Well", SizeFlagsVertical = SizeFlags.ExpandFill };
+        var empty = Widgets.Text(SavedSessionsShelf.EmptyText, 14, Palette.Text, wrap: true);
+        empty.HorizontalAlignment = HorizontalAlignment.Center;
+        empty.VerticalAlignment = VerticalAlignment.Center;
+        _empty.AddChild(empty);
         Body.AddChild(_empty);
 
-        _replay = AddButton(L10n.T("Replay"), Replay, primary: true);
-        _export = AddButton(L10n.T("Export..."), AskAboutPaths);
-        _export.TooltipText = L10n.T("Write this session to a file you can pass on");
         var import = AddButton(L10n.T("Import..."), () => _importPicker!.PopupCentered(new Vector2I(900, 600)));
         import.TooltipText = L10n.T("Put a session file somebody sent you on the shelf");
-        _delete = AddButton(L10n.T("Delete"), AskToDelete);
-        var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        Buttons.AddChild(spacer);
+        _export = AddButton(L10n.T("Export..."), AskAboutPaths);
+        _export.TooltipText = L10n.T("Write this session to a file you can pass on");
+        _delete = AddButton(L10n.T("Delete"), AskToDelete, danger: true);
+        Buttons.AddChild(Widgets.Spacer());
         Buttons.Alignment = BoxContainer.AlignmentMode.Begin;
         AddButton(L10n.T("Close"), Close);
+        _replay = AddButton(L10n.T("Replay"), Replay, primary: true);
 
         _exportPicker = Picker(FileDialog.FileModeEnum.SaveFile, L10n.T("Export Session"));
         _exportPicker.CurrentFile = "session.json";
@@ -81,6 +86,7 @@ public partial class SavedSessionsPanel : AppPanel
         _list.Clear();
         foreach (var row in _shelf.Rows) _list.AddItem(row);
         _empty.Visible = _shelf.IsEmpty;
+        _list.Visible = !_shelf.IsEmpty;
         UpdateButtons();
     }
 
@@ -122,7 +128,7 @@ public partial class SavedSessionsPanel : AppPanel
         if (!_shelf.CanAct) return;
         var question = new AppPanel(L10n.T("Include the media paths?"), new Vector2(520, 0));
         question.AddText(L10n.T("Should this export carry the paths of the media it showed?"), 15, wrap: true);
-        question.AddText(SavedSessionsShelf.PathsWarning, 13, wrap: true);
+        question.AddHint(SavedSessionsShelf.PathsWarning);
         void Choose(bool withPaths)
         {
             question.Close();
@@ -166,6 +172,6 @@ public partial class SavedSessionsPanel : AppPanel
         {
             _shelf.DeleteSelected();
             Refresh();
-        });
+        }, danger: true);
     }
 }
