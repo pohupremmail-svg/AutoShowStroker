@@ -4,15 +4,16 @@ namespace Gooner.Core.App;
 
 public sealed record ChangelogEntry(string Version, string Html);
 
-// Port of src/changelog.py: the user-facing changelog the What's New panel shows.
+// The user-facing changelog the What's New panel shows.
 //
 // Every feat (or critical fix) version bump adds an entry, in the app's own flirty, teasing voice
 // for the end user - not a commit-log dump: a short suggestive lead sentence, an inline <ul><li>
 // list of the real features, then a one-line closing hook. The markup is Qt's rich text;
 // RichText.ToBbcode turns it into what the engine draws.
 //
-// The entries up to the engine were copied word for word from src/changelog.py; new ones are
-// written here.
+// The entries up to 0.14.3 are the Python app's, word for word - they say what that app did, so
+// a word in them that no longer fits (a menu, a folder) stays as it was. Every entry is translated
+// (LocaleFilesTests).
 public static class Changelog
 {
     public static IReadOnlyList<ChangelogEntry> Entries { get; } =
@@ -380,6 +381,33 @@ public static class Changelog
             "and it still is not</li>" +
             "</ul>" +
             "The same fault only interrupts you once, however often it happens."),
+        new("0.15.0",
+            "GoonerApp has a whole new body. Take a good look - she wants you to." +
+            "<ul>" +
+            "<li><b>Rebuilt from the ground up on a real game engine.</b> Every note lands " +
+            "on its click to the frame, every effect runs on the graphics card, and the rhythm " +
+            "you know is exactly the rhythm you get</li>" +
+            "<li><b>She can finally look at you.</b> Bring your own <code>.vrm</code> character - " +
+            "she waits for you on the start screen, watches you from her frame through the whole " +
+            "session, comes closer with every line she says, and strokes right along with your " +
+            "beat. Where to put her is in the Guide, under Characters</li>" +
+            "<li><b>Four ways to watch the beat come for you:</b> a Highway racing at you, a " +
+            "Hypno Ring that wanders across the picture and drags your eyes along - blurring, " +
+            "pixelating or darkening the rest if you ask nicely - a Stream, or a Tunnel to fall " +
+            "into. Pick it under Settings &gt; Look, with Neon or Boudoir colours and effects " +
+            "from subtle to wild</li>" +
+            "<li><b>The climax hits the whole screen</b> - a flash, a shake, colours tearing " +
+            "apart. A fake one hits exactly as hard, right up until it does not</li>" +
+            "<li><b>No more menu bar.</b> A start screen greets you in her voice, and during a " +
+            "session your controls float on glass you can drag anywhere, or throw out of your " +
+            "way</li>" +
+            "<li><b>The app speaks German and French now too</b> - its own words, not just her " +
+            "callouts. Settings &gt; Playback &gt; App Language</li>" +
+            "<li><b>It comes as a folder now.</b> Unpack it anywhere: your settings, history, " +
+            "patterns and saved sessions come along on their own the first time you start it, " +
+            "and the old GoonerApp.exe can go</li>" +
+            "</ul>" +
+            "Same rhythm, same rules, a lot more to look at. Lean back."),
     ];
 
     public static IReadOnlyList<int> ParseVersion(string version)
