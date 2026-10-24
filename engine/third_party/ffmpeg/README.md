@@ -25,8 +25,11 @@ source goes out too, with the scripts that built the libraries:
   the commit of release `autobuild-2023-07-24-08-52`: every library and revision that went into the
   build (`scripts.d/`), and the variant (`variants/win64-lgpl-godot.sh`). GitHub's archive, unchanged.
 - `libiconv-6e2b31f6d66739c5abd850338ea68c6bd2012812-source.tar.gz` - libiconv at the commit the build
-  scripts pin, `git archive` of `git.savannah.gnu.org/git/libiconv.git`. Its build pulled Gnulib
-  unpinned; on the build day that was Gnulib `b70b4f0`, which the notices name.
+  scripts pin, `git archive` of `git.savannah.gnu.org/git/libiconv.git`.
+- `gnulib-b70b4f0cfc8f623c80012bde14047efaef8c720c-source.tar.gz` - Gnulib, which libiconv's build
+  pulled unpinned: its state on the build day (last commit before 2023-07-24 08:52 UTC), GitHub's
+  archive of the mirror `coreutils/gnulib`. It supplies the build's configure macros (e.g.
+  `codeset.m4`) - the LGPL counts the scripts that control compilation as part of the source.
 - `soxr-945b592b70470e29f917f4de89b4281fbbd540c0-source.tar.gz` - soxr at the pinned commit,
   `git archive` of `git.code.sf.net/p/soxr/code`.
 

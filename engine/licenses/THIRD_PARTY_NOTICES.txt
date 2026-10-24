@@ -18,10 +18,10 @@ with (FFmpeg-Builds), which name every library and revision that went into them.
 all of it on request as well: open an issue in this project's repository. That offer stands for
 three years from the date of each release. GoonerApp's own source code is in the same repository.
 
-One part of that build cannot be pinned exactly: libiconv's build script fetches the Gnulib
-helper library as it was on the day of the build (2023-07-24) rather than at a fixed revision.
-Gnulib is free software under the GNU LGPL/GPL; its state of that day is commit b70b4f0 of
-https://git.savannah.gnu.org/git/gnulib.git.
+libiconv's build fetches the Gnulib helper library unpinned, as it was on the day of the build
+(2023-07-24): that state, commit b70b4f0, is attached as well
+(gnulib-b70b4f0cfc8f623c80012bde14047efaef8c720c-source.tar.gz). Gnulib is free software; each of
+its modules names its own license, the GNU LGPL or GPL (LGPL-2.1.txt, LGPL-3.0.txt, GPL-3.0.txt).
 
 
 == Godot Engine 4.7.2 ==

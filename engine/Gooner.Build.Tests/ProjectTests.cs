@@ -82,9 +82,10 @@ public class ProjectTests
         var notices = File.ReadAllText(Path.Combine(Repo.Licenses, "THIRD_PARTY_NOTICES.txt"));
         var archives = Directory.GetFiles(Repo.FfmpegSources, "*-source.tar.gz").Select(Path.GetFileName).ToList();
 
-        // FFmpeg, the extension, the scripts that built the FFmpeg, and the two LGPL libraries built
-        // into it (see the next test).
-        Assert.Equal(["EIRTeam.FFmpeg-", "FFmpeg-", "FFmpeg-Builds-", "libiconv-", "soxr-"],
+        // FFmpeg, the extension, the scripts that built the FFmpeg, the two LGPL libraries built into
+        // it (see the next test), and Gnulib as libiconv's build fetched it - unpinned, so its state on
+        // the build day.
+        Assert.Equal(["EIRTeam.FFmpeg-", "FFmpeg-", "FFmpeg-Builds-", "gnulib-", "libiconv-", "soxr-"],
             archives.Select(a => a![..(a!.LastIndexOf('-', a.Length - "-source.tar.gz".Length - 1) + 1)]).Order(StringComparer.Ordinal));
         foreach (var archive in archives)
             Assert.Contains(archive!, notices, StringComparison.Ordinal);
